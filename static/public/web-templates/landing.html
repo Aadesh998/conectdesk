@@ -1,0 +1,171 @@
+{{ define "landing" }}<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>{{ .Data.Product }}: never lose an admission enquiry</title>
+	<meta name="description" content="Calls, WhatsApp and Instagram on one screen for your counsellors. Missed calls get a WhatsApp reply and a call-back, and the owner gets the day's admissions numbers every evening." />
+	{{ template "app-theme" . }}
+	<style>
+		.wrap { max-width: 1120px; margin: 0 auto; padding: 0 1.25rem; }
+		.top { display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 0; }
+		.brand { font-weight: 700; font-size: 1.15rem; text-decoration: none; color: var(--fg); display: flex; align-items: center; gap: 0.5rem; }
+		.brand .dot { width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--primary); }
+		.top nav { display: flex; gap: 0.6rem; align-items: center; }
+		.btn { display: inline-block; text-decoration: none; background: var(--primary); color: var(--primary-fg); border-radius: var(--radius); padding: 0.6rem 1.05rem; font-weight: 500; }
+		.btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+		.btn.lg { padding: 0.8rem 1.4rem; font-size: 1.02rem; }
+		.hero { padding: 4.5rem 0 3rem; text-align: center; }
+		.hero h1 { font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.1; margin: 0 auto 1rem; max-width: 820px; letter-spacing: -0.02em; }
+		.hero h1 em { font-style: normal; color: var(--primary); }
+		.hero p { font-size: 1.15rem; color: var(--muted-fg); max-width: 640px; margin: 0 auto 2rem; }
+		.hero .cta { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+		.login { max-width: 520px; margin: 1rem auto 0; padding: 1.4rem; }
+		.login h2 { font-size: 1.05rem; margin: 0 0 0.25rem; }
+		.login p { margin: 0 0 0.9rem; color: var(--muted-fg); font-size: 0.9rem; }
+		.login form { display: flex; gap: 0.5rem; align-items: center; }
+		.login .addr { flex: 1; display: flex; align-items: center; border: 1px solid var(--input); border-radius: var(--radius); padding-right: 0.7rem; }
+		.login .addr:focus-within { border-color: var(--ring); box-shadow: 0 0 0 3px hsl(152 45% 40% / 0.2); }
+		.login .addr input { border: 0; box-shadow: none; min-width: 0; }
+		.login .addr span { color: var(--muted-fg); white-space: nowrap; font-size: 0.9rem; }
+		.login .err { color: var(--destructive); font-size: 0.85rem; min-height: 1.2em; margin-top: 0.5rem; }
+		.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; padding: 3.5rem 0; }
+		.feature { padding: 1.3rem; }
+		.feature .ic { width: 2.3rem; height: 2.3rem; border-radius: 0.6rem; display: grid; place-items: center; background: var(--success-bg); color: var(--primary); font-size: 1.15rem; margin-bottom: 0.8rem; }
+		.feature h3 { margin: 0 0 0.35rem; font-size: 1.02rem; }
+		.feature p { margin: 0; color: var(--muted-fg); font-size: 0.92rem; }
+		.band { text-align: center; padding: 3rem 1.25rem; margin: 0 0 3rem; }
+		.band h2 { margin: 0 0 0.5rem; font-size: 1.6rem; }
+		.band p { margin: 0 0 1.4rem; color: var(--muted-fg); }
+		footer { border-top: 1px solid var(--border); padding: 1.5rem 0; color: var(--muted-fg); font-size: 0.85rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+		@media (max-width: 900px) { .features { grid-template-columns: repeat(2, 1fr); } }
+		@media (max-width: 600px) {
+			.top nav .ghost { display: none; }
+			.hero { padding: 2.5rem 0 2rem; }
+			.hero p { font-size: 1.02rem; }
+			.features { grid-template-columns: 1fr; padding: 2rem 0; }
+			.login form { flex-direction: column; align-items: stretch; }
+		}
+		.eyebrow { display: inline-block; font-size: 0.85rem; font-weight: 600; color: var(--primary); background: var(--success-bg); border-radius: 999px; padding: 0.3rem 0.8rem; margin-bottom: 1.1rem; }
+		.section-title { text-align: center; font-size: 1.6rem; margin: 0 0 0.4rem; }
+		.section-sub { text-align: center; color: var(--muted-fg); margin: 0 auto 1.8rem; max-width: 620px; }
+		.flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem; padding: 1rem 0 3rem; counter-reset: step; }
+		.flow .step { padding: 1.1rem; position: relative; }
+		.flow .step::before { counter-increment: step; content: counter(step); display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--primary); color: var(--primary-fg); font-weight: 700; font-size: 0.9rem; margin-bottom: 0.6rem; }
+		.flow .step h3 { margin: 0 0 0.3rem; font-size: 0.98rem; }
+		.flow .step p { margin: 0; color: var(--muted-fg); font-size: 0.88rem; }
+		.for { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; padding: 0 0 3rem; }
+		.for span { border: 1px solid var(--border); border-radius: 999px; padding: 0.45rem 0.95rem; font-size: 0.9rem; }
+		.faq { max-width: 760px; margin: 0 auto 3rem; }
+		.faq details { padding: 1rem 1.2rem; margin-bottom: 0.6rem; }
+		.faq summary { cursor: pointer; font-weight: 600; }
+		.faq details p { margin: 0.6rem 0 0; color: var(--muted-fg); font-size: 0.93rem; }
+		@media (max-width: 900px) { .flow { grid-template-columns: repeat(2, 1fr); } }
+		@media (max-width: 600px) { .flow { grid-template-columns: 1fr; } }
+	</style>
+</head>
+<body>
+<div class="wrap">
+	<header class="top">
+		<a class="brand" href="/"><span class="dot"></span>{{ .Data.Product }}</a>
+		<nav>
+			<a class="btn ghost" href="#login">Log in</a>
+			{{ if .Data.DemoURL }}<a class="btn ghost" href="{{ .Data.DemoURL }}">Book a demo</a>{{ end }}
+			{{ if .Data.SignupEnabled }}<a class="btn" href="/signup">Get started</a>{{ end }}
+		</nav>
+	</header>
+
+	<section class="hero">
+		<span class="eyebrow">For coaching institutes and training centres</span>
+		<h1>Never lose an <em>admission enquiry</em> again</h1>
+		<p>Parents call, WhatsApp and DM you on Instagram. {{ .Data.Product }} puts all of it on one screen for your counsellors, replies on WhatsApp when a call is missed, and makes sure someone calls back.</p>
+		<div class="cta">
+			{{ if .Data.SignupEnabled }}<a class="btn lg" href="/signup">Create your workspace</a>{{ end }}
+			{{ if .Data.DemoURL }}<a class="btn lg{{ if .Data.SignupEnabled }} ghost{{ end }}" href="{{ .Data.DemoURL }}">Book a 10-minute demo</a>{{ else }}<a class="btn lg ghost" href="#login">Log in to your workspace</a>{{ end }}
+		</div>
+	</section>
+
+	<h2 class="section-title">What happens when nobody picks up</h2>
+	<p class="section-sub">A missed call is a lost admission. Here's what {{ .Data.Product }} does in the seconds after one.</p>
+	<section class="flow">
+		<div class="step card"><h3>A parent calls</h3><p>Your counsellors' phones ring. Everyone's busy, and the call is missed.</p></div>
+		<div class="step card"><h3>WhatsApp in seconds</h3><p>They get a WhatsApp message: sorry we missed you, a counsellor will call back. Their reply lands on the same contact.</p></div>
+		<div class="step card"><h3>A call-back for your team</h3><p>The missed call becomes a call-back with a deadline. It closes by itself when someone gets through, and the owner hears if nobody does.</p></div>
+		<div class="step card"><h3>From enquiry to admission</h3><p>Move each lead from New to Visit booked to Admitted, and see every stage on one board.</p></div>
+	</section>
+
+	<section class="features">
+		<div class="feature card"><div class="ic">☎</div><h3>Calls, WhatsApp and Instagram together</h3><p>One contact per parent, whichever way they reach you: calls, WhatsApp, Instagram, email and your website chat.</p></div>
+		<div class="feature card"><div class="ic">↺</div><h3>No missed call forgotten</h3><p>Every missed call becomes a call-back for the right counsellor, with one click to call back from their own phone.</p></div>
+		<div class="feature card"><div class="ic">▦</div><h3>Admissions board</h3><p>See every enquiry by stage, what they asked for (course, class, city) and when you last spoke.</p></div>
+		<div class="feature card"><div class="ic">✦</div><h3>AI that speaks Hinglish</h3><p>An AI assistant answers fees, batches and timings on WhatsApp in Hindi, English or Hinglish, and hands over to a counsellor.</p></div>
+		<div class="feature card"><div class="ic">▶</div><h3>Every call recorded and summarised</h3><p>Listen to any call, or read its AI summary: what the parent wanted and what was promised.</p></div>
+		<div class="feature card"><div class="ic">▤</div><h3>The day's numbers on WhatsApp</h3><p>Every evening the owner gets enquiries, calls, missed calls, call-backs waiting and admissions, on WhatsApp.</p></div>
+	</section>
+
+	<h2 class="section-title">Built for</h2>
+	<section class="for">
+		<span>JEE and NEET coaching</span><span>IELTS and study abroad</span><span>Tuition centres</span><span>Computer and skill courses</span><span>Schools and colleges</span>
+	</section>
+
+	<h2 class="section-title">Questions institutes ask</h2>
+	<section class="faq">
+		<details class="card"><summary>We already use a WhatsApp bot. Why this?</summary><p>Keep it for the easy questions. {{ .Data.Product }} handles what a bot can't: parents who call, missed calls, following up, and showing you who followed up and who didn't. When you're ready, move WhatsApp over too and have everything in one place.</p></details>
+		<details class="card"><summary>Do we need a new phone number?</summary><p>Calls come in on an Exotel number, which can be a new one or the one your institute already advertises. Counsellors take calls on their own mobiles.</p></details>
+		<details class="card"><summary>How long does setup take?</summary><p>A day. We connect your WhatsApp and phone line, add your counsellors, and set up the AI assistant with your courses and fees.</p></details>
+		<details class="card"><summary>Is our data safe?</summary><p>Each institute has its own workspace, with two-factor login, audit logs and a full export of its data any time.</p></details>
+	</section>
+
+	<section class="login card" id="login">
+		<h2>Log in to your workspace</h2>
+		<p>Enter your workspace address.</p>
+		<form id="login-form">
+			<label class="addr">
+				<input id="slug" name="slug" required autocomplete="organization" placeholder="brightclasses" aria-label="Workspace address" />
+				<span>.{{ .Data.BaseDomain }}</span>
+			</label>
+			<button type="submit">Continue</button>
+		</form>
+		<div class="err" id="login-error" role="alert"></div>
+	</section>
+
+	{{ if or .Data.SignupEnabled .Data.DemoURL }}
+	<section class="band card" style="margin-top: 3rem;">
+		<h2>Stop losing enquiries this admission season</h2>
+		<p>Set up your workspace, or see it with your own calls in a 10-minute demo.</p>
+		{{ if .Data.SignupEnabled }}<a class="btn lg" href="/signup">Get started</a>{{ end }}
+		{{ if .Data.DemoURL }}<a class="btn lg{{ if .Data.SignupEnabled }} ghost{{ end }}" href="{{ .Data.DemoURL }}">Book a demo</a>{{ end }}
+	</section>
+	{{ end }}
+
+	<footer>
+		<span>© {{ .Data.Product }}</span>
+	</footer>
+</div>
+
+<script>
+(function () {
+	var form = document.getElementById('login-form');
+	var slug = document.getElementById('slug');
+	var err = document.getElementById('login-error');
+	form.addEventListener('submit', function (e) {
+		e.preventDefault();
+		err.textContent = '';
+		var value = slug.value.trim().toLowerCase();
+		if (!value) return;
+		fetch('/api/v1/workspaces/lookup?slug=' + encodeURIComponent(value))
+			.then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+			.then(function (res) {
+				if (res.ok && res.body.data && res.body.data.url) {
+					window.location.href = res.body.data.url + '/';
+					return;
+				}
+				err.textContent = 'No workspace at ' + value + '.{{ .Data.BaseDomain }}. Check the address, or create one.';
+			})
+			.catch(function () { err.textContent = 'Something went wrong. Please try again.'; });
+	});
+})();
+</script>
+</body>
+</html>
+{{ end }}

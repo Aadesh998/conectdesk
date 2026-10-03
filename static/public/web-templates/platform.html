@@ -1,0 +1,492 @@
+{{ define "platform" }}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Platform admin</title>
+{{ template "app-theme" . }}
+<style>
+	/* Colours come from the app's theme (app-theme, in signup.html). */
+	:root {
+		--panel: var(--card); --text: var(--fg); --subtle: var(--muted-fg);
+		--accent: var(--primary); --accent-text: var(--primary-fg);
+		--ok: var(--success); --ok-bg: var(--success-bg); --bad: var(--destructive); --bad-bg: var(--destructive-bg);
+		--bar: var(--primary); --hover: var(--muted);
+	}
+	* { box-sizing: border-box; }
+	body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 "Instrument Sans", system-ui, sans-serif; }
+	a { color: inherit; }
+	header { display: flex; align-items: center; gap: 1.5rem; padding: 0.75rem 1.5rem; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+	header strong { font-size: 1rem; }
+	header nav { display: flex; gap: 1rem; flex: 1; }
+	header nav a { text-decoration: none; color: var(--subtle); padding: 0.25rem 0; }
+	header nav a.on { color: var(--text); border-bottom: 2px solid var(--accent); }
+	main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+	h1 { font-size: 1.35rem; margin: 0 0 1rem; }
+	h2 { font-size: 1rem; margin: 1.75rem 0 0.75rem; }
+	.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.75rem; }
+	.card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; }
+	.card .n { font-size: 1.6rem; font-weight: 650; }
+	.card .l { color: var(--subtle); font-size: 0.8rem; }
+	.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; }
+	table { width: 100%; border-collapse: collapse; }
+	th, td { text-align: left; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+	th { color: var(--subtle); font-weight: 500; font-size: 0.8rem; }
+	tr:last-child td { border-bottom: 0; }
+	tbody tr.link { cursor: pointer; }
+	tbody tr.link:hover { background: var(--hover); }
+	.muted { color: var(--subtle); }
+	.badge { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 99px; font-size: 0.75rem; border: 1px solid var(--border); }
+	.badge.active { color: var(--ok); background: var(--ok-bg); border-color: transparent; }
+	.badge.suspended, .badge.deleting { color: var(--bad); background: var(--bad-bg); border-color: transparent; }
+	input, select, button { font: inherit; color: inherit; }
+	input, select { width: auto; background: var(--panel); border: 1px solid var(--input); border-radius: var(--radius); padding: 0.45rem 0.6rem; }
+	button { background: var(--accent); color: var(--accent-text); border: 0; border-radius: var(--radius); padding: 0.45rem 0.85rem; cursor: pointer; font-weight: 500; }
+	button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+	button.danger { background: var(--bad); color: var(--card); }
+	.form { max-width: 560px; display: grid; gap: 0.85rem; }
+	.form label { display: block; font-size: 0.85rem; color: var(--subtle); margin-bottom: 0.3rem; }
+	.form input, .form select { width: 100%; }
+	.form .pair { display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem; }
+	.form .check { display: flex; align-items: center; gap: 0.5rem; }
+	.form .check input { width: auto; }
+	.note { font-size: 0.85rem; color: var(--subtle); background: var(--hover); border-radius: var(--radius); padding: 0.75rem 0.9rem; }
+	button:disabled { opacity: 0.5; cursor: default; }
+	.toolbar { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; align-items: center; }
+	.toolbar input[type=search] { flex: 1; min-width: 220px; }
+	.chart { display: flex; align-items: flex-end; gap: 3px; height: 110px; padding: 0.75rem 1rem; }
+	.chart div { flex: 1; background: var(--bar); border-radius: 3px 3px 0 0; min-height: 2px; }
+	.two { display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem; }
+	@media (max-width: 800px) { .two { grid-template-columns: 1fr; } }
+	/* Phones: two number cards a row, a compact header, and tables that
+	   scroll sideways inside their panel instead of widening the page. */
+	@media (max-width: 600px) {
+		header { gap: 0.5rem 1rem; padding: 0.75rem 1rem; }
+		header nav { order: 3; flex-basis: 100%; overflow-x: auto; gap: 0.9rem; }
+		main { padding: 1rem; }
+		.cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+		.card { padding: 0.75rem; }
+		.card .n { font-size: 1.25rem; }
+		th, td { padding: 0.5rem 0.6rem; }
+		.form .pair { grid-template-columns: 1fr; }
+		.toolbar input[type=search] { min-width: 0; }
+		.login { margin: 6vh 1rem; padding: 1.25rem; }
+	}
+	.login { max-width: 360px; margin: 12vh auto; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; }
+	.login label { display: block; margin: 0.9rem 0 0.3rem; font-weight: 600; }
+	.login input { width: 100%; }
+	.login button { width: 100%; margin-top: 1.25rem; }
+	.error { color: var(--bad); min-height: 1.3em; margin-top: 0.75rem; }
+	.actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0.25rem 0 0.5rem; }
+	.head { display: flex; align-items: baseline; gap: 0.75rem; flex-wrap: wrap; }
+	.pager { display: flex; gap: 0.5rem; align-items: center; justify-content: flex-end; margin-top: 0.75rem; }
+	#toast { position: fixed; bottom: 1.25rem; right: 1.25rem; background: var(--accent); color: var(--accent-text); padding: 0.6rem 1rem; border-radius: 8px; display: none; max-width: 420px; }
+	#toast.bad { background: var(--bad); color: #fff; }
+	code { font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" role="status"></div>
+<script>
+(function () {
+	'use strict';
+	var app = document.getElementById('app');
+	var me = null;
+
+	// el builds an element; strings become text nodes, never HTML.
+	function el(tag, attrs) {
+		var e = document.createElement(tag);
+		for (var k in (attrs || {})) {
+			var v = attrs[k];
+			if (v === null || v === undefined || v === false) continue;
+			if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
+			else if (k === 'text') e.textContent = v;
+			else e.setAttribute(k, v === true ? '' : v);
+		}
+		for (var i = 2; i < arguments.length; i++) {
+			var c = arguments[i];
+			if (c === null || c === undefined || c === false) continue;
+			(Array.isArray(c) ? c : [c]).forEach(function (x) {
+				if (x === null || x === undefined || x === false) return;
+				e.appendChild(typeof x === 'object' ? x : document.createTextNode(String(x)));
+			});
+		}
+		return e;
+	}
+
+	function cookie(name) {
+		var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+		return m ? decodeURIComponent(m[1]) : '';
+	}
+
+	function api(method, path, body) {
+		var opts = { method: method, headers: {}, credentials: 'same-origin' };
+		if (method !== 'GET') opts.headers['X-Platform-CSRF'] = cookie('platform_csrf');
+		if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+		return fetch('/api/platform/' + path, opts).then(function (r) {
+			return r.json().catch(function () { return {}; }).then(function (j) {
+				if (r.status === 401) { me = null; renderLogin(); throw new Error(j.message || 'Log in again'); }
+				if (!r.ok) { var e = new Error(j.message || 'Request failed (' + r.status + ')'); e.data = j.data; throw e; }
+				return j.data;
+			});
+		});
+	}
+
+	var toastTimer;
+	function toast(msg, bad) {
+		var t = document.getElementById('toast');
+		t.textContent = msg; t.className = bad ? 'bad' : ''; t.style.display = 'block';
+		clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.style.display = 'none'; }, 4000);
+	}
+	function fail(err) { toast(err.message, true); }
+
+	function date(s) { return s ? new Date(s).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'; }
+	function ago(s) {
+		if (!s) return 'never';
+		var d = (Date.now() - new Date(s).getTime()) / 1000;
+		if (d < 60) return 'just now';
+		if (d < 3600) return Math.floor(d / 60) + 'm ago';
+		if (d < 86400) return Math.floor(d / 3600) + 'h ago';
+		return Math.floor(d / 86400) + 'd ago';
+	}
+	function badge(status) { return el('span', { class: 'badge ' + status, text: status }); }
+	function card(n, label) { return el('div', { class: 'card' }, el('div', { class: 'n', text: n }), el('div', { class: 'l', text: label })); }
+	function table(cols, rows, onRow) {
+		return el('div', { class: 'panel' }, el('table', null,
+			el('thead', null, el('tr', null, cols.map(function (c) { return el('th', { text: c }); }))),
+			el('tbody', null, rows.length ? rows.map(function (r) {
+				return el('tr', { class: onRow ? 'link' : null, onclick: onRow ? function () { onRow(r.item); } : null },
+					r.cells.map(function (c) { return el('td', null, c); }));
+			}) : el('tr', null, el('td', { colspan: cols.length, class: 'muted', text: 'Nothing here.' })))));
+	}
+
+	function renderLogin() {
+		app.replaceChildren(el('form', { class: 'login', onsubmit: function (e) {
+			e.preventDefault();
+			var btn = e.target.querySelector('button'), err = e.target.querySelector('.error');
+			btn.disabled = true; err.textContent = '';
+			api('POST', 'login', { email: e.target.email.value, password: e.target.password.value })
+				.then(function (d) {
+					if (d && d.two_factor_required) return renderTwoFactorLogin(d.two_factor_token);
+					return boot();
+				})
+				.catch(function (x) { err.textContent = x.message; btn.disabled = false; });
+		} },
+			el('h1', { text: 'Platform admin' }),
+			el('p', { class: 'muted', text: 'Every workspace on {{ .Data.BaseDomain }}.' }),
+			el('label', { for: 'email', text: 'Email' }), el('input', { id: 'email', name: 'email', type: 'email', required: true, autocomplete: 'username' }),
+			el('label', { for: 'password', text: 'Password' }), el('input', { id: 'password', name: 'password', type: 'password', required: true, autocomplete: 'current-password' }),
+			el('button', { type: 'submit', text: 'Log in' }),
+			el('div', { class: 'error', role: 'alert' })));
+	}
+
+	// The code step of a login with two-factor login.
+	function renderTwoFactorLogin(token) {
+		app.replaceChildren(el('form', { class: 'login', onsubmit: function (e) {
+			e.preventDefault();
+			var btn = e.target.querySelector('button'), err = e.target.querySelector('.error');
+			btn.disabled = true; err.textContent = '';
+			api('POST', 'login/2fa', { two_factor_token: token, code: e.target.code.value })
+				.then(function () { return boot(); })
+				.catch(function (x) {
+					if (x.data && x.data.two_factor_expired) { renderLogin(); return; }
+					err.textContent = x.message; btn.disabled = false; e.target.code.value = '';
+				});
+		} },
+			el('h1', { text: 'Two-factor code' }),
+			el('p', { class: 'muted', text: 'Enter the 6-digit code from your authenticator app, or a recovery code.' }),
+			el('label', { for: 'code', text: 'Code' }),
+			el('input', { id: 'code', name: 'code', required: true, autocomplete: 'one-time-code', autofocus: true, maxlength: '12' }),
+			el('button', { type: 'submit', text: 'Verify' }),
+			el('div', { class: 'error', role: 'alert' })));
+		app.querySelector('#code').focus();
+	}
+
+	// Platform admins set up two-factor login before using the dashboard.
+	function renderTwoFactorSetup() {
+		var box = el('div', { class: 'login' }, el('h1', { text: 'Set up two-factor login' }),
+			el('p', { class: 'muted', text: 'The platform dashboard requires a code from an authenticator app, such as Google Authenticator, 1Password or Authy.' }),
+			el('p', { class: 'muted', text: 'Loading…' }));
+		app.replaceChildren(box);
+		api('POST', '2fa/setup').then(function (d) {
+			var err = el('div', { class: 'error', role: 'alert' });
+			var form = el('form', { onsubmit: function (e) {
+				e.preventDefault();
+				api('POST', '2fa/enable', { code: e.target.code.value }).then(function (r) {
+					box.replaceChildren(el('h1', { text: 'Recovery codes' }),
+						el('p', { class: 'muted', text: 'Each code logs you in once if you lose your phone. Keep them somewhere safe: they won\u2019t be shown again.' }),
+						el('pre', { text: r.recovery_codes.join('\n') }),
+						el('button', { onclick: function () { boot(); }, text: 'I\u2019ve saved them' }));
+				}).catch(function (x) { err.textContent = x.message; });
+			} },
+				el('label', { for: 'code', text: 'The 6-digit code the app shows' }),
+				el('input', { id: 'code', name: 'code', required: true, autocomplete: 'one-time-code', maxlength: '6' }),
+				el('button', { type: 'submit', text: 'Turn on' }), err);
+			box.replaceChildren(el('h1', { text: 'Set up two-factor login' }),
+				el('p', { class: 'muted', text: 'Scan this QR code with your authenticator app, or enter the key.' }),
+				el('img', { src: d.qr, alt: 'QR code', style: 'width:200px;height:200px;background:#fff;padding:8px;border-radius:8px' }),
+				el('p', null, 'Key: ', el('code', { text: d.secret })), form);
+		}).catch(fail);
+	}
+
+	function layout(active, content) {
+		function link(href, label, key) { return el('a', { href: href, class: key === active ? 'on' : null, text: label }); }
+		app.replaceChildren(
+			el('header', null, el('strong', { text: 'Platform admin' }),
+				el('nav', null, link('#/', 'Overview', 'overview'), link('#/workspaces', 'Workspaces', 'workspaces'), link('#/audit', 'Audit log', 'audit'), link('#/settings', 'Settings', 'settings')),
+				el('span', { class: 'muted', text: me.email }),
+				el('button', { class: 'ghost', onclick: function () { api('POST', 'logout').then(function () { me = null; renderLogin(); }).catch(fail); }, text: 'Log out' })),
+			el('main', null, content));
+	}
+
+	function overview() {
+		layout('overview', el('p', { class: 'muted', text: 'Loading…' }));
+		api('GET', 'overview').then(function (o) {
+			var peak = Math.max.apply(null, o.daily_signups.map(function (d) { return d.count; }).concat([1]));
+			layout('overview', [
+				el('h1', { text: 'Overview' }),
+				el('div', { class: 'cards' },
+					card(o.workspaces, 'Workspaces'), card(o.active, 'Active'), card(o.suspended, 'Suspended'),
+					card(o.active_workspaces_7d, 'Used in the last 7 days'), card(o.signups_7d, 'Signups, 7 days'),
+					card(o.signups_30d, 'Signups, 30 days'), card(o.pending_signups, 'Awaiting email verification'),
+					card(o.agents, 'Agents'), card(o.conversations_30d, 'Conversations, 30 days')),
+				el('div', { class: 'two' },
+					el('div', null, el('h2', { text: 'Signups, last 30 days' }), el('div', { class: 'panel chart' },
+						o.daily_signups.map(function (d) {
+							return el('div', { title: date(d.day) + ': ' + d.count, style: 'height:' + Math.round(d.count / peak * 100) + '%' });
+						}))),
+					el('div', null, el('h2', { text: 'Plans' }), table(['Plan', 'Workspaces'], o.plans.map(function (p) {
+						return { cells: [p.plan, String(p.count)] };
+					}))))
+			]);
+		}).catch(fail);
+	}
+
+	var listState = { q: '', status: '', page: 1 };
+	function workspaces() {
+		var search = el('input', { type: 'search', placeholder: 'Search name, address, domain or agent email', value: listState.q });
+		var status = el('select', null, [['', 'All statuses'], ['active', 'Active'], ['suspended', 'Suspended']].map(function (o) {
+			return el('option', { value: o[0], selected: o[0] === listState.status, text: o[1] });
+		}));
+		var results = el('div', null, el('p', { class: 'muted', text: 'Loading…' }));
+		var timer;
+		function load() {
+			var qs = 'q=' + encodeURIComponent(listState.q) + '&status=' + listState.status + '&page=' + listState.page;
+			api('GET', 'workspaces?' + qs).then(function (d) {
+				var pages = Math.max(1, Math.ceil(d.total / d.page_size));
+				results.replaceChildren(
+					table(['Workspace', 'Plan', 'Status', 'Agents', 'Inboxes', 'Conversations 30d', 'Last active', 'Created'],
+						d.results.map(function (w) {
+							return { item: w, cells: [
+								el('div', null, el('div', { text: w.name }), el('div', { class: 'muted', text: w.custom_domain || (w.slug + '.{{ .Data.BaseDomain }}') })),
+								w.plan, badge(w.status), String(w.agents), String(w.inboxes), String(w.conversations_30d), ago(w.last_active_at), date(w.created_at)] };
+						}), function (w) { location.hash = '#/workspaces/' + w.id; }),
+					el('div', { class: 'pager' },
+						el('span', { class: 'muted', text: d.total + ' workspaces · page ' + d.page + ' of ' + pages }),
+						el('button', { class: 'ghost', disabled: d.page <= 1, onclick: function () { listState.page--; load(); }, text: 'Previous' }),
+						el('button', { class: 'ghost', disabled: d.page >= pages, onclick: function () { listState.page++; load(); }, text: 'Next' })));
+			}).catch(fail);
+		}
+		search.addEventListener('input', function () {
+			clearTimeout(timer);
+			timer = setTimeout(function () { listState.q = search.value; listState.page = 1; load(); }, 250);
+		});
+		status.addEventListener('change', function () { listState.status = status.value; listState.page = 1; load(); });
+		layout('workspaces', [el('h1', { text: 'Workspaces' }), el('div', { class: 'toolbar' }, search, status), results]);
+		load();
+		search.focus();
+	}
+
+	function limit(used, max) { return used + ' / ' + (max ? max : '∞'); }
+	function size(bytes) {
+		var units = ['B', 'KB', 'MB', 'GB', 'TB'], i = 0;
+		while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+		return (i ? bytes.toFixed(1) : bytes) + ' ' + units[i];
+	}
+
+	function workspace(id) {
+		layout('workspaces', el('p', { class: 'muted', text: 'Loading…' }));
+		api('GET', 'workspaces/' + id).then(function (d) { renderWorkspace(d); }).catch(fail);
+	}
+
+	function renderWorkspace(d) {
+		var w = d.workspace;
+		var plan = el('select', null, me.plans.concat(me.plans.indexOf(w.plan) < 0 ? [w.plan] : []).map(function (p) {
+			return el('option', { value: p, selected: p === w.plan, text: p });
+		}));
+		function act(p) { return p.then(renderWorkspace).then(function () { toast('Saved'); }).catch(fail); }
+		var deleting = !!w.deletion_scheduled_at;
+		var actions = el('div', { class: 'actions' },
+			d['default'] ? el('span', { class: 'muted', text: 'The default workspace can’t be suspended or deleted.' }) : deleting ? [
+				el('span', { class: 'badge suspended', text: 'Deletes on ' + date(w.deletion_scheduled_at) }),
+				el('button', { onclick: function () { act(api('POST', 'workspaces/' + w.id + '/restore')); }, text: 'Restore' }),
+				el('button', { class: 'danger', onclick: function () {
+					var typed = prompt('Delete ' + w.name + ' and ALL its data NOW, without waiting? This can’t be undone.\nType its address, ' + w.slug + ', to confirm:');
+					if (typed === null) return;
+					api('POST', 'workspaces/' + w.id + '/delete', { confirm: typed, now: true }).then(function () {
+						toast('Deleted ' + w.slug); location.hash = '#/workspaces';
+					}).catch(fail);
+				}, text: 'Delete now' })
+			] : [
+				w.status === 'active'
+					? el('button', { class: 'ghost', onclick: function () {
+						if (confirm('Suspend ' + w.name + '? Its agents and customers get a "suspended" page until you activate it.'))
+							act(api('PUT', 'workspaces/' + w.id + '/status', { status: 'suspended' }));
+					}, text: 'Suspend' })
+					: el('button', { onclick: function () { act(api('PUT', 'workspaces/' + w.id + '/status', { status: 'active' })); }, text: 'Activate' })
+			],
+			el('span', { class: 'muted', text: 'Plan' }), plan,
+			el('button', { class: 'ghost', onclick: function () {
+				if (plan.value !== w.plan) act(api('PUT', 'workspaces/' + w.id + '/plan', { plan: plan.value }));
+			}, text: 'Change plan' }),
+			d['default'] || deleting ? null : el('button', { class: 'danger', onclick: function () {
+				var typed = prompt('Suspend ' + w.name + ' now and delete it with ALL its data after the grace period? Until then you can restore it.\nType its address, ' + w.slug + ', to confirm:');
+				if (typed === null) return;
+				act(api('POST', 'workspaces/' + w.id + '/delete', { confirm: typed }));
+			}, text: 'Delete' }));
+
+		function impersonate(agent) {
+			api('POST', 'workspaces/' + w.id + '/impersonate', { user_id: agent.id }).then(function (r) {
+				var tab = window.open(r.url, '_blank', 'noopener');
+				if (!tab) toast('Allow pop-ups, or open the link within ' + r.expires_in + 's: ' + r.url);
+			}).catch(fail);
+		}
+
+		layout('workspaces', [
+			el('p', null, el('a', { href: '#/workspaces', class: 'muted', text: '← Workspaces' })),
+			el('div', { class: 'head' }, el('h1', { text: w.name }), badge(w.status),
+				el('a', { href: d.url, target: '_blank', rel: 'noopener', class: 'muted', text: d.url })),
+			el('p', { class: 'muted', text: 'Created ' + date(w.created_at) + ' · plan ' + w.plan + ' · id ' + w.id }),
+			actions,
+			el('div', { class: 'cards' },
+				card(limit(d.usage.agents, d.limits.agents), 'Agents (plan limit)'),
+				card(limit(d.usage.inboxes, d.limits.inboxes), 'Inboxes (plan limit)'),
+				card(d.counts.contacts, 'Contacts'), card(d.counts.conversations, 'Conversations'),
+				card(d.counts.conversations_30d, 'Conversations, 30 days'), card(d.counts.help_centers, 'Help centers')),
+			el('h2', { text: 'Fair use' }),
+			el('div', { class: 'cards' },
+				card(size(d.fair_use.storage_bytes) + ' / ' + (d.limits.storage_mb ? size(d.limits.storage_mb * 1048576) : '∞'), 'File storage'),
+				card(limit(d.fair_use.ai_requests_month, d.limits.ai_requests_per_month), 'AI requests this month'),
+				card(d.limits.api_requests_per_minute ? d.limits.api_requests_per_minute + '/min' : '∞', 'API rate limit'),
+				card(d.fair_use.throttled_today, 'Requests throttled today'),
+				card(d.limits.file_upload_mb ? d.limits.file_upload_mb + ' MB' : 'workspace setting', 'Largest upload')),
+			el('h2', { text: 'Agents' }),
+			table(['Name', 'Email', 'Roles', 'Last active', 'Last login', ''], d.agents.map(function (a) {
+				return { cells: [
+					(a.first_name + ' ' + a.last_name).trim(), a.email || '', a.roles.join(', '), ago(a.last_active_at), ago(a.last_login_at),
+					a.enabled && w.status === 'active'
+						? el('button', { class: 'ghost', title: 'Opens the workspace logged in as this agent. Recorded in both audit logs.', onclick: function () { impersonate(a); }, text: 'Log in as' })
+						: el('span', { class: 'muted', text: a.enabled ? 'workspace suspended' : 'disabled' })] };
+			})),
+			el('h2', { text: 'Domains' }),
+			table(['Domain', 'Status', 'Used for'], d.domains.map(function (x) {
+				var uses = (x.primary ? ['workspace address'] : []).concat(x.help_centers.map(function (h) { return 'help center ' + h; }));
+				return { cells: [x.hostname, x.verified_at ? 'verified ' + date(x.verified_at) : 'not verified', uses.join(', ') || '—'] };
+			})),
+			el('h2', { text: 'Platform audit for this workspace' }),
+			auditTable(d.audit)
+		]);
+	}
+
+	function auditTable(entries) {
+		return table(['When', 'Admin', 'Action', 'Workspace', 'Details', 'IP'], entries.map(function (e) {
+			var details = e.details && Object.keys(e.details).length ? JSON.stringify(e.details) : '';
+			return { item: e, cells: [new Date(e.created_at).toLocaleString(), e.admin_email, e.action.replace('_', ' '),
+				e.workspace_id ? el('a', { href: '#/workspaces/' + e.workspace_id, text: e.workspace_slug }) : (e.workspace_slug || '—'),
+				el('code', { text: details }), e.ip] };
+		}));
+	}
+
+	function audit() {
+		layout('audit', el('p', { class: 'muted', text: 'Loading…' }));
+		api('GET', 'audit').then(function (entries) {
+			layout('audit', [el('h1', { text: 'Audit log' }), el('p', { class: 'muted', text: 'Everything platform admins did, newest first.' }), auditTable(entries)]);
+		}).catch(fail);
+	}
+
+	// The platform's own mailer: signup verification, and the email of every
+	// workspace without mail settings of its own.
+	function settingsPage() {
+		layout('settings', el('p', { class: 'muted', text: 'Loading…' }));
+		api('GET', 'mail').then(function (d) {
+			var m = d.settings || {};
+			function field(label, input) { return el('div', null, el('label', { text: label }), input); }
+			function inp(name, value, attrs) {
+				var a = attrs || {}; a.name = name; a.value = value == null ? '' : value;
+				return el('input', a);
+			}
+			function sel(name, value, options) {
+				return el('select', { name: name }, options.map(function (o) {
+					return el('option', { value: o[0], selected: o[0] === value, text: o[1] });
+				}));
+			}
+			var form = el('form', { class: 'form', onsubmit: function (e) {
+				e.preventDefault();
+				var f = e.target;
+				api('PUT', 'mail', {
+					enabled: f.enabled.checked,
+					host: f.host.value, port: parseInt(f.port.value, 10) || 0,
+					tls_type: f.tls_type.value, auth_protocol: f.auth_protocol.value,
+					username: f.username.value, password: f.password.value,
+					email_address: f.email_address.value, tls_skip_verify: f.tls_skip_verify.checked
+				}).then(function () { toast('Saved'); settingsPage(); }).catch(fail);
+			} },
+				el('div', { class: 'check' }, el('input', { type: 'checkbox', id: 'enabled', name: 'enabled', checked: !!m.enabled }),
+					el('label', { for: 'enabled', style: 'margin:0', text: 'Send email through this server' })),
+				el('div', { class: 'pair' },
+					field('SMTP host', inp('host', m.host, { placeholder: 'smtp.mailgun.org' })),
+					field('Port', inp('port', m.port || 587, { type: 'number', min: '1', max: '65535' }))),
+				el('div', { class: 'pair' },
+					field('Security', sel('tls_type', m.tls_type || 'starttls', [['starttls', 'STARTTLS (port 587)'], ['tls', 'TLS (port 465)'], ['none', 'None']])),
+					field('Authentication', sel('auth_protocol', m.auth_protocol || 'login', [['login', 'Login'], ['plain', 'Plain'], ['cram', 'CRAM-MD5'], ['none', 'None']]))),
+				field('Username', inp('username', m.username, { placeholder: 'postmaster@mg.yourapp.com', autocomplete: 'off' })),
+				field('Password', inp('password', '', { type: 'password', autocomplete: 'new-password',
+					placeholder: d.has_password ? 'Saved; type to replace' : '' })),
+				field('From', inp('email_address', m.email_address, { placeholder: 'YourApp <noreply@mg.yourapp.com>' })),
+				el('div', { class: 'check' }, el('input', { type: 'checkbox', id: 'tls_skip_verify', name: 'tls_skip_verify', checked: !!m.tls_skip_verify }),
+					el('label', { for: 'tls_skip_verify', style: 'margin:0', text: 'Skip TLS certificate check (only for testing)' })),
+				el('div', null, el('button', { type: 'submit', text: 'Save' })));
+
+			var to = el('input', { type: 'email', placeholder: 'you@example.com', style: 'flex:1;min-width:220px' });
+			var test = el('div', { class: 'toolbar' }, to, el('button', { class: 'ghost', onclick: function () {
+				api('POST', 'mail/test', { to: to.value }).then(function () { toast('Test email sent to ' + to.value); }).catch(fail);
+			}, text: 'Send test email' }));
+
+			layout('settings', [
+				el('h1', { text: 'Email' }),
+				el('p', { class: 'muted', text: 'The platform\u2019s mail server. It sends signup verification links, and the email of every workspace that hasn\u2019t set up its own under Admin \u2192 Notifications \u2192 Email; those go out with the workspace\u2019s name on your From address.' }),
+				el('div', { class: 'note' }, 'Mailgun: host ', el('code', { text: 'smtp.mailgun.org' }), ', port 587, STARTTLS, login; the username and password are the domain\u2019s SMTP credentials (Mailgun \u2192 Sending \u2192 Domain settings \u2192 SMTP credentials), and From is an address on that domain.'),
+				el('h2', { text: 'Mail server' }), form,
+				el('h2', { text: 'Test' }), el('p', { class: 'muted', text: 'Save first, then send a test to check the settings work.' }), test
+			]);
+		}).catch(fail);
+	}
+
+	function route() {
+		if (!me) return;
+		var h = location.hash.replace(/^#/, '') || '/';
+		var m = h.match(/^\/workspaces\/(\d+)$/);
+		if (m) workspace(m[1]);
+		else if (h === '/workspaces') workspaces();
+		else if (h === '/audit') audit();
+		else if (h === '/settings') settingsPage();
+		else overview();
+	}
+
+	function boot() {
+		return api('GET', 'me').then(function (d) {
+			me = d;
+			if (d.two_factor_required && !d.totp_enabled) return renderTwoFactorSetup();
+			route();
+		});
+	}
+
+	window.addEventListener('hashchange', route);
+	boot().catch(function () { if (!me) renderLogin(); });
+})();
+</script>
+</body>
+</html>
+{{ end }}

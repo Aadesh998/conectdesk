@@ -1,0 +1,12 @@
+node_modules
+config.toml
+config.toml.*
+conectdesk.bin
+conectdesk
+conectdesk.exe
+uploads
+.env
+dist/
+.vscode/
+static/widget.min.js
+markdown

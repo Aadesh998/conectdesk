@@ -1,0 +1,364 @@
+[app]
+# Log level: info, debug, warn, error, fatal
+log_level = "debug"
+# Environment: dev, prod.
+# Setting to "dev" will enable color logging in terminal.
+env = "dev"
+# Whether to check for application updates on start up; updates are shown as a banner in the admin panel.
+# Checks only run with update_check_url set to a JSON feed of releases.
+check_updates = false
+update_check_url = ""
+# Encryption key. Generate using `openssl rand -hex 16` must be 32 characters long.
+encryption_key = "your-32-char-random-string-here!"
+# Path to a directory with custom static files and templates to override the defaults.
+# The directory structure should mirror the built-in static/ directory.
+# Only the files you provide will be replaced; the rest use built-in defaults.
+# static_dir = "/path/to/custom/static"
+
+# Your legal documents, linked from every workspace's Admin > Privacy page for
+# customers who need them, e.g. to sign a data processing agreement. Empty
+# ones aren't shown.
+[app.legal]
+privacy_policy_url = ""
+dpa_url = ""
+subprocessors_url = ""
+
+# Multi-tenancy. When enabled, each business (tenant) is served on its own
+# subdomain of base_domain, e.g. acme.yourapp.com, or on its custom domain.
+# When disabled, the installation serves a single tenant on any host.
+[app.tenancy]
+enabled = false
+base_domain = ""
+# Scheme of tenant URLs in links and emails. Set "http" for local development.
+url_scheme = "https"
+# Let anyone create a workspace at https://<base_domain>/signup.
+signup_enabled = false
+# Product name on the landing page at the base domain.
+product_name = "ConectDesk"
+# Where the landing page's "Book a demo" buttons go, e.g. a calendar booking
+# page or a https://wa.me/ link. Leave empty to hide them.
+demo_url = ""
+# Email a verification link and only create the workspace once it's opened.
+# Needs the notification mailer (notification.email) to be on.
+signup_verify_email = true
+# Plan new workspaces start on; its limits are under [app.tenancy.plans.<name>].
+default_plan = "free"
+# Where a workspace's Admin > Usage page sends admins to upgrade their plan: a
+# pricing page or a mailto: link. Empty shows no upgrade button.
+upgrade_url = ""
+# Host the platform admin dashboard is served on; admin.<base_domain> when empty.
+# Use a host no workspace can take: "admin" and the other reserved slugs can't
+# be signed up for.
+platform_host = ""
+# Make platform admins log in with a code from an authenticator app; they set
+# it up at their first login. Reset a lost one with --platform-admin-reset-2fa.
+platform_require_2fa = true
+# How often verified custom domains have their DNS record looked up again; one
+# whose record is gone 3 times in a row stops working.
+domain_recheck_interval = "24h"
+# Days a deleted workspace is kept, suspended and restorable, before its data
+# is deleted.
+deletion_grace_days = 30
+# Most stored files a workspace data export includes, in MB.
+export_max_files_mb = 2048
+# Most of any shared background queue (webhooks, incoming mail, automation,
+# AI replies, notification email) one workspace may fill, in percent. Work of a
+# workspace over its share is dropped instead of everyone's. Default 10.
+queue_share_percent = 10
+# DNS server ("host:port") custom domain verification looks TXT records up on.
+# Empty uses the system resolver.
+dns_server = ""
+
+# Plan limits. 0 or a missing key means unlimited. A tenant on a plan not
+# listed here is unlimited, and so is the default tenant.
+#   max_storage_mb           file storage for attachments and avatars
+#   max_file_upload_mb       largest single upload, capping the workspace's own setting
+#   api_requests_per_minute  authenticated API and app requests of the whole workspace
+#   ai_requests_per_month    AI replies, rewrites, summaries and AI agent runs
+[app.tenancy.plans.free]
+max_agents = 2
+max_inboxes = 1
+max_storage_mb = 1024
+max_file_upload_mb = 10
+api_requests_per_minute = 300
+ai_requests_per_month = 200
+
+[app.tenancy.plans.growth]
+max_agents = 15
+max_inboxes = 5
+max_storage_mb = 20480
+max_file_upload_mb = 25
+api_requests_per_minute = 1200
+ai_requests_per_month = 5000
+
+[app.tenancy.plans.pro]
+max_agents = 0
+max_inboxes = 0
+
+# The installation's own Google and Microsoft OAuth apps. When set, workspaces
+# connect Gmail and Outlook inboxes with one click instead of creating an app
+# of their own. Register one redirect URL per provider:
+#   https://<base_domain>/oauth/google/callback
+#   https://<base_domain>/oauth/microsoft/callback
+# (without multi-tenancy: <root_url>/api/v1/inboxes/oauth/<provider>/callback).
+[oauth.google]
+client_id = ""
+client_secret = ""
+
+[oauth.microsoft]
+client_id = ""
+client_secret = ""
+# "common" accepts work and personal Microsoft accounts.
+tenant_id = "common"
+
+# The installation's Meta app, which every workspace connects WhatsApp numbers,
+# Facebook Pages and Instagram accounts through. Setup, permissions and App
+# Review are described in META_CHANNELS.md. In the App Dashboard, set:
+#   Webhook callback URL:        https://<base_domain>/webhook/meta
+#   Valid OAuth redirect URI:    https://<base_domain>/oauth/meta/callback
+#   Deauthorize callback URL:    https://<base_domain>/meta/deauthorize
+#   Data deletion request URL:   https://<base_domain>/meta/data-deletion
+# (without multi-tenancy use <root_url> for the host, and the redirect URI
+# <root_url>/api/v1/inboxes/oauth/meta/callback).
+[meta]
+app_id = ""
+app_secret = ""
+# Graph API version. Meta retires each version about two years after release.
+graph_version = "v24.0"
+# Any random string; enter the same one as the webhook's "Verify token".
+webhook_verify_token = ""
+# Facebook Login for Business configuration for WhatsApp Embedded Signup.
+# WhatsApp can't be connected without it.
+whatsapp_config_id = ""
+# Optional Facebook Login for Business configuration for Pages and Instagram.
+# Without it the login dialog asks for the permissions by scope.
+login_config_id = ""
+# Retry Messenger and Instagram replies that missed the 24-hour window with the
+# HUMAN_AGENT tag (7 days). Only turn on once App Review grants human_agent.
+human_agent = false
+
+# HTTP server.
+[app.server]
+# Address to bind the HTTP server to.
+address = "0.0.0.0:9000"
+# Unix socket path (leave empty to use TCP address instead)
+socket = ""
+# Do NOT disable secure cookies in production environment if you don't know exactly what you're doing!
+disable_secure_cookies = false
+# Session lifetime duration.
+session_lifetime = "9h"
+# Request read and write timeouts.
+read_timeout = "8s"
+write_timeout = "60s"
+# Maximum request body size in bytes (100MB)
+# If you are using proxy, you may need to configure them to allow larger request bodies.
+max_body_size = 104857600
+# Size of the read buffer for incoming requests (also limits max header size).
+read_buffer_size = 65536
+# Keepalive settings.
+keepalive_timeout = "10s"
+
+# File upload provider to use, either `fs` or `s3`.
+[upload]
+provider = "fs"
+
+# Filesystem provider.
+[upload.fs]
+# Directory where uploaded files are stored, make sure this directory exists and is writable by the application.
+upload_path = 'uploads'
+# Signed URL expiry duration (e.g., "30m", "1h"). Defaults to 1h if unset.
+expiry = "1h"
+
+# S3 provider.
+[upload.s3]
+# S3 endpoint URL (required only for non-AWS S3-compatible providers like MinIO).
+# Leave empty to use default AWS endpoints. The bucket is created if missing.
+url = ""
+# Address browsers reach the bucket at, when it differs from `url`, e.g. MinIO
+# on a private network: `url = "http://minio:9000"`, and here its public
+# address. Links to files (attachments, call recordings) are signed for it.
+presign_url = ""
+
+# AWS S3 credentials, keep empty to use attached IAM roles.
+access_key = ""
+secret_key = ""
+
+# AWS region, e.g., "us-east-1", "eu-west-1", etc.
+region = "ap-south-1"
+# S3 bucket name where files will be stored. To move from `fs`, run
+# `conectdesk --copy-uploads-to-s3` with this section filled in.
+bucket = "bucket-name"
+# Optional prefix path within the S3 bucket where files will be stored.
+# Example, if set to "uploads/media", files will be stored under that path.
+# Useful for organizing files inside a shared bucket.
+bucket_path = ""
+# S3 signed URL expiry duration (e.g., "30m", "1h")
+expiry = "30m"
+
+# Postgres.
+[db]
+# If running locally, use `localhost`.
+host = "db"
+# Database port, default is 5432.
+port = 5432
+# Update the following values with your database credentials.
+user = "conectdesk"
+password = "conectdesk"
+database = "conectdesk"
+ssl_mode = "disable"
+# Maximum number of open database connections
+max_open = 30
+# Maximum number of idle connections in the pool
+max_idle = 30
+# Maximum time a connection can be reused before being closed
+max_lifetime = "300s"
+
+# Redis.
+[redis]
+# url parameter overrides other redis config options
+# url = "redis://user:password@host:port/db"
+# If running locally, use `localhost:6379`.
+address = "redis:6379"
+user = ""
+password = ""
+db = 0
+
+[message]
+# Number of workers processing outgoing message queue
+outgoing_queue_workers = 10
+# Number of workers processing incoming message queue
+incoming_queue_workers = 10
+# How often to scan for outgoing messages to process, keep it low to process messages quickly.
+message_outgoing_scan_interval = "50ms"
+# Maximum number of messages that can be queued for incoming processing
+incoming_queue_size = 5000
+# Maximum number of messages that can be queued for outgoing processing
+outgoing_queue_size = 5000
+
+[notification]
+# Number of concurrent notification workers
+concurrency = 2
+# Maximum number of notifications that can be queued
+queue_size = 2000
+
+[automation]
+# Number of workers processing automation rules
+worker_count = 10
+
+[ai_agent]
+# Number of workers running autonomous AI assistant responses
+worker_count = 10
+# Maximum number of AI assistant response jobs that can be queued
+queue_size = 1000
+# Maximum number of tool calls the assistant can make while working on one reply. (1-20)
+max_steps = 6
+# Conversation messages sent to the model as history. (5-100)
+max_history_messages = 30
+
+[autoassigner]
+# How often to run automatic conversation assignment
+autoassign_interval = "5m"
+
+[webhook]
+# Number of webhook delivery workers
+workers = 5
+# Maximum number of webhook deliveries that can be queued
+queue_size = 10000
+# HTTP timeout for webhook requests
+timeout = "15s"
+
+# Slack app, for Admin > Integrations > Slack: workspaces install it and pick a
+# channel, see markdown/SLACK_TEAMS.md. From the app's Basic Information page.
+[slack]
+client_id = ""
+client_secret = ""
+signing_secret = ""
+# Slack's Web API. Change only for GovSlack: "https://slack-gov.com/api".
+api_base = "https://slack.com/api"
+
+# Microsoft Teams bot, for Admin > Integrations > Microsoft Teams: an Azure Bot
+# registration, see markdown/SLACK_TEAMS.md. app_tenant_id is the Microsoft 365
+# tenant of a single-tenant bot; leave it empty for a multi-tenant one.
+[teams]
+app_id = ""
+app_password = ""
+app_tenant_id = ""
+# What the bot is called in Teams, which people @mention.
+bot_name = "ConectDesk"
+
+# Posting conversation updates to connected Slack and Teams channels.
+[integration]
+workers = 4
+queue_size = 5000
+
+# SSRF guard for admin-configured outbound URLs (webhooks, OIDC discovery, AI provider and tool calls).
+[ssrf]
+# Block outbound requests to private/loopback/link-local/cloud-metadata IPs.
+# Leave false for self-hosted single-tenant deployments, where internal webhooks,
+# OIDC providers and model endpoints on private IPs are legitimate.
+# Set true for multi-tenant/hosted deployments where those URLs come from untrusted tenants.
+enabled = false
+# CIDR ranges allowed to bypass the guard when enabled, for reaching known internal hosts.
+# Examples: ["10.0.0.0/8", "192.168.1.10/32", "172.16.0.0/12", "fd00::/8"]
+allowed_cidrs = []
+
+[conversation]
+# How often to check for conversations to unsnooze
+unsnooze_interval = "5m"
+# How long to keep drafts before deleting them from the database. (e.g. "360h", "48h")
+draft_retention_duration = "360h"
+# How often to check for offline conversations in database to send continuity emails
+continuity_scan_interval = "5m"
+
+[sla]
+# How often to evaluate SLA compliance for conversations
+evaluation_interval = "5m"
+
+# Per-IP rate limits (requests per minute) for unauthenticated endpoints.
+# Setting enabled = false disables that rule entirely.
+
+# Livechat widget APIs.
+[rate_limit.widget]
+enabled = true
+requests_per_minute = 100
+
+# Login, password reset and other auth endpoints.
+[rate_limit.auth]
+enabled = true
+requests_per_minute = 30
+
+# Public pages and APIs: help center, CSAT, robots.txt/sitemaps.
+[rate_limit.public]
+enabled = true
+requests_per_minute = 100
+
+# Public media downloads (uploaded files, avatars).
+[rate_limit.media]
+enabled = true
+requests_per_minute = 300
+
+# Meta's webhook for WhatsApp, Messenger and Instagram. Meta calls it from a
+# handful of addresses for every workspace at once, so keep this generous.
+[rate_limit.meta_webhook]
+enabled = true
+requests_per_minute = 1200
+
+# Telegram bot webhooks, per workspace address.
+[rate_limit.telegram_webhook]
+enabled = true
+requests_per_minute = 1200
+
+# Exotel call webhooks, per workspace address.
+[rate_limit.voice_webhook]
+enabled = true
+requests_per_minute = 1200
+
+# Slack's events and button clicks, and the Teams bot's messages, for every
+# workspace on the base domain.
+[rate_limit.slack_webhook]
+enabled = true
+requests_per_minute = 1200
+
+[rate_limit.teams_webhook]
+enabled = true
+requests_per_minute = 1200

@@ -1,0 +1,35 @@
+FROM node:22-alpine AS frontend
+RUN corepack enable
+WORKDIR /src/frontend
+ARG CONECTDESK_VERSION=v0.0.0
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY frontend ./
+# The main app imports stylesheets from the repo-root static/ directory.
+COPY static /src/static
+RUN VITE_APP_VERSION="${CONECTDESK_VERSION}" pnpm build:main \
+    && VITE_APP_VERSION="${CONECTDESK_VERSION}" pnpm build:widget
+
+FROM golang:1.25-alpine AS backend
+RUN apk --no-cache add git
+WORKDIR /src
+ARG CONECTDESK_VERSION=v0.0.0
+COPY go.mod go.sum ./
+RUN go mod download
+RUN go install github.com/knadh/stuffbin/...@latest
+COPY . .
+COPY --from=frontend /src/frontend/dist ./frontend/dist
+RUN CGO_ENABLED=0 go build -ldflags="-s -w \
+      -X 'main.versionString=${CONECTDESK_VERSION}' \
+      -X 'main.buildString=${CONECTDESK_VERSION} (docker)' \
+      -X 'github.com/conectdesk/conectdesk/internal/version.Version=${CONECTDESK_VERSION}'" \
+      -o conectdesk ./cmd/
+RUN stuffbin -a stuff -in conectdesk -out conectdesk frontend/dist i18n schema static
+
+FROM alpine:3.18
+RUN apk --no-cache add ca-certificates tzdata
+WORKDIR /conectdesk
+COPY --from=backend /src/conectdesk .
+COPY config.sample.toml config.toml
+EXPOSE 9000
+CMD ["./conectdesk"]

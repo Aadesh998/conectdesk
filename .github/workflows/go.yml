@@ -1,0 +1,40 @@
+name: Go
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:17-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: conectdesk
+          POSTGRES_PASSWORD: conectdesk
+          POSTGRES_DB: conectdesk
+        options: >-
+          --health-cmd="pg_isready -U conectdesk"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      CONECTDESK_TEST_DB_DSN: "postgres://conectdesk:conectdesk@127.0.0.1:5432/conectdesk?sslmode=disable&connect_timeout=3"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0"
+
+      - name: Install dependencies
+        run: go get -v ./...
+
+      - name: Run tests
+        run: make test

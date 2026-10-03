@@ -1,0 +1,124 @@
+services:
+  # ConectDesk app
+  app:
+    image: ${CONECTDESK_IMAGE:-conectdesk/conectdesk:dev}
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        CONECTDESK_VERSION: ${CONECTDESK_VERSION:-v0.0.0-dev}
+    container_name: conectdesk_app
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      CONECTDESK_SYSTEM_USER_PASSWORD: ${CONECTDESK_SYSTEM_USER_PASSWORD:-}
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-}
+      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:-}
+
+      CONECTDESK_db__host: db
+      CONECTDESK_db__port: "5432"
+      CONECTDESK_db__user: ${POSTGRES_USER:-conectdesk}
+      CONECTDESK_db__password: ${POSTGRES_PASSWORD:-conectdesk}
+      CONECTDESK_db__database: ${POSTGRES_DB:-conectdesk}
+      CONECTDESK_redis__address: redis:6379
+
+      # Files on the MinIO below instead of ./uploads: UPLOAD_PROVIDER=s3.
+      # Move existing ones with `docker compose exec app ./conectdesk
+      # --copy-uploads-to-s3 --config /conectdesk/config.toml`.
+      CONECTDESK_upload__provider: ${UPLOAD_PROVIDER:-fs}
+      CONECTDESK_upload__s3__url: http://minio:9000
+      CONECTDESK_upload__s3__presign_url: ${MINIO_PUBLIC_URL:-http://localhost:9100}
+      CONECTDESK_upload__s3__access_key: ${MINIO_ROOT_USER:-conectdesk}
+      CONECTDESK_upload__s3__secret_key: ${MINIO_ROOT_PASSWORD:-conectdesk-minio}
+      CONECTDESK_upload__s3__region: us-east-1
+      CONECTDESK_upload__s3__bucket: conectdesk
+      CONECTDESK_upload__s3__expiry: 1h
+    networks:
+      - conectdesk
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    volumes:
+      - ./uploads:/conectdesk/uploads:rw
+      - ./config.toml:/conectdesk/config.toml
+    command:
+      - sh
+      - -c
+      - |
+        ./conectdesk --install --idempotent-install --yes --config /conectdesk/config.toml &&
+        ./conectdesk --upgrade --yes --config /conectdesk/config.toml &&
+        if [ -n "$$PLATFORM_ADMIN_EMAIL" ]; then
+          echo "$$PLATFORM_ADMIN_PASSWORD" | ./conectdesk --config /conectdesk/config.toml --platform-admin-add "$$PLATFORM_ADMIN_EMAIL" ||
+            echo "platform admin not created, fix PLATFORM_ADMIN_EMAIL/PASSWORD; starting anyway";
+        fi &&
+        exec ./conectdesk --config /conectdesk/config.toml
+
+  # PostgreSQL database
+  db:
+    image: postgres:17-alpine
+    container_name: conectdesk_db
+    restart: unless-stopped
+    networks:
+      - conectdesk
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-conectdesk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-conectdesk}
+      POSTGRES_DB: ${POSTGRES_DB:-conectdesk}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-conectdesk} -d ${POSTGRES_DB:-conectdesk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: conectdesk_redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - conectdesk
+    volumes:
+      - redis-data:/data
+
+  # MinIO, S3-compatible storage for uploads and call recordings. MinIO no
+  # longer publishes images on Docker Hub; this is Chainguard's build.
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: conectdesk_minio
+    restart: unless-stopped
+    command: ["server", "/data", "--address", ":9000", "--console-address", ":9001"]
+    user: "0"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-conectdesk}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-conectdesk-minio}
+    ports:
+      - "127.0.0.1:9100:9000"
+      - "127.0.0.1:9101:9001"
+    networks:
+      - conectdesk
+    volumes:
+      - minio-data:/data
+
+networks:
+  conectdesk:
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:

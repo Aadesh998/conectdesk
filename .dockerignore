@@ -1,0 +1,11 @@
+.git
+.github
+frontend/node_modules
+frontend/dist
+frontend/cypress
+node_modules
+uploads
+# The locally built binary and config; the image builds/ships its own.
+conectdesk
+config.toml
+.env

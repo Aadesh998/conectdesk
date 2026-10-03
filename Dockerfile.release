@@ -1,0 +1,17 @@
+FROM alpine:3.18
+
+# Install necessary packages
+RUN apk --no-cache add ca-certificates tzdata
+
+# Set the working directory to /conectdesk
+WORKDIR /conectdesk
+
+# Copy necessary files
+COPY conectdesk .
+COPY config.sample.toml config.toml
+
+# Expose port 9000 for the application
+EXPOSE 9000
+
+# Set the default command to run the conectdesk binary
+CMD ["./conectdesk"]
