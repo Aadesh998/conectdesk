@@ -48,6 +48,15 @@
       <p v-if="channel !== 'telegram'" class="text-xs text-muted-foreground">{{ $t('admin.inbox.meta.window') }}</p>
 
       <TelegramWebhookStatus v-if="channel === 'telegram' && initialValues.id" :inbox-id="initialValues.id" />
+      <!-- A number connected with the business's own Meta app is renewed by
+           entering its credentials again, not through Facebook. -->
+      <template v-else-if="manual">
+        <WhatsAppWebhookInfo v-if="initialValues.id" :key="webhookKey" :inbox-id="initialValues.id" />
+        <Button v-if="!showReconnect" type="button" variant="outline" @click="showReconnect = true">
+          {{ $t('whatsapp.manual.updateTitle') }}
+        </Button>
+        <WhatsAppManualConnect v-else reconnect @connected="onReconnected" />
+      </template>
       <template v-else>
         <p class="text-xs text-muted-foreground">
           {{ $t('admin.inbox.meta.reconnect.description') }}
@@ -167,7 +176,7 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
@@ -187,7 +196,11 @@ import WhatsAppTemplateManager from './WhatsAppTemplateManager.vue'
 import MetaHistoryImport from './MetaHistoryImport.vue'
 import WhatsAppHealth from './WhatsAppHealth.vue'
 import TelegramWebhookStatus from './TelegramWebhookStatus.vue'
+import WhatsAppManualConnect from './WhatsAppManualConnect.vue'
+import WhatsAppWebhookInfo from './WhatsAppWebhookInfo.vue'
 import { useI18n } from 'vue-i18n'
+import { useEmitter } from '@main/composables/useEmitter'
+import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
 
 const props = defineProps({
   initialValues: {
@@ -205,6 +218,7 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
+const emitter = useEmitter()
 
 // The server caps this again against the workspace's upload limit.
 const MAX_MEDIA_SIZE_MB = 100
@@ -243,6 +257,15 @@ const form = useForm({
 
 const channel = computed(() => props.initialValues.channel)
 const config = computed(() => props.initialValues.config || {})
+const manual = computed(() => channel.value === 'whatsapp' && config.value.connection_mode === 'manual')
+const showReconnect = ref(false)
+const webhookKey = ref(0)
+
+const onReconnected = () => {
+  showReconnect.value = false
+  webhookKey.value++
+  emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: t('toast.inboxConnected') })
+}
 
 // Only the options travel back; the server keeps the account and its token.
 const onSubmit = form.handleSubmit(async (values) => {

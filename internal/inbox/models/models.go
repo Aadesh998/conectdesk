@@ -149,12 +149,14 @@ func (m *Inbox) ClearPasswords() error {
 		if m.Secret.Valid && m.Secret.String != "" {
 			m.Secret = null.StringFrom(strings.Repeat(stringutil.PasswordDummy, 10))
 		}
-		// The access token and PIN never leave the server; the form can't edit them.
+		// The access token, PIN and app secret never leave the server; the form
+		// can't edit them. A manual WhatsApp inbox's verify token is shown only
+		// by its own endpoint.
 		var cfg map[string]interface{}
 		if err := json.Unmarshal(m.Config, &cfg); err != nil {
 			return err
 		}
-		for _, key := range []string{"access_token", "two_step_pin"} {
+		for _, key := range []string{"access_token", "two_step_pin", "app_secret", "webhook_verify_token"} {
 			if v, ok := cfg[key].(string); ok && v != "" {
 				cfg[key] = strings.Repeat(stringutil.PasswordDummy, 10)
 			}

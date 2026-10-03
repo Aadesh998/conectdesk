@@ -525,6 +525,14 @@ const getTelegramWebhook = (id) => http.get(`/api/v1/inboxes/${id}/telegram/webh
 const setTelegramWebhook = (id) => http.post(`/api/v1/inboxes/${id}/telegram/webhook`)
 // Starts connecting WhatsApp, Messenger or Instagram; returns the Facebook Login URL.
 const metaAuthorize = (product) => http.post(`/api/v1/inboxes/meta/${product}/authorize`)
+// A one-time key to seal WhatsApp credentials to before they're sent.
+const getWhatsAppManualKey = () => http.post('/api/v1/inboxes/whatsapp/manual/key')
+// Connects a WhatsApp number with credentials from the business's own Meta
+// app. The body is a sealed envelope, never the credentials themselves.
+const connectWhatsAppManual = (envelope) =>
+  http.post('/api/v1/inboxes/whatsapp/manual', envelope, { headers: { 'Content-Type': 'application/json' } })
+// A manually connected WhatsApp inbox's webhook URL and verify token.
+const getWhatsAppWebhook = (id) => http.get(`/api/v1/inboxes/${id}/whatsapp/webhook`)
 // A WhatsApp inbox's approved templates; refresh skips the server's short cache.
 const getWhatsAppTemplates = (inboxID, refresh = false) =>
   http.get(`/api/v1/inboxes/${inboxID}/whatsapp/templates`, { params: refresh ? { refresh: true } : {} })
@@ -801,6 +809,9 @@ export default {
   getUsers,
   getInbox,
   metaAuthorize,
+  getWhatsAppManualKey,
+  connectWhatsAppManual,
+  getWhatsAppWebhook,
   connectTelegram,
   getVoiceSetup,
   testVoice,

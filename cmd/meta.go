@@ -253,8 +253,8 @@ func connectWhatsAppNumbers(c context.Context, app *App, tid int, token string) 
 			}
 
 			// A number reconnected keeps the PIN it was registered with.
-			if pin := existingWhatsAppPIN(app, tid, n.ID); pin != "" {
-				cfg.TwoStepPIN = pin
+			if existing, _ := existingWhatsAppConfig(app, tid, n.ID); existing.TwoStepPIN != "" {
+				cfg.TwoStepPIN = existing.TwoStepPIN
 			} else if cfg.TwoStepPIN, err = randomPIN(); err != nil {
 				return res, err
 			}
@@ -429,24 +429,6 @@ func keepEditableOptions(existing, fresh json.RawMessage) (json.RawMessage, erro
 	return json.Marshal(next)
 }
 
-// existingWhatsAppPIN returns the PIN a number's inbox in this workspace was
-// registered with, if it has one.
-func existingWhatsAppPIN(app *App, tid int, phoneNumberID string) string {
-	owner, inboxID, found, err := app.inbox.AccountOwner(inbox.ChannelWhatsApp, phoneNumberID)
-	if err != nil || !found || owner != tid {
-		return ""
-	}
-	record, err := app.inbox.GetDBRecord(tid, inboxID)
-	if err != nil {
-		return ""
-	}
-	var cfg whatsapp.Config
-	if json.Unmarshal(record.Config, &cfg) != nil {
-		return ""
-	}
-	return cfg.TwoStepPIN
-}
-
 // randomPIN returns a six-digit two-step verification PIN.
 func randomPIN() (string, error) {
 	n, err := rand.Int(rand.Reader, big.NewInt(1_000_000))
@@ -521,7 +503,7 @@ func handleMetaWebhook(r *fastglue.Request) error {
 		var err error
 		switch env.Object {
 		case meta.ObjectWhatsApp:
-			err = handleWhatsAppEntry(c, app, entry)
+			err = handleWhatsAppEntry(c, app, entry, nil)
 		case meta.ObjectPage:
 			err = handleMessagingEntry(c, app, inbox.ChannelMessenger, entry)
 		case meta.ObjectInstagram:
@@ -545,7 +527,15 @@ func handleMetaWebhook(r *fastglue.Request) error {
 // handleWhatsAppEntry stores the messages of one WhatsApp webhook entry, and
 // disconnects the account's inboxes if the business removed the app. It
 // returns an error only when a message couldn't be queued and should be retried.
-func handleWhatsAppEntry(c context.Context, app *App, entry meta.Entry) error {
+//
+// only is set for an entry from a manually connected inbox's own webhook. That
+// is signed with the business's app secret, not the platform's, so it is
+// trusted for that inbox alone: everything else in it is dropped.
+func handleWhatsAppEntry(c context.Context, app *App, entry meta.Entry, only *whatsapp.WhatsApp) error {
+	if only != nil && entry.ID != only.Config().WABAID {
+		app.lo.Warn("dropping whatsapp webhook entry for another account", "inbox_id", only.Identifier(), "waba_id", entry.ID)
+		return nil
+	}
 	var failed error
 	for _, change := range entry.Changes {
 		switch change.Field {
@@ -555,14 +545,22 @@ func handleWhatsAppEntry(c context.Context, app *App, entry meta.Entry) error {
 				app.lo.Error("error decoding whatsapp webhook change", "error", err)
 				continue
 			}
-			inb, ok := app.inbox.FindByAccount(inbox.ChannelWhatsApp, v.Metadata.PhoneNumberID)
-			if !ok {
-				app.lo.Debug("no whatsapp inbox for number", "phone_number_id", v.Metadata.PhoneNumberID)
-				continue
-			}
-			wa, ok := inb.(*whatsapp.WhatsApp)
-			if !ok {
-				continue
+			var wa *whatsapp.WhatsApp
+			if only != nil {
+				if v.Metadata.PhoneNumberID != only.AccountID() {
+					app.lo.Warn("dropping whatsapp webhook change for another number", "inbox_id", only.Identifier(), "phone_number_id", v.Metadata.PhoneNumberID)
+					continue
+				}
+				wa = only
+			} else {
+				inb, ok := app.inbox.FindByAccount(inbox.ChannelWhatsApp, v.Metadata.PhoneNumberID)
+				if !ok {
+					app.lo.Debug("no whatsapp inbox for number", "phone_number_id", v.Metadata.PhoneNumberID)
+					continue
+				}
+				if wa, ok = inb.(*whatsapp.WhatsApp); !ok {
+					continue
+				}
 			}
 			for _, rc := range wa.Receipts(v) {
 				applyReceipt(app, wa.TenantID(), wa.Identifier(), rc)
@@ -579,44 +577,56 @@ func handleWhatsAppEntry(c context.Context, app *App, entry meta.Entry) error {
 		case "message_template_status_update":
 			// A template was approved, rejected or paused: drop the cached list so
 			// the picker shows it at once.
-			for _, inb := range app.inbox.Running(inbox.ChannelWhatsApp) {
-				if wa, ok := inb.(*whatsapp.WhatsApp); ok && wa.Config().WABAID == entry.ID {
-					wa.InvalidateTemplates()
-				}
+			for _, wa := range wabaInboxes(app, entry.ID, only) {
+				wa.InvalidateTemplates()
 			}
 		case "account_update":
 			var v struct {
 				Event string `json:"event"`
 			}
 			if json.Unmarshal(change.Value, &v) == nil && v.Event == "PARTNER_REMOVED" {
-				disconnectWABA(app, entry.ID)
+				disconnectWABA(app, entry.ID, only)
 				continue
 			}
 			if alert, ok := whatsapp.AccountAlert(change.Value); ok {
-				recordHealthAlert(app, entry.ID, "", alert)
+				recordHealthAlert(app, entry.ID, "", alert, only)
 			}
 		case "phone_number_quality_update":
 			if number, alert, ok := whatsapp.QualityAlert(change.Value); ok {
-				recordHealthAlert(app, entry.ID, number, alert)
+				recordHealthAlert(app, entry.ID, number, alert, only)
 			}
 		case "phone_number_name_update":
 			if number, alert, ok := whatsapp.NameAlert(change.Value); ok {
-				recordHealthAlert(app, entry.ID, number, alert)
+				recordHealthAlert(app, entry.ID, number, alert, only)
 			}
 		}
 	}
 	return failed
 }
 
+// wabaInboxes returns the running inboxes of a WhatsApp Business Account, or
+// just only when an inbox's own webhook reported the event.
+func wabaInboxes(app *App, wabaID string, only *whatsapp.WhatsApp) []*whatsapp.WhatsApp {
+	if only != nil {
+		if only.Config().WABAID == wabaID {
+			return []*whatsapp.WhatsApp{only}
+		}
+		return nil
+	}
+	var out []*whatsapp.WhatsApp
+	for _, inb := range app.inbox.Running(inbox.ChannelWhatsApp) {
+		if wa, ok := inb.(*whatsapp.WhatsApp); ok && wa.Config().WABAID == wabaID {
+			out = append(out, wa)
+		}
+	}
+	return out
+}
+
 // recordHealthAlert keeps what Meta reported about a number's standing on the
 // inboxes it concerns: those of the business account, or only the one for
 // number when the report names it.
-func recordHealthAlert(app *App, wabaID, number string, alert whatsapp.HealthAlert) {
-	for _, inb := range app.inbox.Running(inbox.ChannelWhatsApp) {
-		wa, ok := inb.(*whatsapp.WhatsApp)
-		if !ok || wa.Config().WABAID != wabaID {
-			continue
-		}
+func recordHealthAlert(app *App, wabaID, number string, alert whatsapp.HealthAlert, only *whatsapp.WhatsApp) {
+	for _, wa := range wabaInboxes(app, wabaID, only) {
 		if number != "" && whatsapp.WAIDFromPhone(wa.Config().DisplayPhoneNumber) != number {
 			continue
 		}
@@ -650,11 +660,12 @@ func setInboxConfigKey(app *App, tid, id int, key string, value any) error {
 }
 
 // disconnectWABA disconnects the inboxes of a WhatsApp Business Account whose
-// business removed the app, deleting the token it no longer grants.
-func disconnectWABA(app *App, wabaID string) {
-	for _, inb := range app.inbox.Running(inbox.ChannelWhatsApp) {
-		wa, ok := inb.(*whatsapp.WhatsApp)
-		if !ok || wa.Config().WABAID != wabaID {
+// business removed the app, deleting the token it no longer grants. From the
+// platform's webhook that is the platform's app, which manually connected
+// numbers don't go through; from an inbox's own webhook, the business's app.
+func disconnectWABA(app *App, wabaID string, only *whatsapp.WhatsApp) {
+	for _, wa := range wabaInboxes(app, wabaID, only) {
+		if only == nil && wa.Config().Manual() {
 			continue
 		}
 		if err := app.inbox.Disconnect(wa.TenantID(), wa.Identifier()); err != nil {

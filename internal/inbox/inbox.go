@@ -48,7 +48,7 @@ func IsMetaChannel(channel string) bool {
 var metaEditableKeys = []string{"max_media_size_mb", "mark_seen", "allow_groups"}
 
 // metaSecretKeys are the Meta inbox config keys encrypted at rest.
-var metaSecretKeys = []string{"access_token", "two_step_pin"}
+var metaSecretKeys = []string{"access_token", "two_step_pin", "app_secret", "webhook_verify_token"}
 
 var (
 	// Embedded filesystem

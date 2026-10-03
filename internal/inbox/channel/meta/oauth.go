@@ -229,6 +229,14 @@ func (c *Client) SubscribeWABA(ctx context.Context, token, wabaID string) error 
 	return c.PostForm(ctx, token, wabaID+"/subscribed_apps", url.Values{}, nil)
 }
 
+// SubscribeWABAOverride subscribes the token's app to a WhatsApp Business
+// Account's webhooks, delivered to callbackURL instead of the app's own. Meta
+// checks callbackURL with verifyToken before it answers.
+func (c *Client) SubscribeWABAOverride(ctx context.Context, token, wabaID, callbackURL, verifyToken string) error {
+	form := url.Values{"override_callback_uri": {callbackURL}, "verify_token": {verifyToken}}
+	return c.PostForm(ctx, token, wabaID+"/subscribed_apps", form, nil)
+}
+
 // UnsubscribeWABA removes the app's webhook subscription from a WhatsApp
 // Business Account.
 func (c *Client) UnsubscribeWABA(ctx context.Context, token, wabaID string) error {

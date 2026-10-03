@@ -1024,7 +1024,7 @@ func initWhatsAppInbox(inboxRecord imodels.Inbox, msgStore inbox.MessageStore, u
 		Name:     inboxRecord.Name,
 		From:     inboxRecord.From,
 		Config:   config,
-		Graph:    metaGraph(),
+		Graph:    whatsAppGraph(config),
 		Lo:       initLogger("whatsapp_inbox"),
 	})
 	if err != nil {

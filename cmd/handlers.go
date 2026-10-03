@@ -254,6 +254,16 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// workspace.
 	g.POST("/api/v1/inboxes/meta/{product}/authorize", perm(handleMetaAuthorize, "inboxes:manage"))
 
+	// WhatsApp connected manually, with a token from the business's own Meta
+	// app. The credentials arrive sealed to a one-time key; the webhook is on
+	// the workspace's own address, names the inbox, and is signed with the
+	// business's app secret.
+	g.POST("/api/v1/inboxes/whatsapp/manual/key", perm(handleWhatsAppManualKey, "inboxes:manage"))
+	g.POST("/api/v1/inboxes/whatsapp/manual", perm(handleConnectWhatsAppManual, "inboxes:manage"))
+	g.GET("/api/v1/inboxes/{id}/whatsapp/webhook", perm(handleGetWhatsAppWebhook, "inboxes:manage"))
+	g.GET("/webhook/whatsapp/{uuid}", rateLimit(handleWhatsAppManualWebhookVerify, "meta_webhook"))
+	g.POST("/webhook/whatsapp/{uuid}", rateLimit(handleWhatsAppManualWebhook, "meta_webhook"))
+
 	// Phone calls through Exotel. Its webhooks are on each workspace's own
 	// address, name the inbox, and carry its secret as a token.
 	g.POST("/api/v1/conversations/{uuid}/call", perm(handleStartCall, "messages:write"))

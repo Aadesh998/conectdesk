@@ -2,7 +2,8 @@
 // Platform (the Cloud API).
 //
 // A workspace connects a number through Embedded Signup on the platform's Meta
-// app. Inbound messages arrive on the app's webhook and are parsed by
+// app, or manually with a token from its own Meta app. Inbound messages arrive
+// on the platform app's webhook, or the inbox's own one, and are parsed by
 // ParseValue, so Receive is a no-op like the livechat channel. Replies are sent
 // through the Graph API with the business token Embedded Signup issued.
 package whatsapp
@@ -55,8 +56,9 @@ type Config struct {
 	DisplayPhoneNumber string `json:"display_phone_number"`
 	VerifiedName       string `json:"verified_name"`
 
-	// AccessToken is the business token Embedded Signup issued. It doesn't
-	// expire, and is encrypted at rest by the inbox manager.
+	// AccessToken is the business token Embedded Signup issued, or the system
+	// user token pasted on a manual connection. It doesn't expire, and is
+	// encrypted at rest by the inbox manager.
 	AccessToken string `json:"access_token"`
 
 	// TwoStepPIN is the two-step verification PIN the number was registered
@@ -76,6 +78,30 @@ type Config struct {
 
 	// MarkSeen sends a read receipt (blue ticks) when a message is received.
 	MarkSeen bool `json:"mark_seen"`
+
+	// Mode is how the number was connected: ModeManual when the business
+	// pasted a token from its own Meta app, empty for Embedded Signup.
+	Mode string `json:"connection_mode,omitempty"`
+
+	// AppID and AppSecret are the business's own Meta app, on a number
+	// connected manually. Graph calls are proved with the secret and webhooks
+	// are verified against it. The secret is encrypted at rest.
+	AppID     string `json:"app_id,omitempty"`
+	AppSecret string `json:"app_secret,omitempty"`
+
+	// WebhookVerifyToken is the verify token the business's app checks the
+	// inbox's own webhook with, on a number connected manually. Encrypted at
+	// rest.
+	WebhookVerifyToken string `json:"webhook_verify_token,omitempty"`
+}
+
+// ModeManual marks a number connected with the business's own app and token.
+const ModeManual = "manual"
+
+// Manual reports whether the number was connected with the business's own
+// Meta app rather than the platform's.
+func (c Config) Manual() bool {
+	return c.Mode == ModeManual
 }
 
 // WhatsApp is a Cloud API inbox.
