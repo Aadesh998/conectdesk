@@ -131,13 +131,7 @@
 
         <!-- Row 3: SLA Card with Compliance Percentages -->
         <div class="w-full box p-5">
-          <div class="flex items-center justify-between gap-2 mb-4">
-            <p class="card-title">{{ $t('report.sla.cardTitle') }}</p>
-            <Button size="sm" variant="outline" class="gap-1.5" @click="slaCopilotOpen = true">
-              <Bot class="h-3.5 w-3.5" />
-              {{ $t('copilot.sla.open', { name: COPILOT_NAME }) }}
-            </Button>
-          </div>
+          <p class="card-title mb-4">{{ $t('report.sla.cardTitle') }}</p>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <!-- First Response -->
@@ -278,6 +272,16 @@
         </div>
       </div>
     </div>
+
+    <!-- Floats over the page so it stays in reach however far it's scrolled. -->
+    <Button
+      v-show="!slaCopilotOpen"
+      class="fixed bottom-6 right-6 z-40 h-11 gap-2 rounded-full px-5 shadow-lg"
+      @click="slaCopilotOpen = true"
+    >
+      <Bot class="h-4 w-4" />
+      {{ $t('copilot.sla.open', { name: COPILOT_NAME }) }}
+    </Button>
 
     <Sheet v-model:open="slaCopilotOpen">
       <SheetContent class="w-full sm:!max-w-md h-full p-0 flex flex-col gap-0">
