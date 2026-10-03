@@ -113,6 +113,8 @@ type Collection struct {
 	Icon         string    `db:"icon" json:"icon"`
 	SortOrder    int       `db:"sort_order" json:"sort_order"`
 	IsPublished  bool      `db:"is_published" json:"is_published"`
+	// TenantID is mapped so RETURNING * scans in safe-mode transactions don't fail.
+	TenantID int `db:"tenant_id" json:"-"`
 }
 
 type Article struct {
@@ -141,8 +143,9 @@ type Article struct {
 	// safe-mode transactions don't fail, but never exposed in API responses.
 	EmbeddedFingerprint string `db:"embedded_fingerprint" json:"-"`
 	SearchTSV           string `db:"search_tsv" json:"-"`
-	HelpfulCount    int    `db:"helpful_count" json:"helpful_count"`
-	NotHelpfulCount int    `db:"not_helpful_count" json:"not_helpful_count"`
+	TenantID            int    `db:"tenant_id" json:"-"`
+	HelpfulCount        int    `db:"helpful_count" json:"helpful_count"`
+	NotHelpfulCount     int    `db:"not_helpful_count" json:"not_helpful_count"`
 }
 
 // NavLink is a single header navigation link on the public help center pages.

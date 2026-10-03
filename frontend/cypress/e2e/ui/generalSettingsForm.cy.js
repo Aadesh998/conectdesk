@@ -112,7 +112,7 @@ describe('General settings form', () => {
     cy.get('input[name="site_name"]').should('not.have.value', '').clear()
     cy.get('button[type="submit"]').click()
 
-    cy.contains('Site name should be at least 1 character').should('be.visible')
+    cy.contains('Site name should be at least 1 character').scrollIntoView().should('be.visible')
     cy.get('@saveGeneral.all').should('have.length', 0)
   })
 })
