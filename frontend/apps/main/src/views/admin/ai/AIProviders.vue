@@ -14,6 +14,7 @@
           :description="t('admin.ai.embeddingDescription')"
           :show-embedding-fields="true"
         />
+        <JevSettings />
       </div>
     </template>
 
@@ -26,6 +27,7 @@
 <script setup>
 import AdminSplitLayout from '@/layouts/admin/AdminSplitLayout.vue'
 import ProviderForm from '@/features/admin/ai/ProviderForm.vue'
+import JevSettings from '@/features/admin/ai/JevSettings.vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()

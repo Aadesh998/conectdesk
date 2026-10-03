@@ -82,6 +82,7 @@
     <!-- Messages & reply box -->
     <div class="flex flex-col flex-grow overflow-hidden">
       <MessageList class="flex-1 overflow-y-auto" />
+      <AIHandlingBanner />
       <ReplyBox />
     </div>
   </div>
@@ -105,6 +106,7 @@ import { formatMessageTimestamp } from '@shared-ui/utils/datetime.js'
 import { Button } from '@shared-ui/components/ui/button'
 import MessageList from '@/features/conversation/message/MessageList.vue'
 import ReplyBox from './ReplyBox.vue'
+import AIHandlingBanner from '@main/features/conversation/AIHandlingBanner.vue'
 import CallButton from '@/features/conversation/sidebar/CallButton.vue'
 import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
 import { CONVERSATION_DEFAULT_STATUSES } from '@main/constants/conversation'

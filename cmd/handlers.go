@@ -441,6 +441,11 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/v1/ai/assistants/{id}/preview", perm(handleAIAssistantPreview, "ai:manage"))
 	g.GET("/api/v1/ai/assistants/{id}/stats", perm(handleGetAIAssistantStats, "ai:manage"))
 
+	// The Jev (TypeSafe System One) decision layer the assistants use.
+	g.GET("/api/v1/ai/jev", perm(handleGetJevSettings, "ai:manage"))
+	g.PUT("/api/v1/ai/jev", perm(handleUpdateJevSettings, "ai:manage"))
+	g.POST("/api/v1/ai/jev/test", perm(handleTestJevSettings, "ai:manage"))
+
 	// AI FAQ learning: review queue for suggestions mined from resolved conversations + on/off setting.
 	g.GET("/api/v1/ai/faq-suggestions", perm(handleGetAIFaqSuggestions, "ai:manage"))
 	g.POST("/api/v1/ai/faq-suggestions/{id}/approve", perm(handleApproveAIFaqSuggestion, "ai:manage"))

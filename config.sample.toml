@@ -254,6 +254,13 @@ worker_count = 10
 queue_size = 1000
 # Maximum number of tool calls the assistant can make while working on one reply. (1-20)
 max_steps = 6
+# How often assistants look for quiet conversations to follow up. Follow-ups
+# are switched on per assistant. (minimum 1m)
+followup_interval = "5m"
+# On an inbox with an AI assistant set, how long a customer waits on a person
+# for a reply before the assistant takes the conversation back. A person who
+# isn't online gets one minute. (minimum 1m)
+hand_back_after = "5m"
 # Conversation messages sent to the model as history. (5-100)
 max_history_messages = 30
 

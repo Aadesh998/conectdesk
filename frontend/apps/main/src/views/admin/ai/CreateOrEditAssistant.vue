@@ -217,7 +217,10 @@ const tiles = computed(() => {
     tile('admin.ai.assistant.stats.reopenRate', fmtPercent(s.reopen_rate), trends.reopen_rate, 'point', false),
     tile('admin.ai.assistant.stats.depth', fmtDecimal(s.depth), null),
     tile('admin.ai.assistant.stats.csat', hasCsat ? fmtDecimal(s.csat_avg) : '-', hasCsat ? trends.csat_avg : null, 'point', true),
-    tile('admin.ai.assistant.stats.csatPositive', hasCsat ? fmtPercent(s.csat_positive) : '-', null)
+    tile('admin.ai.assistant.stats.csatPositive', hasCsat ? fmtPercent(s.csat_positive) : '-', null),
+    tile('admin.ai.assistant.stats.jevSkipped', fmtNumber(s.skipped ?? 0), null),
+    tile('admin.ai.assistant.stats.jevBlocked', fmtNumber(s.blocked ?? 0), null),
+    tile('admin.ai.assistant.stats.followups', fmtNumber(s.followups ?? 0), null)
   ]
 })
 

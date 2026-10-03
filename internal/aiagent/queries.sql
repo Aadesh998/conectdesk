@@ -1,6 +1,7 @@
 -- name: get-assistants
 SELECT a.id, a.created_at, a.updated_at, a.user_id, u.first_name AS name, u.avatar_url,
-       a.description, a.instructions, a.guardrails, a.expectation, a.tone, a.response_length, a.max_turns, a.fallback_team_id, a.handoff_enabled, a.languages, a.enabled
+       a.description, a.instructions, a.guardrails, a.expectation, a.tone, a.response_length, a.max_turns, a.fallback_team_id, a.handoff_enabled, a.languages, a.enabled,
+       a.jev_gate, a.jev_guard, a.jev_lead_stage, a.jev_confidence, a.followups_enabled, a.followup_hours, a.followup_templates
 FROM ai_assistants a
 JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL
 WHERE a.tenant_id = $1
@@ -8,14 +9,16 @@ ORDER BY a.updated_at DESC;
 
 -- name: get-assistant
 SELECT a.id, a.created_at, a.updated_at, a.user_id, u.first_name AS name, u.avatar_url,
-       a.description, a.instructions, a.guardrails, a.expectation, a.tone, a.response_length, a.max_turns, a.fallback_team_id, a.handoff_enabled, a.languages, a.enabled
+       a.description, a.instructions, a.guardrails, a.expectation, a.tone, a.response_length, a.max_turns, a.fallback_team_id, a.handoff_enabled, a.languages, a.enabled,
+       a.jev_gate, a.jev_guard, a.jev_lead_stage, a.jev_confidence, a.followups_enabled, a.followup_hours, a.followup_templates
 FROM ai_assistants a
 JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL
 WHERE a.tenant_id = $1 AND a.id = $2;
 
 -- name: get-assistant-by-user-id
 SELECT a.id, a.created_at, a.updated_at, a.user_id, u.first_name AS name, u.avatar_url,
-       a.description, a.instructions, a.guardrails, a.expectation, a.tone, a.response_length, a.max_turns, a.fallback_team_id, a.handoff_enabled, a.languages, a.enabled
+       a.description, a.instructions, a.guardrails, a.expectation, a.tone, a.response_length, a.max_turns, a.fallback_team_id, a.handoff_enabled, a.languages, a.enabled,
+       a.jev_gate, a.jev_guard, a.jev_lead_stage, a.jev_confidence, a.followups_enabled, a.followup_hours, a.followup_templates
 FROM ai_assistants a
 JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL
 WHERE a.tenant_id = $1 AND a.user_id = $2;
@@ -31,13 +34,15 @@ VALUES ($1, 'ai_assistant', $2, '', true)
 RETURNING id;
 
 -- name: insert-assistant
-INSERT INTO ai_assistants (tenant_id, user_id, description, instructions, guardrails, tone, response_length, max_turns, fallback_team_id, enabled, expectation, handoff_enabled, languages)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+INSERT INTO ai_assistants (tenant_id, user_id, description, instructions, guardrails, tone, response_length, max_turns, fallback_team_id, enabled, expectation, handoff_enabled, languages,
+  jev_gate, jev_guard, jev_lead_stage, jev_confidence, followups_enabled, followup_hours, followup_templates)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 RETURNING id;
 
 -- name: update-assistant
 UPDATE ai_assistants
-SET description = $3, instructions = $4, guardrails = $5, tone = $6, response_length = $7, max_turns = $8, fallback_team_id = $9, enabled = $10, expectation = $11, handoff_enabled = $12, languages = $13, updated_at = now()
+SET description = $3, instructions = $4, guardrails = $5, tone = $6, response_length = $7, max_turns = $8, fallback_team_id = $9, enabled = $10, expectation = $11, handoff_enabled = $12, languages = $13,
+    jev_gate = $14, jev_guard = $15, jev_lead_stage = $16, jev_confidence = $17, followups_enabled = $18, followup_hours = $19, followup_templates = $20, updated_at = now()
 WHERE tenant_id = $1 AND id = $2;
 
 -- name: get-assistant-expectation-by-user-id
@@ -91,7 +96,10 @@ SELECT
   COALESCE((SELECT round(avg(cr.rating)::numeric, 2) FROM csat_responses cr WHERE cr.tenant_id = $1 AND cr.rating > 0 AND cr.created_at >= $4 AND cr.created_at < $5 AND EXISTS (
      SELECT 1 FROM conversation_messages m WHERE m.conversation_id = cr.conversation_id AND m.sender_id = $2 AND m.type = 'outgoing' AND m.private = false AND NOT COALESCE((m.meta->>'is_csat')::boolean, false))), 0)::float8 AS csat_avg,
   COALESCE((SELECT round((count(*) FILTER (WHERE cr.rating >= 4))::numeric / NULLIF(count(*), 0) * 100, 1) FROM csat_responses cr WHERE cr.tenant_id = $1 AND cr.rating > 0 AND cr.created_at >= $4 AND cr.created_at < $5 AND EXISTS (
-     SELECT 1 FROM conversation_messages m WHERE m.conversation_id = cr.conversation_id AND m.sender_id = $2 AND m.type = 'outgoing' AND m.private = false AND NOT COALESCE((m.meta->>'is_csat')::boolean, false))), 0)::float8 AS csat_positive;
+     SELECT 1 FROM conversation_messages m WHERE m.conversation_id = cr.conversation_id AND m.sender_id = $2 AND m.type = 'outgoing' AND m.private = false AND NOT COALESCE((m.meta->>'is_csat')::boolean, false))), 0)::float8 AS csat_positive,
+  (SELECT count(*) FROM ai_agent_events WHERE tenant_id = $1 AND assistant_id = $3 AND type = 'skip' AND created_at >= $4 AND created_at < $5) AS skipped,
+  (SELECT count(*) FROM ai_agent_events WHERE tenant_id = $1 AND assistant_id = $3 AND type = 'block' AND created_at >= $4 AND created_at < $5) AS blocked,
+  (SELECT count(*) FROM ai_agent_events WHERE tenant_id = $1 AND assistant_id = $3 AND type = 'followup' AND created_at >= $4 AND created_at < $5) AS followups;
 
 -- name: count-ai-turns-since-assignment
 -- Counts the assistant's public non-CSAT replies since the last assignment activity.
@@ -99,6 +107,7 @@ SELECT count(*) FROM conversation_messages
 WHERE tenant_id = $1 AND conversation_id = $2 AND sender_id = $3 AND type = 'outgoing' AND private = false
   AND NOT COALESCE((meta->>'is_csat')::boolean, false)
   AND NOT COALESCE((meta->>'is_confirmation')::boolean, false)
+  AND NOT COALESCE((meta->>'ai_followup')::boolean, false)
   AND created_at > COALESCE((
     SELECT max(created_at) FROM conversation_messages
     WHERE tenant_id = $1 AND conversation_id = $2 AND type = 'activity'
@@ -145,3 +154,67 @@ WHERE tenant_id = $1 AND id = $2 AND status = 'approved';
 -- name: approve-faq-suggestion-if-pending
 UPDATE ai_faq_suggestions SET status = 'approved', reviewed_by_id = $3, reviewed_at = now(), updated_at = now()
 WHERE tenant_id = $1 AND id = $2 AND status = 'pending';
+
+-- name: get-followup-candidates
+-- tenant: all, the follow-up scheduler runs for every workspace.
+-- Open conversations assigned to an enabled assistant with follow-ups on, where the customer has
+-- written before, the newest public message is the assistant's, and it is between $1 hours and
+-- 8 days old. followups_sent counts the follow-ups since the customer last wrote.
+SELECT c.tenant_id, c.id AS conversation_id, a.id AS assistant_id, lm.created_at AS last_message_at,
+  (SELECT count(*) FROM ai_agent_events e
+    WHERE e.tenant_id = c.tenant_id AND e.conversation_id = c.id AND e.type = 'followup' AND e.created_at > li.created_at) AS followups_sent
+FROM ai_assistants a
+JOIN conversations c ON c.tenant_id = a.tenant_id AND c.assigned_user_id = a.user_id
+JOIN conversation_statuses s ON s.id = c.status_id AND s.category NOT IN ('waiting', 'resolved')
+CROSS JOIN LATERAL (
+  SELECT m.created_at, m.sender_id FROM conversation_messages m
+  WHERE m.tenant_id = c.tenant_id AND m.conversation_id = c.id AND m.private = false AND m.type IN ('incoming', 'outgoing')
+  ORDER BY m.created_at DESC, m.id DESC LIMIT 1
+) lm
+CROSS JOIN LATERAL (
+  SELECT max(m.created_at) AS created_at FROM conversation_messages m
+  WHERE m.tenant_id = c.tenant_id AND m.conversation_id = c.id AND m.type = 'incoming' AND m.sender_id = c.contact_id
+) li
+WHERE a.enabled AND a.followups_enabled
+  AND lm.sender_id = a.user_id
+  AND li.created_at IS NOT NULL
+  AND lm.created_at <= now() - make_interval(hours => $1)
+  AND lm.created_at >= now() - interval '8 days'
+ORDER BY lm.created_at
+LIMIT $2;
+
+-- name: recent-handoff-exists
+-- Whether an assistant handed this conversation to people in the last $3 hours, so it isn't
+-- pulled straight back to the AI.
+SELECT EXISTS (
+  SELECT 1 FROM ai_agent_events
+  WHERE tenant_id = $1 AND conversation_id = $2 AND type = 'handoff' AND created_at > now() - make_interval(hours => $3)
+);
+
+-- name: get-return-candidates
+-- tenant: all, the return checker runs for every workspace.
+-- Open conversations on an inbox with an AI assistant set, assigned to a person, where the customer
+-- wrote last and has waited at least $1 minutes, or at least $2 minutes when that person isn't
+-- online. Conversations an assistant handed off in the last $3 hours stay with people.
+SELECT c.tenant_id, c.id AS conversation_id, c.uuid AS conversation_uuid, (i.config->>'ai_assistant_id')::int AS assistant_id,
+  c.assigned_user_id AS agent_id, u.availability_status::text AS agent_status, lm.created_at AS waiting_since
+FROM conversations c
+JOIN inboxes i ON i.id = c.inbox_id AND i.tenant_id = c.tenant_id AND i.deleted_at IS NULL AND i.enabled
+  AND COALESCE(NULLIF(i.config->>'ai_assistant_id', ''), '0')::int > 0
+JOIN users u ON u.id = c.assigned_user_id AND u.tenant_id = c.tenant_id AND u.type = 'agent'
+JOIN conversation_statuses s ON s.id = c.status_id AND s.category NOT IN ('waiting', 'resolved')
+CROSS JOIN LATERAL (
+  SELECT m.created_at, m.type, m.sender_id FROM conversation_messages m
+  WHERE m.tenant_id = c.tenant_id AND m.conversation_id = c.id AND m.private = false AND m.type IN ('incoming', 'outgoing')
+  ORDER BY m.created_at DESC, m.id DESC LIMIT 1
+) lm
+WHERE lm.type = 'incoming' AND lm.sender_id = c.contact_id
+  AND lm.created_at >= now() - interval '2 days'
+  AND (lm.created_at <= now() - make_interval(mins => $1)
+       OR (u.availability_status <> 'online' AND lm.created_at <= now() - make_interval(mins => $2)))
+  AND NOT EXISTS (
+    SELECT 1 FROM ai_agent_events e
+    WHERE e.tenant_id = c.tenant_id AND e.conversation_id = c.id AND e.type = 'handoff' AND e.created_at > now() - make_interval(hours => $3)
+  )
+ORDER BY lm.created_at
+LIMIT $4;

@@ -90,6 +90,27 @@
       </FormItem>
     </FormField>
 
+    <!-- New conversations on this inbox go straight to an AI assistant. -->
+    <div class="box p-4 space-y-2">
+      <FormField v-slot="{ componentField }" name="config.ai_assistant_id">
+        <FormItem>
+          <FormLabel>{{ $t('admin.inbox.aiAssistant') }}</FormLabel>
+          <FormControl>
+            <select
+              :value="componentField.modelValue"
+              class="w-full max-w-sm rounded-md border bg-background px-2 py-2 text-sm"
+              @change="componentField['onUpdate:modelValue'](Number($event.target.value))"
+            >
+              <option :value="0">{{ $t('admin.inbox.aiAssistant.none') }}</option>
+              <option v-for="a in assistants" :key="a.id" :value="a.id">{{ a.name }}</option>
+            </select>
+          </FormControl>
+          <FormDescription>{{ $t('admin.inbox.aiAssistant.description') }}</FormDescription>
+          <FormMessage />
+        </FormItem>
+      </FormField>
+    </div>
+
     <div class="box p-4 space-y-4">
       <FormField v-slot="{ componentField }" name="config.max_media_size_mb">
         <FormItem>
@@ -176,7 +197,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
@@ -200,6 +221,7 @@ import WhatsAppManualConnect from './WhatsAppManualConnect.vue'
 import WhatsAppWebhookInfo from './WhatsAppWebhookInfo.vue'
 import { useI18n } from 'vue-i18n'
 import { useEmitter } from '@main/composables/useEmitter'
+import api from '@/api'
 import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
 
 const props = defineProps({
@@ -238,7 +260,8 @@ const schema = computed(() =>
             message: t('validation.minmaxNumber', { min: 1, max: MAX_MEDIA_SIZE_MB })
           }),
         mark_seen: z.boolean().optional(),
-        allow_groups: z.boolean().optional()
+        allow_groups: z.boolean().optional(),
+        ai_assistant_id: z.coerce.number().int().min(0).optional()
       })
     })
   )
@@ -251,12 +274,22 @@ const form = useForm({
     enabled: true,
     csat_enabled: false,
     prompt_tags_on_reply: false,
-    config: { max_media_size_mb: 20, mark_seen: true, allow_groups: false }
+    config: { max_media_size_mb: 20, mark_seen: true, allow_groups: false, ai_assistant_id: 0 }
   }
 })
 
 const channel = computed(() => props.initialValues.channel)
 const config = computed(() => props.initialValues.config || {})
+// Enabled assistants new conversations can go to.
+const assistants = ref([])
+onMounted(async () => {
+  try {
+    assistants.value = (await api.getAIAssistantsCompact()).data.data || []
+  } catch {
+    assistants.value = []
+  }
+})
+
 const manual = computed(() => channel.value === 'whatsapp' && config.value.connection_mode === 'manual')
 const showReconnect = ref(false)
 const webhookKey = ref(0)
@@ -274,7 +307,8 @@ const onSubmit = form.handleSubmit(async (values) => {
     config: {
       max_media_size_mb: values.config.max_media_size_mb,
       mark_seen: !!values.config.mark_seen,
-      allow_groups: !!values.config.allow_groups
+      allow_groups: !!values.config.allow_groups,
+      ai_assistant_id: Number(values.config.ai_assistant_id) || 0
     }
   })
 })
@@ -292,7 +326,8 @@ watch(
         config: {
           max_media_size_mb: v.config?.max_media_size_mb || 20,
           mark_seen: v.config?.mark_seen ?? true,
-          allow_groups: !!v.config?.allow_groups
+          allow_groups: !!v.config?.allow_groups,
+          ai_assistant_id: Number(v.config?.ai_assistant_id) || 0
         }
       },
       false

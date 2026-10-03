@@ -94,7 +94,7 @@ type Manager struct {
 	// rootURL returns the URL a tenant is served on, which public links hang off.
 	rootURL func(tenantID int) string
 	// onNewConversation runs when a contact starts a new conversation.
-	onNewConversation func(tenantID, contactID int)
+	onNewConversation func(tenantID int, conversation models.Conversation)
 	// onIncomingMessage runs after each message from a contact.
 	onIncomingMessage          func(tenantID int, conversationUUID string)
 	settingsStore              settingsStore
@@ -138,7 +138,7 @@ type AIAgentEngine interface {
 // SetRootURL sets the lookup of the URL a tenant is served on.
 // SetNewConversationHook sets what runs when a contact starts a new
 // conversation, e.g. putting them on the lead pipeline.
-func (m *Manager) SetNewConversationHook(fn func(tenantID, contactID int)) {
+func (m *Manager) SetNewConversationHook(fn func(tenantID int, conversation models.Conversation)) {
 	m.onNewConversation = fn
 }
 

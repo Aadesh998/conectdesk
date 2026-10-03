@@ -1,6 +1,9 @@
 package models
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/lib/pq"
@@ -41,8 +44,63 @@ type Assistant struct {
 	Enabled        bool           `db:"enabled" json:"enabled"`
 	ToolIDs        []int          `db:"-" json:"tool_ids"`
 
+	// The Jev decision layer. JevGate lets Jev decide whether a customer
+	// message is answered by the LLM, skipped, or handed to a person; JevGuard
+	// has Jev check each reply before it is sent; JevLeadStage has Jev move the
+	// contact's lead stage. Answers less confident than JevConfidence are
+	// ignored, and the agent behaves as it would without Jev.
+	JevGate       bool    `db:"jev_gate" json:"jev_gate"`
+	JevGuard      bool    `db:"jev_guard" json:"jev_guard"`
+	JevLeadStage  bool    `db:"jev_lead_stage" json:"jev_lead_stage"`
+	JevConfidence float64 `db:"jev_confidence" json:"jev_confidence"`
+
+	// FollowupsEnabled has the assistant follow up when the customer stops
+	// replying, FollowupHours after its last message (one entry per
+	// follow-up). Past WhatsApp's 24-hour window it can only send one of
+	// FollowupTemplates, which Jev picks between.
+	FollowupsEnabled  bool          `db:"followups_enabled" json:"followups_enabled"`
+	FollowupHours     pq.Int64Array `db:"followup_hours" json:"followup_hours"`
+	FollowupTemplates TemplateRefs  `db:"followup_templates" json:"followup_templates"`
+
 	// RemoveAvatar, when set on a save request, clears the assistant's current avatar.
 	RemoveAvatar bool `db:"-" json:"remove_avatar"`
+}
+
+// TemplateRef names an approved WhatsApp template and its body values, which
+// may use {{name}}, {{phone}} and {{business}} for the contact's name and
+// number and the workspace's name.
+type TemplateRef struct {
+	Name     string   `json:"name"`
+	Language string   `json:"language"`
+	Body     []string `json:"body"`
+}
+
+// TemplateRefs is a JSONB list of templates.
+type TemplateRefs []TemplateRef
+
+// Value stores the list as JSON.
+func (t TemplateRefs) Value() (driver.Value, error) {
+	if t == nil {
+		return []byte("[]"), nil
+	}
+	return json.Marshal(t)
+}
+
+// Scan reads the list from JSON.
+func (t *TemplateRefs) Scan(src any) error {
+	var b []byte
+	switch v := src.(type) {
+	case nil:
+		*t = TemplateRefs{}
+		return nil
+	case []byte:
+		b = v
+	case string:
+		b = []byte(v)
+	default:
+		return errors.New("unsupported type for template list")
+	}
+	return json.Unmarshal(b, t)
 }
 
 // PreviewSource is one knowledge item a preview reply was grounded in.
@@ -72,24 +130,32 @@ type StatWindow struct {
 	CSATCount     int     `db:"csat_count"`
 	CSATAvg       float64 `db:"csat_avg"`
 	CSATPositive  float64 `db:"csat_positive"`
+	Skipped       int     `db:"skipped"`
+	Blocked       int     `db:"blocked"`
+	Followups     int     `db:"followups"`
 }
 
 // AssistantStats is the computed window summary with derived rates and trend deltas vs the previous equal window.
 type AssistantStats struct {
-	RangeDays      int                `json:"range_days"`
-	Conversations  int                `json:"conversations"`
-	Replies        int                `json:"replies"`
-	Handoffs       int                `json:"handoffs"`
-	Resolved       int                `json:"resolved"`
-	Reopened       int                `json:"reopened"`
-	ResolutionRate float64            `json:"resolution_rate"`
-	HandoffRate    float64            `json:"handoff_rate"`
-	ReopenRate     float64            `json:"reopen_rate"`
-	Depth          float64            `json:"depth"`
-	CSATCount      int                `json:"csat_count"`
-	CSATAvg        float64            `json:"csat_avg"`
-	CSATPositive   float64            `json:"csat_positive"`
-	Trends         map[string]float64 `json:"trends"`
+	RangeDays      int     `json:"range_days"`
+	Conversations  int     `json:"conversations"`
+	Replies        int     `json:"replies"`
+	Handoffs       int     `json:"handoffs"`
+	Resolved       int     `json:"resolved"`
+	Reopened       int     `json:"reopened"`
+	ResolutionRate float64 `json:"resolution_rate"`
+	HandoffRate    float64 `json:"handoff_rate"`
+	ReopenRate     float64 `json:"reopen_rate"`
+	Depth          float64 `json:"depth"`
+	CSATCount      int     `json:"csat_count"`
+	CSATAvg        float64 `json:"csat_avg"`
+	CSATPositive   float64 `json:"csat_positive"`
+	// What the Jev layer did: messages it decided needed no LLM reply,
+	// replies it stopped, and follow-ups sent.
+	Skipped   int                `json:"skipped"`
+	Blocked   int                `json:"blocked"`
+	Followups int                `json:"followups"`
+	Trends    map[string]float64 `json:"trends"`
 }
 
 // FAQSuggestion is a candidate Q&A mined from a resolved conversation, awaiting review.

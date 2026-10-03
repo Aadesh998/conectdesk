@@ -208,7 +208,9 @@ const teamsStore = useTeamStore()
 const tagStore = useTagStore()
 const userStore = useUserStore()
 const tags = ref([])
-const accordionState = useStorage('conversation-sidebar-accordion', [])
+// Actions open by default, so the agent picker is in view; the agent's own
+// choice is remembered after that.
+const accordionState = useStorage('conversation-sidebar-accordion', ['actions'])
 const activeTab = useStorage('conversation-sidebar-tab', 'details')
 const { t } = useI18n()
 customAttributeStore.fetchCustomAttributes()

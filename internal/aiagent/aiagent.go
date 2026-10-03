@@ -14,15 +14,19 @@ import (
 	"github.com/conectdesk/conectdesk/internal/ai"
 	"github.com/conectdesk/conectdesk/internal/aiagent/models"
 	"github.com/conectdesk/conectdesk/internal/conversation"
+	cmodels "github.com/conectdesk/conectdesk/internal/conversation/models"
 	"github.com/conectdesk/conectdesk/internal/dbutil"
 	"github.com/conectdesk/conectdesk/internal/envelope"
 	"github.com/conectdesk/conectdesk/internal/fairshare"
 	"github.com/conectdesk/conectdesk/internal/i18ncat"
+	lmodels "github.com/conectdesk/conectdesk/internal/lead/models"
 	"github.com/conectdesk/conectdesk/internal/media"
 	notifier "github.com/conectdesk/conectdesk/internal/notification"
 	"github.com/conectdesk/conectdesk/internal/setting"
+	"github.com/conectdesk/conectdesk/internal/systemone"
 	"github.com/conectdesk/conectdesk/internal/user"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 	"github.com/zerodha/logf"
 )
@@ -51,6 +55,9 @@ type queries struct {
 	GetAssistantWindowStats *sqlx.Stmt `query:"get-assistant-window-stats"`
 	GetAssistantExpectation *sqlx.Stmt `query:"get-assistant-expectation-by-user-id"`
 	InsertAIAgentEvent      *sqlx.Stmt `query:"insert-ai-agent-event"`
+	GetFollowupCandidates   *sqlx.Stmt `query:"get-followup-candidates"`
+	RecentHandoffExists     *sqlx.Stmt `query:"recent-handoff-exists"`
+	GetReturnCandidates     *sqlx.Stmt `query:"get-return-candidates"`
 
 	InsertFAQSuggestion           *sqlx.Stmt `query:"insert-faq-suggestion"`
 	CountFAQByConversation        *sqlx.Stmt `query:"count-faq-suggestions-by-conversation"`
@@ -100,6 +107,37 @@ type Manager struct {
 	share    *fairshare.Limiter
 	// platformFrom returns the platform mailer's sender, for tenants without their own.
 	platformFrom func() string
+
+	// hooks are what the Jev layer and follow-ups need from the rest of the app.
+	hooks Hooks
+	// jevFactory, when set, replaces reading the Jev client from settings (tests).
+	jevFactory func(tenantID int) *systemone.Client
+}
+
+// Hooks are what the agent needs from outside its package to follow up and
+// keep leads current. Unset hooks turn the matching feature off.
+type Hooks struct {
+	// ReplyWindowOpen reports whether a free-form message can still reach the
+	// contact on the inbox: WhatsApp's 24-hour window. True on channels
+	// without one.
+	ReplyWindowOpen func(tenantID, contactID, inboxID int) bool
+	// TemplateText returns an approved template's body, for Jev to judge
+	// whether it fits; false if the inbox doesn't have it.
+	TemplateText func(tenantID, inboxID int, ref models.TemplateRef) (string, bool)
+	// SendTemplate queues an approved template to the conversation's contact
+	// from the assistant's user.
+	SendTemplate func(conv cmodels.Conversation, senderID int, ref models.TemplateRef, meta map[string]any) error
+	// LeadStage returns the workspace's lead stages and the contact's stage.
+	LeadStage func(tenantID, contactID int) ([]lmodels.Stage, string, error)
+	// SetLeadStage moves the contact to stage as actorID.
+	SetLeadStage func(tenantID, contactID int, stage string, actorID int) error
+	// BusinessOpen reports whether the workspace's business hours are open at t.
+	BusinessOpen func(tenantID int, t time.Time) bool
+}
+
+// SetHooks wires the app-side hooks after construction.
+func (m *Manager) SetHooks(h Hooks) {
+	m.hooks = h
 }
 
 type Opts struct {
@@ -290,7 +328,8 @@ func (m *Manager) CreateAssistant(tenantID int, a models.Assistant) (models.Assi
 	}
 
 	var id int
-	if err := tx.Stmtx(m.q.InsertAssistant).QueryRow(tenantID, userID, a.Description, a.Instructions, a.Guardrails, a.Tone, a.ResponseLength, a.MaxTurns, a.FallbackTeamID, a.Enabled, a.Expectation, a.HandoffEnabled, a.Languages).Scan(&id); err != nil {
+	if err := tx.Stmtx(m.q.InsertAssistant).QueryRow(tenantID, userID, a.Description, a.Instructions, a.Guardrails, a.Tone, a.ResponseLength, a.MaxTurns, a.FallbackTeamID, a.Enabled, a.Expectation, a.HandoffEnabled, a.Languages,
+		a.JevGate, a.JevGuard, a.JevLeadStage, a.JevConfidence, a.FollowupsEnabled, a.FollowupHours, a.FollowupTemplates).Scan(&id); err != nil {
 		m.lo.Error("error creating assistant", "error", err)
 		return models.Assistant{}, envelope.NewError(envelope.GeneralError, m.i18n.For(tenantID).T("globals.messages.somethingWentWrong"), nil)
 	}
@@ -327,7 +366,8 @@ func (m *Manager) UpdateAssistant(tenantID, id int, a models.Assistant) (models.
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.Stmtx(m.q.UpdateAssistant).Exec(tenantID, id, a.Description, a.Instructions, a.Guardrails, a.Tone, a.ResponseLength, a.MaxTurns, a.FallbackTeamID, a.Enabled, a.Expectation, a.HandoffEnabled, a.Languages); err != nil {
+	if _, err := tx.Stmtx(m.q.UpdateAssistant).Exec(tenantID, id, a.Description, a.Instructions, a.Guardrails, a.Tone, a.ResponseLength, a.MaxTurns, a.FallbackTeamID, a.Enabled, a.Expectation, a.HandoffEnabled, a.Languages,
+		a.JevGate, a.JevGuard, a.JevLeadStage, a.JevConfidence, a.FollowupsEnabled, a.FollowupHours, a.FollowupTemplates); err != nil {
 		m.lo.Error("error updating assistant", "error", err)
 		return models.Assistant{}, envelope.NewError(envelope.GeneralError, m.i18n.For(tenantID).T("globals.messages.somethingWentWrong"), nil)
 	}
@@ -432,7 +472,58 @@ func (m *Manager) validate(a *models.Assistant) error {
 		a.MaxTurns = 6
 	}
 	a.Languages = normalizeLanguages(a.Languages)
+	normalizeJev(a)
 	return nil
+}
+
+// Limits on the Jev settings, matching the table's constraints.
+const (
+	defaultJevConfidence = 0.7
+	maxFollowups         = 5
+	maxFollowupHours     = 168
+	maxFollowupTemplates = 10
+)
+
+// normalizeJev clamps the Jev settings to what the table accepts: the
+// confidence into 0.5-0.99, the follow-up delays to 1-5 increasing entries
+// within a week, and the templates to named ones with a language.
+func normalizeJev(a *models.Assistant) {
+	switch {
+	case a.JevConfidence == 0:
+		a.JevConfidence = defaultJevConfidence
+	case a.JevConfidence < 0.5:
+		a.JevConfidence = 0.5
+	case a.JevConfidence > 0.99:
+		a.JevConfidence = 0.99
+	}
+
+	hours := make(pq.Int64Array, 0, len(a.FollowupHours))
+	for _, h := range a.FollowupHours {
+		if h >= 1 && h <= maxFollowupHours && !slices.Contains(hours, h) {
+			hours = append(hours, h)
+		}
+	}
+	slices.Sort(hours)
+	if len(hours) > maxFollowups {
+		hours = hours[:maxFollowups]
+	}
+	if len(hours) == 0 {
+		hours = pq.Int64Array{4, 24}
+	}
+	a.FollowupHours = hours
+
+	templates := models.TemplateRefs{}
+	for _, t := range a.FollowupTemplates {
+		t.Name, t.Language = strings.TrimSpace(t.Name), strings.TrimSpace(t.Language)
+		if t.Name == "" || t.Language == "" || len(templates) == maxFollowupTemplates {
+			continue
+		}
+		if t.Body == nil {
+			t.Body = []string{}
+		}
+		templates = append(templates, t)
+	}
+	a.FollowupTemplates = templates
 }
 
 // normalizeLanguages trims, drops empties, and dedupes case-insensitively while keeping order.
@@ -467,6 +558,11 @@ func (m *Manager) refreshAssistantUserIDs() error {
 	return nil
 }
 
+// IsAssistantUser reports whether userID is an AI assistant's user.
+func (m *Manager) IsAssistantUser(userID int) bool {
+	return m.isAssistantUser(userID)
+}
+
 func (m *Manager) isAssistantUser(userID int) bool {
 	m.userIDsMu.RLock()
 	defer m.userIDsMu.RUnlock()
@@ -488,6 +584,9 @@ func buildStats(rangeDays int, cur, prev models.StatWindow) models.AssistantStat
 		CSATCount:      cur.CSATCount,
 		CSATAvg:        cur.CSATAvg,
 		CSATPositive:   cur.CSATPositive,
+		Skipped:        cur.Skipped,
+		Blocked:        cur.Blocked,
+		Followups:      cur.Followups,
 	}
 	s.Trends = map[string]float64{
 		"conversations":   pctChange(cur.Conversations, prev.Conversations),

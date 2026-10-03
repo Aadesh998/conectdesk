@@ -198,6 +198,115 @@
       </FormItem>
     </FormField>
 
+    <!-- The Jev decision layer: decides when the LLM is called, checks
+         replies before they go out, and keeps the lead stage current. -->
+    <div class="box p-4 space-y-4">
+      <div>
+        <h3 class="font-semibold">{{ t('admin.ai.assistant.jev.title') }}</h3>
+        <p class="text-sm text-muted-foreground">{{ t('admin.ai.assistant.jev.description') }}</p>
+        <p v-if="!jevReady" class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+          {{ t('admin.ai.assistant.jev.off') }}
+          <router-link :to="{ name: 'ai-providers' }" class="underline">{{ t('admin.ai.assistant.jev.setUp') }}</router-link>
+        </p>
+      </div>
+      <FormField v-slot="{ componentField, handleChange }" name="jev_gate">
+        <FormItem>
+          <SwitchField
+            :title="t('admin.ai.assistant.jev.gate')"
+            :description="t('admin.ai.assistant.jev.gateHint')"
+            :checked="componentField.modelValue"
+            @update:checked="handleChange"
+          />
+        </FormItem>
+      </FormField>
+      <FormField v-slot="{ componentField, handleChange }" name="jev_guard">
+        <FormItem>
+          <SwitchField
+            :title="t('admin.ai.assistant.jev.guard')"
+            :description="t('admin.ai.assistant.jev.guardHint')"
+            :checked="componentField.modelValue"
+            @update:checked="handleChange"
+          />
+        </FormItem>
+      </FormField>
+      <FormField v-slot="{ componentField, handleChange }" name="jev_lead_stage">
+        <FormItem>
+          <SwitchField
+            :title="t('admin.ai.assistant.jev.leadStage')"
+            :description="t('admin.ai.assistant.jev.leadStageHint')"
+            :checked="componentField.modelValue"
+            @update:checked="handleChange"
+          />
+        </FormItem>
+      </FormField>
+      <FormField v-slot="{ componentField }" name="jev_confidence">
+        <FormItem>
+          <FormLabel>{{ t('admin.ai.assistant.jev.confidence') }}</FormLabel>
+          <FormControl>
+            <Input type="number" min="0.5" max="0.99" step="0.05" class="w-28" v-bind="componentField" />
+          </FormControl>
+          <FormDescription>{{ t('admin.ai.assistant.jev.confidenceHint') }}</FormDescription>
+          <FormMessage />
+        </FormItem>
+      </FormField>
+    </div>
+
+    <!-- Following up when the customer goes quiet. -->
+    <div class="box p-4 space-y-4">
+      <FormField v-slot="{ componentField, handleChange }" name="followups_enabled">
+        <FormItem>
+          <SwitchField
+            :title="t('admin.ai.assistant.followups.title')"
+            :description="t('admin.ai.assistant.followups.description')"
+            :checked="componentField.modelValue"
+            @update:checked="handleChange"
+          />
+        </FormItem>
+      </FormField>
+      <template v-if="form.values.followups_enabled">
+        <div class="space-y-1.5">
+          <Label>{{ t('admin.ai.assistant.followups.hours') }}</Label>
+          <Input v-model="followupHours" class="w-48" placeholder="4, 24" />
+          <p class="text-xs text-muted-foreground">{{ t('admin.ai.assistant.followups.hoursHint') }}</p>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <p class="text-sm font-medium">{{ t('admin.ai.assistant.followups.templates') }}</p>
+            <p class="text-xs text-muted-foreground">{{ t('admin.ai.assistant.followups.templatesHint') }}</p>
+          </div>
+          <div class="space-y-1.5">
+            <Label class="text-xs">{{ t('admin.ai.assistant.followups.templateInbox') }}</Label>
+            <select v-model.number="templateInboxId" class="w-full max-w-sm rounded-md border bg-background px-2 py-2 text-sm">
+              <option :value="0">{{ t('admin.ai.assistant.followups.chooseInbox') }}</option>
+              <option v-for="inb in whatsappInboxes" :key="inb.id" :value="inb.id">{{ inb.name }}</option>
+            </select>
+          </div>
+          <div v-for="(tmpl, i) in followupTemplates" :key="i" class="flex items-start gap-2 rounded-md border p-3">
+            <AutoTemplateField
+              v-model="followupTemplates[i]"
+              :inbox-id="templateInboxId"
+              :label="t('admin.ai.assistant.followups.template', { n: i + 1 })"
+              :hint="t('voice.missedCalls.template.hint')"
+              class="flex-1"
+            />
+            <Button type="button" variant="ghost" size="sm" class="mt-6" @click="followupTemplates.splice(i, 1)">
+              {{ t('globals.terms.remove') }}
+            </Button>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            :disabled="!templateInboxId || followupTemplates.length >= 10"
+            @click="followupTemplates.push({ name: '', language: '', body: [] })"
+          >
+            {{ t('admin.ai.assistant.followups.addTemplate') }}
+          </Button>
+        </div>
+      </template>
+    </div>
+
     <div class="space-y-2">
       <div class="text-sm font-medium leading-none">{{ t('admin.ai.assistant.tools') }}</div>
       <p class="text-sm text-muted-foreground">{{ t('admin.ai.assistant.toolsHint') }}</p>
@@ -235,6 +344,8 @@ import { Button } from '@shared-ui/components/ui/button/index.js'
 import { Input } from '@shared-ui/components/ui/input/index.js'
 import { Textarea } from '@shared-ui/components/ui/textarea/index.js'
 import { Checkbox } from '@shared-ui/components/ui/checkbox/index.js'
+import { Label } from '@shared-ui/components/ui/label/index.js'
+import AutoTemplateField from '@/features/admin/inbox/AutoTemplateField.vue'
 import {
   TagsInput,
   TagsInputInput,
@@ -284,6 +395,17 @@ const selectedToolIds = ref([])
 const avatarFile = ref(null)
 const avatarPreview = ref('')
 const removeAvatar = ref(false)
+const jevReady = ref(true)
+const followupHours = ref('4, 24')
+const followupTemplates = ref([])
+const templateInboxId = ref(0)
+const whatsappInboxes = ref([])
+
+// "4, 24" -> [4, 24]: whole hours within a week, at most five follow-ups.
+const parseHours = (text) =>
+  [...new Set(String(text).split(/[\s,]+/).map(Number).filter((h) => Number.isInteger(h) && h >= 1 && h <= 168))]
+    .sort((a, b) => a - b)
+    .slice(0, 5)
 
 const avatarInitials = computed(() => (form.values.name || '').trim().charAt(0).toUpperCase() || 'A')
 
@@ -320,7 +442,15 @@ const form = useForm({
       languages: z.array(z.string()).optional(),
       instructions: z.string().optional(),
       guardrails: z.string().optional(),
-      enabled: z.boolean().optional()
+      enabled: z.boolean().optional(),
+      jev_gate: z.boolean().optional(),
+      jev_guard: z.boolean().optional(),
+      jev_lead_stage: z.boolean().optional(),
+      jev_confidence: z.coerce
+        .number()
+        .min(0.5, { message: t('admin.ai.assistant.jev.confidenceHint') })
+        .max(0.99, { message: t('admin.ai.assistant.jev.confidenceHint') }),
+      followups_enabled: z.boolean().optional()
     })
   ),
   initialValues: {
@@ -335,7 +465,12 @@ const form = useForm({
     languages: [],
     instructions: '',
     guardrails: '',
-    enabled: true
+    enabled: true,
+    jev_gate: true,
+    jev_guard: true,
+    jev_lead_stage: false,
+    jev_confidence: 0.7,
+    followups_enabled: false
   }
 })
 
@@ -363,10 +498,17 @@ watch(
         languages: [...(values.languages || [])],
         instructions: values.instructions || '',
         guardrails: values.guardrails || '',
-        enabled: values.enabled ?? true
+        enabled: values.enabled ?? true,
+        jev_gate: values.jev_gate ?? true,
+        jev_guard: values.jev_guard ?? true,
+        jev_lead_stage: values.jev_lead_stage ?? false,
+        jev_confidence: values.jev_confidence ?? 0.7,
+        followups_enabled: values.followups_enabled ?? false
       },
       false
     )
+    followupHours.value = (values.followup_hours?.length ? values.followup_hours : [4, 24]).join(', ')
+    followupTemplates.value = (values.followup_templates || []).map((x) => ({ ...x, body: [...(x.body || [])] }))
     selectedToolIds.value = [...(values.tool_ids || [])]
     avatarFile.value = null
     avatarPreview.value = values.avatar_url || ''
@@ -378,9 +520,18 @@ watch(
 
 onMounted(async () => {
   try {
-    const [toolsResp, teamsResp] = await Promise.all([api.getAITools(), api.getTeamsCompact()])
+    const [toolsResp, teamsResp, inboxesResp, jevResp] = await Promise.all([
+      api.getAITools(),
+      api.getTeamsCompact(),
+      api.getInboxes(),
+      api.getJevSettings().catch(() => null)
+    ])
     tools.value = (toolsResp.data.data || []).filter((tool) => tool.enabled)
     teams.value = teamsResp.data.data || []
+    whatsappInboxes.value = (inboxesResp.data.data || []).filter((inb) => inb.channel === 'whatsapp')
+    if (!templateInboxId.value && whatsappInboxes.value.length) templateInboxId.value = whatsappInboxes.value[0].id
+    const jev = jevResp?.data?.data
+    jevReady.value = !!(jev?.enabled && jev?.has_key)
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
@@ -409,7 +560,14 @@ const onSubmit = form.handleSubmit(async (values) => {
       guardrails: values.guardrails || '',
       enabled: !!values.enabled,
       remove_avatar: removeAvatar.value,
-      tool_ids: [...selectedToolIds.value]
+      tool_ids: [...selectedToolIds.value],
+      jev_gate: !!values.jev_gate,
+      jev_guard: !!values.jev_guard,
+      jev_lead_stage: !!values.jev_lead_stage,
+      jev_confidence: Number(values.jev_confidence),
+      followups_enabled: !!values.followups_enabled,
+      followup_hours: parseHours(followupHours.value),
+      followup_templates: followupTemplates.value.filter((x) => x?.name)
     }
     const formData = new FormData()
     formData.append('data', JSON.stringify(payload))

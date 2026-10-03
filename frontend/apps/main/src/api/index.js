@@ -637,6 +637,12 @@ const updateAIAssistant = (id, data) =>
 const deleteAIAssistant = (id) => http.delete(`/api/v1/ai/assistants/${id}`)
 const previewAIAssistant = (id, data) =>
   http.post(`/api/v1/ai/assistants/${id}/preview`, data, { timeout: AI_TIMEOUT })
+// The Jev (TypeSafe System One) decision layer's workspace settings.
+const getJevSettings = () => http.get('/api/v1/ai/jev')
+const updateJevSettings = (data) =>
+  http.put('/api/v1/ai/jev', data, { headers: { 'Content-Type': 'application/json' } })
+const testJevSettings = (data) =>
+  http.post('/api/v1/ai/jev/test', data, { headers: { 'Content-Type': 'application/json' } })
 const getAIAssistantStats = (id, range) =>
   http.get(`/api/v1/ai/assistants/${id}/stats`, { params: range ? { range } : {} })
 const getAISnippets = () => http.get('/api/v1/ai/snippets')
@@ -984,6 +990,9 @@ export default {
   deleteAITool,
   getAIAssistants,
   getAIAssistantsCompact,
+  getJevSettings,
+  updateJevSettings,
+  testJevSettings,
   getAIAssistant,
   createAIAssistant,
   updateAIAssistant,

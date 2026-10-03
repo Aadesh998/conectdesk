@@ -37,6 +37,21 @@ CREATE TABLE ai_assistants (
 	handoff_enabled BOOLEAN NOT NULL DEFAULT true,
 	languages TEXT[] NOT NULL DEFAULT '{}',
 	enabled BOOLEAN NOT NULL DEFAULT true,
+	-- The Jev decision layer: whether Jev decides if the LLM is called at all
+	-- (gate), checks a reply before it goes out (guard), and moves the lead
+	-- stage; and the confidence below which its answers are ignored.
+	jev_gate BOOLEAN NOT NULL DEFAULT true,
+	jev_guard BOOLEAN NOT NULL DEFAULT true,
+	jev_lead_stage BOOLEAN NOT NULL DEFAULT false,
+	jev_confidence REAL NOT NULL DEFAULT 0.7,
+	-- Following up when the customer goes quiet: the hours after the
+	-- assistant's last message each follow-up waits, and the WhatsApp
+	-- templates Jev may pick from once the 24-hour window has closed.
+	followups_enabled BOOLEAN NOT NULL DEFAULT false,
+	followup_hours INTEGER[] NOT NULL DEFAULT '{4,24}',
+	followup_templates JSONB NOT NULL DEFAULT '[]',
+	CONSTRAINT constraint_ai_assistants_on_jev_confidence CHECK (jev_confidence >= 0.5 AND jev_confidence <= 0.99),
+	CONSTRAINT constraint_ai_assistants_on_followup_hours CHECK (cardinality(followup_hours) BETWEEN 1 AND 5 AND 1 <= ALL(followup_hours) AND 168 >= ALL(followup_hours)),
 	CONSTRAINT constraint_ai_assistants_on_tone CHECK (tone IN ('friendly', 'professional', 'neutral', 'casual')),
 	CONSTRAINT constraint_ai_assistants_on_response_length CHECK (response_length IN ('concise', 'balanced', 'detailed')),
 	CONSTRAINT constraint_ai_assistants_on_max_turns CHECK (max_turns > 0 AND max_turns <= 20)
@@ -64,8 +79,9 @@ CREATE TABLE ai_agent_events (
 	assistant_id INTEGER NOT NULL REFERENCES ai_assistants(id) ON DELETE CASCADE,
 	conversation_id BIGINT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
 	type TEXT NOT NULL,
-	CONSTRAINT constraint_ai_agent_events_on_type CHECK (type IN ('handoff', 'resolve'))
+	CONSTRAINT constraint_ai_agent_events_on_type CHECK (type IN ('handoff', 'resolve', 'skip', 'block', 'followup', 'lead_stage'))
 );
+CREATE INDEX index_ai_agent_events_on_conversation_type_created ON ai_agent_events(conversation_id, type, created_at);
 CREATE INDEX index_ai_agent_events_on_assistant_type_created ON ai_agent_events(assistant_id, type, created_at);
 CREATE INDEX index_ai_agent_events_on_conversation_id ON ai_agent_events(conversation_id);
 CREATE INDEX index_ai_agent_events_on_tenant_id ON ai_agent_events (tenant_id);

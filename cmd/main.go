@@ -407,7 +407,10 @@ func main() {
 	app.callback = initCallback(db, i18n)
 	app.lead = initLead(db, settings, i18n)
 	conversation.SetNewConversationHook(onNewContactConversation(app))
-	conversation.SetIncomingMessageHook(onIncomingForLeads(app))
+	aiAgent.SetHooks(aiAgentHooks(app))
+	go aiAgent.RunFollowups(ctx, aiFollowupInterval())
+	go aiAgent.RunHandBacks(ctx, time.Minute, aiHandBackAfter())
+	conversation.SetIncomingMessageHook(onIncomingMessage(app))
 	app.dailyReport = initDailyReport(db, app)
 	go app.dailyReport.Run(ctx, time.Minute, sendDailyReport(app))
 	app.notifDispatcher = notifDispatcher

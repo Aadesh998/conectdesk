@@ -54,6 +54,7 @@ func New(opts Opts) (*Manager, error) {
 	// Fields that need encryption.
 	encryptedFields := map[string]bool{
 		"notification.email.password": true,
+		"jev.api_key":                 true,
 	}
 
 	return &Manager{

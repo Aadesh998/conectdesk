@@ -471,6 +471,7 @@ func validateMissedCallConfig(app *App, tenantID int, mc voice.MissedCallConfig)
 func validateMetaConfig(app *App, tenantID int, configJSON json.RawMessage) error {
 	var cfg struct {
 		MaxMediaSizeMB int `json:"max_media_size_mb"`
+		AIAssistantID  int `json:"ai_assistant_id"`
 	}
 	if len(configJSON) > 0 {
 		if err := json.Unmarshal(configJSON, &cfg); err != nil {
@@ -481,6 +482,15 @@ func validateMetaConfig(app *App, tenantID int, configJSON json.RawMessage) erro
 	if cfg.MaxMediaSizeMB < 0 || cfg.MaxMediaSizeMB > maxUpload {
 		return envelope.NewError(envelope.InputError,
 			app.i18n.For(tenantID).Ts("validation.minmaxNumber", "min", "1", "max", strconv.Itoa(maxUpload)), nil)
+	}
+	// The assistant new conversations go to must be one of this workspace's.
+	if cfg.AIAssistantID < 0 {
+		return envelope.NewError(envelope.InputError, app.i18n.For(tenantID).T("ai.jev.invalidAssistant"), nil)
+	}
+	if cfg.AIAssistantID > 0 {
+		if _, err := app.aiAgent.GetAssistant(tenantID, cfg.AIAssistantID); err != nil {
+			return envelope.NewError(envelope.InputError, app.i18n.For(tenantID).T("ai.jev.invalidAssistant"), nil)
+		}
 	}
 	return nil
 }

@@ -1541,7 +1541,7 @@ func (m *Manager) ProcessIncomingMessageHooks(tenantID int, conversationUUID str
 			m.webhookStore.TriggerEvent(tenantID, wmodels.EventConversationCreated, conversation)
 			m.automation.EvaluateNewConversationRules(conversation)
 			if m.onNewConversation != nil {
-				m.onNewConversation(tenantID, conversation.ContactID)
+				m.onNewConversation(tenantID, conversation)
 			}
 		}
 		return nil

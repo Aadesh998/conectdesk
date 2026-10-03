@@ -45,7 +45,7 @@ func IsMetaChannel(channel string) bool {
 // metaEditableKeys are the only config keys an admin may change on a Meta
 // inbox. The rest (account IDs, the access token) come from Meta when the
 // account is connected and are kept as stored.
-var metaEditableKeys = []string{"max_media_size_mb", "mark_seen", "allow_groups"}
+var metaEditableKeys = []string{"max_media_size_mb", "mark_seen", "allow_groups", "ai_assistant_id"}
 
 // metaSecretKeys are the Meta inbox config keys encrypted at rest.
 var metaSecretKeys = []string{"access_token", "two_step_pin", "app_secret", "webhook_verify_token"}

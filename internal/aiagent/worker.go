@@ -276,6 +276,41 @@ func (m *Manager) handle(ctx context.Context, tenantID, convID int) {
 		return
 	}
 
+	// The Jev gate decides whether this message is worth an LLM run at all:
+	// a plain "ok, thanks" is left (or closes a settled conversation), an
+	// angry customer or one asking for a person goes straight to a human, and
+	// everything else, or anything Jev isn't sure of, goes to the LLM.
+	jev := m.jevClient(tenantID)
+	var lines []transcriptLine
+	if jev != nil {
+		lines = m.transcript(msgs, conv.ContactID)
+	}
+	if jev != nil && assistant.JevGate {
+		d, err := m.gate(ctx, jev, assistant, lines)
+		if err != nil {
+			m.lo.Warn("jev gate unavailable, letting the llm reply", "conversation_uuid", conv.UUID, "error", err)
+		} else {
+			verdict, why := decideGate(d, assistant.JevConfidence, assistant.HandoffEnabled, turns > 0)
+			m.lo.Debug("jev gate", "conversation_uuid", conv.UUID, "action", d.Action, "confidence", d.ActionConfidence,
+				"frustration", d.Frustration, "settled", d.Settled, "verdict", verdict)
+			switch verdict {
+			case verdictSkip:
+				m.recordEvent(tenantID, assistant.ID, conv.ID, "skip")
+				if assistant.JevLeadStage {
+					m.updateLeadStage(ctx, jev, conv, assistant, lines)
+				}
+				return
+			case verdictResolve:
+				m.recordEvent(tenantID, assistant.ID, conv.ID, "skip")
+				m.resolve(conv, assistant)
+				return
+			case verdictHandoff:
+				m.handoff(conv, assistant, m.i18n.For(tenantID).T("ai.jev.handoff."+why))
+				return
+			}
+		}
+	}
+
 	contactLines := contactFieldLines(conv.Contact)
 	systemPrompt := buildSystemPrompt(assistant)
 	if len(contactLines) == 0 {
@@ -303,8 +338,15 @@ func (m *Manager) handle(ctx context.Context, tenantID, convID int) {
 	m.lo.Debug("ai agent verification state", "conversation_uuid", conv.UUID, "channel", conv.InboxChannel, "contact_type", conv.Contact.Type, "has_email", conv.Contact.Email.String != "", "verified", runVerified)
 
 	outcome := &runOutcome{}
+	// What the knowledge base searches returned, for the Jev guard to check
+	// the reply's facts against.
+	var knowledge []string
 	tools := []ai.Tool{
-		&searchKnowledgeTool{m: m, tenantID: tenantID},
+		&searchKnowledgeTool{m: m, tenantID: tenantID, collect: func(hits []aimodels.SearchResult) {
+			for _, h := range hits {
+				knowledge = append(knowledge, truncateRunes(h.ChunkText, jevKnowledgeChars))
+			}
+		}},
 		&resolveTool{m: m, conv: conv, outcome: outcome},
 	}
 	if assistant.HandoffEnabled {
@@ -377,6 +419,20 @@ func (m *Manager) handle(ctx context.Context, tenantID, convID int) {
 	if conv.InboxChannel == channelEmail && confirm != "" {
 		answer, confirm = answer+"\n\n"+confirm, ""
 	}
+	// The Jev guard reads the draft before the customer does. One it flags
+	// isn't sent: it goes to a person as a private note, to send or fix.
+	if jev != nil && assistant.JevGuard && answer != "" {
+		draft := strings.TrimSpace(answer + "\n\n" + confirm)
+		g, err := m.guard(ctx, jev, assistant, m.messageText(*inbound), draft, knowledge, assistant.JevConfidence)
+		if err != nil {
+			m.lo.Warn("jev guard unavailable, sending the reply unchecked", "conversation_uuid", conv.UUID, "error", err)
+		} else if g.Blocked() {
+			m.lo.Info("jev guard stopped a reply", "conversation_uuid", conv.UUID, "reasons", g.Reasons)
+			m.recordEvent(tenantID, assistant.ID, conv.ID, "block")
+			m.handoff(conv, assistant, m.blockedNote(tenantID, g, draft))
+			return
+		}
+	}
 	if answer != "" {
 		m.lo.Debug("ai agent replying", "conversation_uuid", conv.UUID, "reply_len", len(answer), "resolved", outcome.resolved)
 		if err := m.postReply(conv, assistant, answer, nil); err != nil {
@@ -389,6 +445,9 @@ func (m *Manager) handle(ctx context.Context, tenantID, convID int) {
 			m.handoff(conv, assistant, m.i18n.For(tenantID).T("ai.agent.handoffError"))
 			return
 		}
+	}
+	if jev != nil && assistant.JevLeadStage && answer != "" {
+		m.updateLeadStage(ctx, jev, conv, assistant, append(lines, transcriptLine{From: "assistant", Text: truncateRunes(answer, jevMessageChars)}))
 	}
 	if outcome.resolved && (answer != "" || turns > 0) {
 		m.resolve(conv, assistant)

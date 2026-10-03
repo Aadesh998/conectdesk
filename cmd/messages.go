@@ -312,6 +312,11 @@ func handleSendMessage(r *fastglue.Request) error {
 			}
 		}
 	}
+	// An agent replying to a conversation an AI assistant is handling takes it
+	// over, so the assistant doesn't answer the customer's next message too.
+	// Done before queueing, so an assistant run in flight drops its reply.
+	takeOverFromAssistant(app, tenantID(r), *conv, user)
+
 	message, err := app.conversation.QueueReply(tenantID(r), media, conv.InboxID, user.ID, conv.ContactID, cuuid, req.Message, req.To, req.CC, req.BCC, meta)
 	if err != nil {
 		return sendErrorEnvelope(r, err)

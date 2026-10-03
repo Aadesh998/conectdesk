@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	amodels "github.com/conectdesk/conectdesk/internal/auth/models"
+	cmodels "github.com/conectdesk/conectdesk/internal/conversation/models"
 	"github.com/conectdesk/conectdesk/internal/envelope"
 	"github.com/conectdesk/conectdesk/internal/lead"
 	lmodels "github.com/conectdesk/conectdesk/internal/lead/models"
@@ -16,13 +17,16 @@ import (
 
 // onNewContactConversation puts a contact who just got in touch on the first
 // lead stage, when the workspace has that on and they aren't on it yet.
-func onNewContactConversation(app *App) func(tenantID, contactID int) {
-	return func(tid, contactID int) {
-		stage, err := app.lead.EnsureLead(tid, contactID)
+func onNewContactConversation(app *App) func(tenantID int, conv cmodels.Conversation) {
+	return func(tid int, conv cmodels.Conversation) {
+		// The inbox's AI assistant, if it has one, takes the conversation.
+		assignToInboxAssistant(app, tid, conv)
+
+		stage, err := app.lead.EnsureLead(tid, conv.ContactID)
 		if err != nil || stage == "" {
 			return
 		}
-		leadStageChanged(app, tid, contactID, stage)
+		leadStageChanged(app, tid, conv.ContactID, stage)
 	}
 }
 
