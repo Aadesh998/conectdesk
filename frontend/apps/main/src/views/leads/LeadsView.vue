@@ -36,12 +36,16 @@
             v-for="card in col.cards"
             :key="card.id"
             draggable="true"
-            class="box cursor-grab space-y-1.5 p-2.5 text-sm active:cursor-grabbing"
+            role="link"
+            tabindex="0"
+            class="box cursor-pointer space-y-1.5 p-2.5 text-sm transition-colors hover:border-primary/50 active:cursor-grabbing"
             @dragstart="dragging = { id: card.id, from: col.stage.key }"
             @dragend="dragging = null; dropTarget = null"
+            @click="open(card)"
+            @keydown.enter="open(card)"
           >
             <div class="flex items-start justify-between gap-2">
-              <router-link :to="{ name: 'contact-detail', params: { id: card.id } }" class="font-medium hover:underline">
+              <router-link :to="{ name: 'contact-detail', params: { id: card.id } }" class="font-medium hover:underline" @click.stop>
                 {{ [card.first_name, card.last_name].filter(Boolean).join(' ') || card.phone_number }}
               </router-link>
               <span
@@ -61,8 +65,9 @@
             <div class="flex items-center justify-between gap-2 pt-0.5">
               <router-link
                 v-if="card.last_conversation_uuid"
-                :to="{ name: 'inbox-conversation', params: { type: 'all', uuid: card.last_conversation_uuid } }"
+                :to="conversationRoute(card)"
                 class="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                @click.stop
               >
                 {{ $t('lead.lastActivity', { time: ago(card.last_message_at || card.stage_changed_at) }) }}
               </router-link>
@@ -72,6 +77,8 @@
                 :value="col.stage.key"
                 class="h-6 max-w-28 rounded border bg-background px-1 text-[11px]"
                 :aria-label="$t('lead.moveTo')"
+                @click.stop
+                @keydown.enter.stop
                 @change="move(card.id, col.stage.key, $event.target.value)"
               >
                 <option v-for="c in columns" :key="c.stage.key" :value="c.stage.key">{{ c.stage.label }}</option>
@@ -90,6 +97,7 @@
 
 <script setup>
 import { onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { PhoneMissed } from 'lucide-vue-next'
 import { Button } from '@shared-ui/components/ui/button'
 import { Input } from '@shared-ui/components/ui/input'
@@ -106,6 +114,7 @@ import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
 const CARD_ATTRIBUTES = ['course', 'class', 'grade', 'city', 'batch']
 
 const emitter = useEmitter()
+const router = useRouter()
 const leadStore = useLeadStore()
 const userStore = useUserStore()
 const columns = ref([])
@@ -156,6 +165,18 @@ const move = async (id, from, to) => {
     toast(handleHTTPError(error).message)
     load()
   }
+}
+
+const conversationRoute = (card) => ({
+  name: 'inbox-conversation',
+  params: { type: 'all', uuid: card.last_conversation_uuid }
+})
+
+// Clicking a card opens the lead's latest conversation, or their contact page
+// when they have none yet. A drag doesn't fire a click, so moving still works.
+const open = (card) => {
+  if (dragging.value) return
+  router.push(card.last_conversation_uuid ? conversationRoute(card) : { name: 'contact-detail', params: { id: card.id } })
 }
 
 const drop = (to) => {
