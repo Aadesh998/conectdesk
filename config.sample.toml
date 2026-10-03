@@ -31,7 +31,9 @@ enabled = false
 base_domain = ""
 # Scheme of tenant URLs in links and emails. Set "http" for local development.
 url_scheme = "https"
-# Let anyone create a workspace at https://<base_domain>/signup.
+# Let anyone create a workspace at https://<base_domain>/signup. Off, only
+# platform admins create workspaces, from the platform dashboard, and pick
+# the inbox channels each one may use.
 signup_enabled = false
 # Product name on the landing page at the base domain.
 product_name = "ConectDesk"

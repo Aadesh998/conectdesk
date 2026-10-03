@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"slices"
 	"time"
 
 	"github.com/lib/pq"
@@ -47,6 +48,29 @@ type Onboarding struct {
 // Active reports whether the tenant may serve requests.
 func (t Tenant) Active() bool {
 	return t.Status == StatusActive
+}
+
+// meta is what Tenant.Meta holds.
+type meta struct {
+	// Channels are the inbox channels the platform lets the tenant use; nil
+	// (no key) leaves every channel open.
+	Channels *[]string `json:"channels"`
+}
+
+// AllowedChannels returns the inbox channels the platform admin enabled for
+// the tenant. all is true when they haven't restricted them.
+func (t Tenant) AllowedChannels() (channels []string, all bool) {
+	var m meta
+	if len(t.Meta) == 0 || json.Unmarshal(t.Meta, &m) != nil || m.Channels == nil {
+		return nil, true
+	}
+	return *m.Channels, false
+}
+
+// ChannelAllowed reports whether the tenant may have inboxes of channel.
+func (t Tenant) ChannelAllowed(channel string) bool {
+	channels, all := t.AllowedChannels()
+	return all || slices.Contains(channels, channel)
 }
 
 // Domain is a hostname a tenant has added to serve on.

@@ -21,6 +21,7 @@ import (
 	"github.com/conectdesk/conectdesk/internal/stringutil"
 	umodels "github.com/conectdesk/conectdesk/internal/user/models"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/logf"
 )
@@ -135,6 +136,7 @@ type queries struct {
 	GetAll         *sqlx.Stmt `query:"get-all-inboxes"`
 	Update         *sqlx.Stmt `query:"update"`
 	Toggle         *sqlx.Stmt `query:"toggle"`
+	DisableOthers  *sqlx.Stmt `query:"disable-other-channels"`
 	SoftDelete     *sqlx.Stmt `query:"soft-delete"`
 	InsertInbox    *sqlx.Stmt `query:"insert-inbox"`
 	UpdateConfig   *sqlx.Stmt `query:"update-config"`
@@ -565,6 +567,17 @@ func (m *Manager) Toggle(tenantID, id int) (imodels.Inbox, error) {
 		return imodels.Inbox{}, envelope.NewError(envelope.GeneralError, m.i18n.For(tenantID).T("globals.messages.somethingWentWrong"), nil)
 	}
 	return updatedInbox, nil
+}
+
+// DisableOtherChannels turns off the tenant's enabled inboxes whose channel
+// isn't in channels, and returns their IDs.
+func (m *Manager) DisableOtherChannels(tenantID int, channels []string) ([]int, error) {
+	var ids []int
+	if err := m.queries.DisableOthers.Select(&ids, tenantID, pq.StringArray(channels)); err != nil {
+		m.lo.Error("error disabling inboxes of other channels", "error", err)
+		return nil, err
+	}
+	return ids, nil
 }
 
 // SoftDelete soft deletes an inbox in the DB.

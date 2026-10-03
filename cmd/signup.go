@@ -28,11 +28,18 @@ func isSignupPath(path string) bool {
 	return strings.HasPrefix(path, "/static/public/static/")
 }
 
-// signupAllowed reports whether the request may sign up a workspace: signup
-// is on and the request is for the bare base domain, not a workspace.
+// publicSignup reports whether anyone may create a workspace at
+// <base_domain>/signup, app.tenancy.signup_enabled. Off, only platform admins
+// create workspaces, from the platform dashboard.
+func publicSignup(app *App) bool {
+	return app.signup != nil && ko.Bool("app.tenancy.signup_enabled")
+}
+
+// signupAllowed reports whether the request may sign up a workspace: public
+// signup is on and the request is for the bare base domain, not a workspace.
 func signupAllowed(r *fastglue.Request) bool {
 	app := r.Context.(*App)
-	return app.signup != nil && app.tenant.IsBaseDomain(string(r.RequestCtx.Host()))
+	return publicSignup(app) && app.tenant.IsBaseDomain(string(r.RequestCtx.Host()))
 }
 
 // handleSignupPage renders the workspace signup form.
@@ -197,7 +204,7 @@ func landingOr(next fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 			"Data": map[string]any{
 				"Product":       cmp.Or(ko.String("app.tenancy.product_name"), "ConectDesk"),
 				"BaseDomain":    ko.String("app.tenancy.base_domain"),
-				"SignupEnabled": app.signup != nil,
+				"SignupEnabled": publicSignup(app),
 				// DemoURL is where "Book a demo" goes, e.g. a calendar or a
 				// wa.me link; the button is hidden without it.
 				"DemoURL": ko.String("app.tenancy.demo_url"),

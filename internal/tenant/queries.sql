@@ -45,6 +45,13 @@ UPDATE tenants SET status = $2::tenant_status, updated_at = NOW()
 WHERE id = $1
 RETURNING id, created_at, updated_at, slug, "name", custom_domain, status, "plan", meta, deletion_scheduled_at;
 
+-- name: update-tenant-channels
+-- tenant: all, this is the tenant registry itself.
+-- $2 is the JSON array of allowed inbox channels; NULL removes the restriction.
+UPDATE tenants SET meta = CASE WHEN $2::jsonb IS NULL THEN meta - 'channels' ELSE jsonb_set(meta, '{channels}', $2::jsonb) END, updated_at = NOW()
+WHERE id = $1
+RETURNING id, created_at, updated_at, slug, "name", custom_domain, status, "plan", meta, deletion_scheduled_at;
+
 -- name: update-tenant-plan
 -- tenant: all, this is the tenant registry itself.
 UPDATE tenants SET "plan" = $2, updated_at = NOW()

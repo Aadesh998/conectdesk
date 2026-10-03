@@ -13,6 +13,7 @@ import (
 	amodels "github.com/conectdesk/conectdesk/internal/auth/models"
 	"github.com/conectdesk/conectdesk/internal/envelope"
 	"github.com/conectdesk/conectdesk/internal/image"
+	"github.com/conectdesk/conectdesk/internal/inbox"
 	"github.com/conectdesk/conectdesk/internal/media"
 	"github.com/conectdesk/conectdesk/internal/platform"
 	pmodels "github.com/conectdesk/conectdesk/internal/platform/models"
@@ -69,7 +70,7 @@ func tenantHandler(app *App, next fasthttp.RequestHandler) fasthttp.RequestHandl
 
 		// The bare base domain has no tenant; it only serves signup.
 		if app.tenant.IsBaseDomain(string(ctx.Host())) {
-			if app.signup != nil && isSignupPath(string(ctx.Path())) {
+			if publicSignup(app) && isSignupPath(string(ctx.Path())) {
 				next(ctx)
 				return
 			}
@@ -340,6 +341,29 @@ func checkPlanLimit(app *App, tenantID int, resource string, adding int) error {
 	}
 	if used+adding > max {
 		return envelope.NewError(envelope.PermissionError, app.i18n.For(tenantID).Ts(msg, "max", strconv.Itoa(max)), nil)
+	}
+	return nil
+}
+
+// inboxChannels are the inbox channels a platform admin can enable or disable
+// for each workspace.
+var inboxChannels = []string{
+	inbox.ChannelEmail, inbox.ChannelLiveChat, inbox.ChannelWhatsApp, inbox.ChannelMessenger,
+	inbox.ChannelInstagram, inbox.ChannelTelegram, inbox.ChannelVoice,
+}
+
+// checkChannelAllowed returns an error when the platform admin hasn't enabled
+// channel for the tenant. Without multi-tenancy every channel is allowed.
+func checkChannelAllowed(app *App, tenantID int, channel string) error {
+	if !app.tenant.Enabled() {
+		return nil
+	}
+	t, err := app.tenant.Get(tenantID)
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, app.i18n.For(tenantID).T("globals.messages.somethingWentWrong"), nil)
+	}
+	if !t.ChannelAllowed(channel) {
+		return envelope.NewError(envelope.PermissionError, app.i18n.For(tenantID).T("tenant.channelNotAllowed"), nil)
 	}
 	return nil
 }

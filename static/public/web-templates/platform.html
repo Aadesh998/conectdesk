@@ -84,6 +84,11 @@
 	#toast { position: fixed; bottom: 1.25rem; right: 1.25rem; background: var(--accent); color: var(--accent-text); padding: 0.6rem 1rem; border-radius: 8px; display: none; max-width: 420px; }
 	#toast.bad { background: var(--bad); color: #fff; }
 	code { font-size: 0.85em; }
+	.channels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
+	.channels label { display: flex; align-items: center; gap: 0.5rem; margin: 0; color: var(--text); font-size: 0.9rem;
+		background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem 0.65rem; cursor: pointer; }
+	.channels label.off { opacity: 0.5; cursor: default; }
+	.channels input { width: auto; }
 </style>
 </head>
 <body>
@@ -294,9 +299,89 @@
 			timer = setTimeout(function () { listState.q = search.value; listState.page = 1; load(); }, 250);
 		});
 		status.addEventListener('change', function () { listState.status = status.value; listState.page = 1; load(); });
-		layout('workspaces', [el('h1', { text: 'Workspaces' }), el('div', { class: 'toolbar' }, search, status), results]);
+		layout('workspaces', [
+			el('div', { class: 'head', style: 'justify-content:space-between' }, el('h1', { text: 'Workspaces' }),
+				el('button', { onclick: function () { location.hash = '#/workspaces/new'; }, text: 'New workspace' })),
+			el('div', { class: 'toolbar' }, search, status), results]);
 		load();
 		search.focus();
+	}
+
+	var channelNames = { email: 'Email', livechat: 'Live chat', whatsapp: 'WhatsApp', messenger: 'Messenger',
+		instagram: 'Instagram', telegram: 'Telegram', voice: 'Phone calls (Exotel)' };
+
+	// channelPicker is an "every channel" switch over a checkbox per channel.
+	// value() returns { all_channels, channels } for the API.
+	function channelPicker(selected, all) {
+		var allBox = el('input', { type: 'checkbox', checked: !!all });
+		var boxes = me.channels.map(function (c) {
+			return el('input', { type: 'checkbox', value: c, checked: !all && selected.indexOf(c) >= 0 });
+		});
+		var labels = boxes.map(function (b) { return el('label', null, b, channelNames[b.value] || b.value); });
+		function sync() {
+			boxes.forEach(function (b, i) { b.disabled = allBox.checked; labels[i].className = allBox.checked ? 'off' : ''; });
+		}
+		allBox.addEventListener('change', sync);
+		sync();
+		var node = el('div', null,
+			el('div', { class: 'check', style: 'margin-bottom:0.6rem' }, allBox,
+				el('span', { text: 'Every channel, including ones added later' })),
+			el('div', { class: 'channels' }, labels));
+		return {
+			node: node,
+			value: function () {
+				return {
+					all_channels: allBox.checked,
+					channels: boxes.filter(function (b) { return b.checked; }).map(function (b) { return b.value; })
+				};
+			}
+		};
+	}
+
+	function newWorkspace() {
+		var plan = el('select', { name: 'plan' }, me.plans.map(function (p) {
+			return el('option', { value: p, selected: p === me.default_plan, text: p });
+		}));
+		var picker = channelPicker([], false);
+		var err = el('div', { class: 'error', role: 'alert' });
+		function field(label, input, hint) {
+			return el('div', null, el('label', { text: label }), input, hint ? el('div', { class: 'muted', style: 'font-size:0.8rem;margin-top:0.25rem', text: hint }) : null);
+		}
+		var form = el('form', { class: 'form', onsubmit: function (e) {
+			e.preventDefault();
+			var f = e.target, ch = picker.value(), btn = f.querySelector('button[type=submit]');
+			err.textContent = '';
+			if (!ch.all_channels && !ch.channels.length) { err.textContent = 'Pick at least one channel.'; return; }
+			btn.disabled = true;
+			api('POST', 'workspaces', {
+				company: f.company.value, slug: f.slug.value,
+				first_name: f.first_name.value, last_name: f.last_name.value,
+				email: f.email.value, password: f.password.value,
+				plan: plan.value, channels: ch.channels, all_channels: ch.all_channels
+			}).then(function (d) {
+				toast('Created ' + d.url);
+				location.hash = '#/workspaces/' + d.id;
+			}).catch(function (x) { err.textContent = x.message; btn.disabled = false; });
+		} },
+			el('h2', { text: 'Organization', style: 'margin-top:0' }),
+			field('Name', el('input', { name: 'company', required: true, maxlength: '140', placeholder: 'Acme Tuition' })),
+			field('Address', el('input', { name: 'slug', required: true, pattern: '[a-z0-9][a-z0-9\\-]{1,61}[a-z0-9]', placeholder: 'acme' }),
+				'Lowercase letters, numbers and dashes. The workspace is served on <address>.{{ .Data.BaseDomain }}.'),
+			field('Plan', plan),
+			el('h2', { text: 'First admin' }),
+			el('div', { class: 'pair' },
+				field('First name', el('input', { name: 'first_name', required: true, maxlength: '140' })),
+				field('Last name', el('input', { name: 'last_name', maxlength: '140' }))),
+			field('Email', el('input', { name: 'email', type: 'email', required: true, autocomplete: 'off' })),
+			field('Password', el('input', { name: 'password', type: 'password', required: true, minlength: '10', autocomplete: 'new-password' }),
+				'10+ characters with upper and lowercase letters, a number and a symbol. Share it securely; they can change it after logging in.'),
+			el('h2', { text: 'Channels' }),
+			el('p', { class: 'muted', style: 'margin:0', text: 'The inbox channels this organization can set up. You can change this later.' }),
+			picker.node,
+			el('div', null, el('button', { type: 'submit', text: 'Create workspace' })), err);
+		layout('workspaces', [
+			el('p', null, el('a', { href: '#/workspaces', class: 'muted', text: '← Workspaces' })),
+			el('h1', { text: 'New workspace' }), form]);
 	}
 
 	function limit(used, max) { return used + ' / ' + (max ? max : '∞'); }
@@ -347,6 +432,18 @@
 				act(api('POST', 'workspaces/' + w.id + '/delete', { confirm: typed }));
 			}, text: 'Delete' }));
 
+		var picker = channelPicker(d.channels || [], d.all_channels);
+		var channels = el('div', { class: 'form' },
+			el('p', { class: 'muted', style: 'margin:0', text: 'The inbox channels this workspace can set up. Taking one away switches off its inboxes of that channel; they stay off until you enable it again.' }),
+			picker.node,
+			el('div', null, el('button', { onclick: function () {
+				var ch = picker.value();
+				if (!ch.all_channels && !ch.channels.length && !confirm('Leave ' + w.name + ' with no channels? All its inboxes will be switched off.')) return;
+				api('PUT', 'workspaces/' + w.id + '/channels', ch).then(function (r) {
+					renderWorkspace(r); toast('Channels saved');
+				}).catch(fail);
+			}, text: 'Save channels' })));
+
 		function impersonate(agent) {
 			api('POST', 'workspaces/' + w.id + '/impersonate', { user_id: agent.id }).then(function (r) {
 				var tab = window.open(r.url, '_blank', 'noopener');
@@ -365,6 +462,8 @@
 				card(limit(d.usage.inboxes, d.limits.inboxes), 'Inboxes (plan limit)'),
 				card(d.counts.contacts, 'Contacts'), card(d.counts.conversations, 'Conversations'),
 				card(d.counts.conversations_30d, 'Conversations, 30 days'), card(d.counts.help_centers, 'Help centers')),
+			el('h2', { text: 'Channels' }),
+			channels,
 			el('h2', { text: 'Fair use' }),
 			el('div', { class: 'cards' },
 				card(size(d.fair_use.storage_bytes) + ' / ' + (d.limits.storage_mb ? size(d.limits.storage_mb * 1048576) : '∞'), 'File storage'),
@@ -469,6 +568,7 @@
 		var h = location.hash.replace(/^#/, '') || '/';
 		var m = h.match(/^\/workspaces\/(\d+)$/);
 		if (m) workspace(m[1]);
+		else if (h === '/workspaces/new') newWorkspace();
 		else if (h === '/workspaces') workspaces();
 		else if (h === '/audit') audit();
 		else if (h === '/settings') settingsPage();

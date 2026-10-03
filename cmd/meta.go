@@ -101,6 +101,9 @@ func handleMetaAuthorize(r *fastglue.Request) error {
 	if !available {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.For(tid).T("inbox.metaAppMissing"), nil, envelope.InputError)
 	}
+	if err := checkChannelAllowed(app, tid, product); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
 
 	state, err := stringutil.RandomAlphanumeric(32)
 	if err != nil {

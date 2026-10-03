@@ -5,6 +5,9 @@
   <div class="space-y-6">
     <div v-if="currentStep === 1" class="space-y-4 mt-10">
       <h3 class="font-semibold text-lg">{{ $t('admin.inbox.chooseChannel') }}</h3>
+      <p v-if="!channels.length" class="text-sm text-muted-foreground">
+        {{ $t('admin.inbox.noChannelsEnabled') }}
+      </p>
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <MenuCard
           v-for="channel in channels"
@@ -49,7 +52,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Button } from '@shared-ui/components/ui/button'
 import { useRouter } from 'vue-router'
 import { CustomBreadcrumb } from '@shared-ui/components/ui/breadcrumb/index.js'
@@ -65,6 +68,7 @@ import { EMITTER_EVENTS } from '../../../constants/emitterEvents.js'
 import { useEmitter } from '../../../composables/useEmitter'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
 import { useI18n } from 'vue-i18n'
+import { useAppSettingsStore } from '@/stores/appSettings'
 
 const { t } = useI18n()
 const emitter = useEmitter()
@@ -93,50 +97,68 @@ const selectLiveChatChannel = () => {
 
 const metaChannels = ['whatsapp', 'messenger', 'instagram']
 
-const channels = [
+const appSettingsStore = useAppSettingsStore()
+
+const allChannels = [
   {
+    channel: 'email',
     title: t('globals.terms.email'),
     subTitle: t('admin.inbox.createEmailInbox'),
     onClick: selectEmailChannel,
     icon: Mail
   },
   {
+    channel: 'livechat',
     title: t('globals.terms.liveChat'),
     subTitle: t('admin.inbox.createLiveChatInbox'),
     onClick: selectLiveChatChannel,
     icon: MessageCircle
   },
   {
+    channel: 'whatsapp',
     title: t('globals.terms.whatsapp'),
     subTitle: t('admin.inbox.createWhatsAppInbox'),
     onClick: () => selectChannel('whatsapp'),
     icon: MessagesSquare
   },
   {
+    channel: 'messenger',
     title: t('globals.terms.messenger'),
     subTitle: t('admin.inbox.createMessengerInbox'),
     onClick: () => selectChannel('messenger'),
     icon: Facebook
   },
   {
+    channel: 'instagram',
     title: t('globals.terms.instagram'),
     subTitle: t('admin.inbox.createInstagramInbox'),
     onClick: () => selectChannel('instagram'),
     icon: Instagram
   },
   {
+    channel: 'telegram',
     title: t('globals.terms.telegram'),
     subTitle: t('admin.inbox.createTelegramInbox'),
     onClick: () => selectChannel('telegram'),
     icon: Send
   },
   {
+    channel: 'voice',
     title: t('globals.terms.voice'),
     subTitle: t('admin.inbox.createVoiceInbox'),
     onClick: () => selectChannel('voice'),
     icon: Phone
   }
 ]
+
+// Only the channels the platform enabled for this workspace; all of them when
+// it hasn't restricted them.
+const channels = computed(() => {
+  const allowed = appSettingsStore.public_config['app.allowed_channels']
+  return Array.isArray(allowed)
+    ? allChannels.filter((c) => allowed.includes(c.channel))
+    : allChannels
+})
 
 onMounted(async () => {
   try {

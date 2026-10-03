@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/conectdesk/conectdesk/internal/platform"
@@ -83,5 +84,18 @@ func TestTenantHandlerForwardedProto(t *testing.T) {
 		if got := string(ctx.Response.Header.Peek("Location")); got != want {
 			t.Errorf("X-Forwarded-Proto %q: Location %q, want %q", proto, got, want)
 		}
+	}
+}
+
+func TestPlatformChannels(t *testing.T) {
+	got, ok := platformChannels([]string{"voice", "whatsapp", "voice"})
+	if !ok || !slices.Equal(got, []string{"whatsapp", "voice"}) {
+		t.Errorf("got %v, %v; want [whatsapp voice], true", got, ok)
+	}
+	if got, ok := platformChannels(nil); !ok || got == nil || len(got) != 0 {
+		t.Errorf("no channels: got %#v, %v; want an empty list", got, ok)
+	}
+	if _, ok := platformChannels([]string{"whatsapp", "sms"}); ok {
+		t.Error("unknown channel sms: want ok false")
 	}
 }

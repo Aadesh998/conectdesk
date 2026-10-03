@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"encoding/json"
 	"errors"
 	"net"
 	"strconv"
@@ -87,6 +88,7 @@ type queries struct {
 	InsertTenant       *sqlx.Stmt `query:"insert-tenant"`
 	UpdateTenantStatus *sqlx.Stmt `query:"update-tenant-status"`
 	UpdateTenantPlan   *sqlx.Stmt `query:"update-tenant-plan"`
+	UpdateChannels     *sqlx.Stmt `query:"update-tenant-channels"`
 
 	ScheduleTenantDeletion   *sqlx.Stmt `query:"schedule-tenant-deletion"`
 	CancelTenantDeletion     *sqlx.Stmt `query:"cancel-tenant-deletion"`
@@ -315,6 +317,34 @@ func (m *Manager) SetPlan(id int, plan string) (models.Tenant, error) {
 			return t, ErrNotFound
 		}
 		m.lo.Error("error updating tenant plan", "error", err)
+		return t, err
+	}
+	m.Invalidate()
+	return t, nil
+}
+
+// SetChannels sets the inbox channels a tenant may use. all lifts the
+// restriction, leaving every channel open.
+func (m *Manager) SetChannels(id int, channels []string, all bool) (models.Tenant, error) {
+	var (
+		t   models.Tenant
+		arg any
+	)
+	if !all {
+		if channels == nil {
+			channels = []string{}
+		}
+		b, err := json.Marshal(channels)
+		if err != nil {
+			return t, err
+		}
+		arg = string(b)
+	}
+	if err := m.q.UpdateChannels.Get(&t, id, arg); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return t, ErrNotFound
+		}
+		m.lo.Error("error updating tenant channels", "error", err)
 		return t, err
 	}
 	m.Invalidate()

@@ -32,6 +32,12 @@ SET enabled = NOT enabled, updated_at = NOW()
 WHERE tenant_id = $1 AND id = $2
 RETURNING *;
 
+-- name: disable-other-channels
+-- Turns off the tenant's inboxes of channels outside $2, the ones it may use.
+UPDATE inboxes SET enabled = false, updated_at = NOW()
+WHERE tenant_id = $1 AND enabled AND deleted_at IS NULL AND NOT (channel::text = ANY($2::text[]))
+RETURNING id;
+
 -- name: update-config
 UPDATE inboxes
 SET config = $3, updated_at = NOW()

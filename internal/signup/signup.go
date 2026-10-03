@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -122,6 +123,20 @@ func (r Request) Validate() error {
 // Create validates the request and creates the tenant at once, without
 // verifying its email. Nothing is kept if any step fails.
 func (m *Manager) Create(ctx context.Context, r Request) (tmodels.Tenant, error) {
+	return m.CreateWith(ctx, r, CreateOpts{})
+}
+
+// CreateOpts are what a platform admin sets on a workspace they create.
+type CreateOpts struct {
+	// Plan is the workspace's plan; empty is the default plan.
+	Plan string
+	// Channels are the inbox channels the workspace may use; nil allows all.
+	Channels []string
+}
+
+// CreateWith is Create with a plan and allowed channels, for workspaces a
+// platform admin creates.
+func (m *Manager) CreateWith(ctx context.Context, r Request, opts CreateOpts) (tmodels.Tenant, error) {
 	r.Normalize()
 	if err := r.Validate(); err != nil {
 		return tmodels.Tenant{}, err
@@ -149,7 +164,7 @@ func (m *Manager) Create(ctx context.Context, r Request) (tmodels.Tenant, error)
 		return tmodels.Tenant{}, ErrSlugTaken
 	}
 
-	t, err := m.createTenant(tx, r, string(adminHash))
+	t, err := m.createTenant(tx, r, string(adminHash), opts)
 	if err != nil {
 		return tmodels.Tenant{}, err
 	}
@@ -253,7 +268,7 @@ func (m *Manager) Confirm(ctx context.Context, token string) (tmodels.Tenant, er
 		return tmodels.Tenant{}, err
 	}
 
-	t, err := m.createTenant(tx, Request{Company: p.Company, Slug: p.Slug, FirstName: p.FirstName, LastName: p.LastName, Email: p.Email}, p.PasswordHash)
+	t, err := m.createTenant(tx, Request{Company: p.Company, Slug: p.Slug, FirstName: p.FirstName, LastName: p.LastName, Email: p.Email}, p.PasswordHash, CreateOpts{})
 	if err != nil {
 		return tmodels.Tenant{}, err
 	}
@@ -266,7 +281,16 @@ func (m *Manager) Confirm(ctx context.Context, token string) (tmodels.Tenant, er
 
 // createTenant creates the tenant with its default data, its system user and
 // its admin, whose password is already hashed, inside tx.
-func (m *Manager) createTenant(tx *sqlx.Tx, r Request, adminHash string) (tmodels.Tenant, error) {
+func (m *Manager) createTenant(tx *sqlx.Tx, r Request, adminHash string, opts CreateOpts) (tmodels.Tenant, error) {
+	meta := map[string]any{}
+	if opts.Channels != nil {
+		meta["channels"] = opts.Channels
+	}
+	metaJSON, err := json.Marshal(meta)
+	if err != nil {
+		return tmodels.Tenant{}, err
+	}
+
 	// Nobody logs in as the system user; it only authors automatic actions.
 	sysPassword, err := stringutil.RandomAlphanumeric(32)
 	if err != nil {
@@ -279,9 +303,9 @@ func (m *Manager) createTenant(tx *sqlx.Tx, r Request, adminHash string) (tmodel
 
 	var t tmodels.Tenant
 	if err := tx.Get(&t, `
-		INSERT INTO tenants (slug, "name", "plan") VALUES ($1, $2, $3)
+		INSERT INTO tenants (slug, "name", "plan", meta) VALUES ($1, $2, $3, $4)
 		RETURNING id, created_at, updated_at, slug, "name", custom_domain, status, "plan", meta, deletion_scheduled_at`,
-		r.Slug, r.Company, m.plan); err != nil {
+		r.Slug, r.Company, cmp.Or(opts.Plan, m.plan), string(metaJSON)); err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
 			return tmodels.Tenant{}, ErrSlugTaken

@@ -122,7 +122,8 @@ type App struct {
 	rootURL func(tenantID int) string
 	// mailer sends each tenant's notification email.
 	mailer *emailnotifier.TenantRouter
-	// signup creates workspaces; nil when signup is off.
+	// signup creates workspaces, from the platform dashboard and, when
+	// app.tenancy.signup_enabled, from public signup; nil without multi-tenancy.
 	signup *signup.Manager
 	// platform backs the platform admin dashboard, served on platformHost;
 	// nil without multi-tenancy.

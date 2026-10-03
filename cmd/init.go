@@ -402,9 +402,10 @@ func initTag(db *sqlx.DB, i18n *i18ncat.Catalog) *tag.Manager {
 	return mgr
 }
 
-// initSignup inits workspace signup, nil unless multi-tenancy and signup are on.
+// initSignup inits workspace creation, nil without multi-tenancy. Platform
+// admins create workspaces with it; publicSignup says whether anyone can too.
 func initSignup(db *sqlx.DB, tenants *tenant.Manager) *signup.Manager {
-	if !tenants.Enabled() || !ko.Bool("app.tenancy.signup_enabled") {
+	if !tenants.Enabled() {
 		return nil
 	}
 	return signup.New(signup.Opts{

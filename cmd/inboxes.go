@@ -86,6 +86,9 @@ func handleCreateInbox(r *fastglue.Request) error {
 	if err := validateInbox(app, tenantID(r), inbox); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	if err := checkChannelAllowed(app, tenantID(r), inbox.Channel); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
 	if err := checkPlanLimit(app, tenantID(r), planInboxes, 1); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -133,6 +136,12 @@ func handleUpdateInbox(r *fastglue.Request) error {
 	if err := validateInbox(app, tenantID(r), inbox); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	// An inbox of a channel the platform disabled stays off.
+	if inbox.Enabled {
+		if err := checkChannelAllowed(app, tenantID(r), inbox.Channel); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+	}
 
 	updatedInbox, err := app.inbox.Update(tenantID(r), id, inbox)
 	if err != nil {
@@ -162,6 +171,17 @@ func handleToggleInbox(r *fastglue.Request) error {
 	if err != nil || id == 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			app.i18n.For(tenantID(r)).T("globals.messages.somethingWentWrong"), nil, envelope.InputError)
+	}
+
+	// An inbox of a channel the platform disabled can't be switched back on.
+	record, err := app.inbox.GetDBRecord(tenantID(r), id)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if !record.Enabled {
+		if err := checkChannelAllowed(app, tenantID(r), record.Channel); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
 	}
 
 	toggledInbox, err := app.inbox.Toggle(tenantID(r), id)

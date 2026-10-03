@@ -74,6 +74,8 @@ const (
 	ActionScheduleDelete = "schedule_delete"
 	ActionRestore        = "restore"
 	ActionUpdateMail     = "update_mail"
+	ActionCreate         = "create"
+	ActionSetChannels    = "set_channels"
 	ActionTestMail       = "test_mail"
 )
 

@@ -43,6 +43,11 @@ func handleGetConfig(r *fastglue.Request) error {
 		// Channels the platform's Meta app can connect: whatsapp, messenger, instagram.
 		"app.meta_products": metaGraph().App().Products(),
 	}
+	// The inbox channels the platform admin enabled for the workspace; absent
+	// when every channel is open.
+	if channels, all := tenantFromReq(r).AllowedChannels(); !all && app.tenant.Enabled() {
+		publicSettings["app.allowed_channels"] = channels
+	}
 
 	// Get all OIDC providers
 	oidcProviders, err := app.oidc.GetAll(tenantID(r))

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"encoding/base64"
 	"errors"
 	"net"
@@ -16,6 +17,7 @@ import (
 	notifier "github.com/conectdesk/conectdesk/internal/notification"
 	"github.com/conectdesk/conectdesk/internal/platform"
 	pmodels "github.com/conectdesk/conectdesk/internal/platform/models"
+	"github.com/conectdesk/conectdesk/internal/signup"
 	"github.com/conectdesk/conectdesk/internal/stringutil"
 	"github.com/conectdesk/conectdesk/internal/tenant"
 	tmodels "github.com/conectdesk/conectdesk/internal/tenant/models"
@@ -221,6 +223,8 @@ func handlePlatformMe(r *fastglue.Request) error {
 	return r.SendEnvelope(map[string]any{
 		"email":               a.Email,
 		"plans":               platformPlans(),
+		"default_plan":        cmp.Or(ko.String("app.tenancy.default_plan"), "free"),
+		"channels":            inboxChannels,
 		"totp_enabled":        a.TOTPEnabled,
 		"two_factor_required": platformRequires2FA(),
 	})
@@ -355,17 +359,20 @@ func handlePlatformWorkspace(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.For(tenantID(r)).T("globals.messages.somethingWentWrong"), nil))
 	}
 
+	channels, allChannels := t.AllowedChannels()
 	return r.SendEnvelope(map[string]any{
-		"workspace": t,
-		"url":       app.tenant.URLFor(t),
-		"default":   t.ID == tenant.DefaultID,
-		"usage":     usage.Usage,
-		"limits":    usage.Limits,
-		"counts":    counts,
-		"fair_use":  usage.FairUse,
-		"agents":    agents,
-		"domains":   domains,
-		"audit":     audit,
+		"workspace":    t,
+		"channels":     channels,
+		"all_channels": allChannels,
+		"url":          app.tenant.URLFor(t),
+		"default":      t.ID == tenant.DefaultID,
+		"usage":        usage.Usage,
+		"limits":       usage.Limits,
+		"counts":       counts,
+		"fair_use":     usage.FairUse,
+		"agents":       agents,
+		"domains":      domains,
+		"audit":        audit,
 	})
 }
 
@@ -400,6 +407,113 @@ func handlePlatformSetStatus(r *fastglue.Request) error {
 	}
 	app.platform.Audit(platformAdmin(r), action, t.ID, t.Slug, map[string]any{"from": t.Status}, realip.FromRequest(r.RequestCtx))
 	return handlePlatformWorkspace(r)
+}
+
+// handlePlatformCreateWorkspace creates a workspace with its first admin, on
+// a plan and with the inbox channels the platform admin picked.
+func handlePlatformCreateWorkspace(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+		req struct {
+			signup.Request
+			Plan     string   `json:"plan"`
+			Channels []string `json:"channels"`
+			// AllChannels leaves every channel open, now and as channels are added.
+			AllChannels bool `json:"all_channels"`
+		}
+	)
+	if app.signup == nil {
+		return r.SendErrorEnvelope(fasthttp.StatusNotFound, app.i18n.T("globals.messages.pageNotFound"), nil, envelope.NotFoundError)
+	}
+	if err := r.Decode(&req, "json"); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.badRequest"), nil, envelope.InputError)
+	}
+	if req.Plan != "" && !slices.Contains(platformPlans(), req.Plan) {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("platform.unknownPlan"), nil, envelope.InputError)
+	}
+	opts := signup.CreateOpts{Plan: req.Plan}
+	if !req.AllChannels {
+		channels, ok := platformChannels(req.Channels)
+		if !ok {
+			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("platform.unknownChannel"), nil, envelope.InputError)
+		}
+		opts.Channels = channels
+	}
+	t, err := app.signup.CreateWith(r.RequestCtx, req.Request, opts)
+	if err != nil {
+		return sendSignupError(r, err)
+	}
+	app.platform.Audit(platformAdmin(r), platform.ActionCreate, t.ID, t.Slug,
+		map[string]any{"name": t.Name, "plan": t.Plan, "admin_email": strings.ToLower(strings.TrimSpace(req.Email)), "channels": opts.Channels},
+		realip.FromRequest(r.RequestCtx))
+	return r.SendEnvelope(map[string]any{"id": t.ID, "url": app.tenant.URLFor(t)})
+}
+
+// handlePlatformSetChannels sets the inbox channels a workspace may use. Its
+// enabled inboxes of channels taken away are switched off.
+func handlePlatformSetChannels(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+		req struct {
+			Channels    []string `json:"channels"`
+			AllChannels bool     `json:"all_channels"`
+		}
+	)
+	t, ok := platformWorkspaceParam(r)
+	if !ok {
+		return nil
+	}
+	if err := r.Decode(&req, "json"); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.badRequest"), nil, envelope.InputError)
+	}
+	channels, ok := platformChannels(req.Channels)
+	if !ok && !req.AllChannels {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("platform.unknownChannel"), nil, envelope.InputError)
+	}
+	if req.AllChannels {
+		channels = nil
+	}
+	from, fromAll := t.AllowedChannels()
+	if _, err := app.tenant.SetChannels(t.ID, channels, req.AllChannels); err != nil {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.somethingWentWrong"), nil))
+	}
+
+	var disabled []int
+	if !req.AllChannels {
+		ids, err := app.inbox.DisableOtherChannels(t.ID, channels)
+		if err != nil {
+			return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.somethingWentWrong"), nil))
+		}
+		for _, id := range ids {
+			if err := reloadInbox(app, t.ID, id); err != nil {
+				app.lo.Error("error reloading inbox", "tenant_id", t.ID, "id", id, "error", err)
+			}
+		}
+		disabled = ids
+	}
+	app.platform.Audit(platformAdmin(r), platform.ActionSetChannels, t.ID, t.Slug, map[string]any{
+		"from":             map[string]any{"channels": from, "all": fromAll},
+		"to":               map[string]any{"channels": channels, "all": req.AllChannels},
+		"disabled_inboxes": disabled,
+	}, realip.FromRequest(r.RequestCtx))
+	return handlePlatformWorkspace(r)
+}
+
+// platformChannels returns channels without repeats, in inboxChannels order;
+// ok is false if one isn't an inbox channel.
+func platformChannels(channels []string) ([]string, bool) {
+	for _, c := range channels {
+		if !slices.Contains(inboxChannels, c) {
+			return nil, false
+		}
+	}
+	out := []string{}
+	for _, c := range inboxChannels {
+		if slices.Contains(channels, c) {
+			out = append(out, c)
+		}
+	}
+	return out, true
 }
 
 // handlePlatformSetPlan moves a workspace to another configured plan.

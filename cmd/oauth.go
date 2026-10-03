@@ -94,6 +94,10 @@ func handleOAuthAuthorize(r *fastglue.Request) error {
 			app.i18n.For(tenantID(r)).Ts("globals.messages.somethingWentWrong"), nil, envelope.InputError)
 	}
 
+	if err := checkChannelAllowed(app, tenantID(r), inbox.ChannelEmail); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	// Validate credentials
 	if req.UsePlatformApp {
 		var ok bool

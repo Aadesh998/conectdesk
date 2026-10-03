@@ -49,6 +49,9 @@ func handleConnectTelegram(r *fastglue.Request) error {
 	if err := r.Decode(&req, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.For(tid).T("errors.parsingRequest"), nil, envelope.InputError)
 	}
+	if err := checkChannelAllowed(app, tid, inbox.ChannelTelegram); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
 	token := strings.TrimSpace(req.BotToken)
 	if token == "" || !strings.Contains(token, ":") {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.For(tid).T("telegram.invalidToken"), nil, envelope.InputError)
