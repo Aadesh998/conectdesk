@@ -35,7 +35,7 @@ func TestTenantRouter(t *testing.T) {
 	}{
 		{2, true, "Acme Support <support@acme.test>"}, // its own mailer
 		{3, false, `"Foo" <noreply@yourapp.test>`},    // the platform's, with its name
-		{0, false, "Desk <noreply@yourapp.test>"},     // no tenant, such as signup
+		{0, false, "Desk <noreply@yourapp.test>"},     // no tenant
 		{9, false, "Desk <noreply@yourapp.test>"},     // a tenant without a name keeps the address
 	} {
 		e, from, err := r.mailerFor(c.tenant)

@@ -1,4 +1,4 @@
-package signup
+package workspace
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 
 const password = "Str0ng!Passw0rd#2026"
 
-func TestSignup(t *testing.T) {
-	db := testutil.NewDB(t, "signup")
+func TestCreate(t *testing.T) {
+	db := testutil.NewDB(t, "workspace")
 	lo := logf.New(logf.Opts{})
 	tenants, err := tenant.New(tenant.Opts{DB: db, Lo: &lo, Enabled: true, BaseDomain: "yourapp.test"})
 	if err != nil {
@@ -93,7 +93,7 @@ func TestSignup(t *testing.T) {
 	var n int
 	db.Get(&n, `SELECT COUNT(*) FROM tenants WHERE slug = 'newco'`)
 	if n != 0 {
-		t.Fatal("an invalid signup created a tenant")
+		t.Fatal("an invalid request created a tenant")
 	}
 
 	// The same email can sign up a second workspace.

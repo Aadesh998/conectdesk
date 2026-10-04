@@ -31,7 +31,7 @@ type Settings struct {
 // TenantRouter sends each tenant's notification email through that tenant's
 // own mailer when it has one switched on, else through the platform's mailer
 // with the tenant's name on the From address. Messages of no tenant (tenant
-// ID 0), such as signup verification, go through the platform's mailer. It
+// ID 0) go through the platform's mailer. It
 // implements notifier.Notifier.
 type TenantRouter struct {
 	lo         *logf.Logger

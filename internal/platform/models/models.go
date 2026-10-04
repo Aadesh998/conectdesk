@@ -91,8 +91,8 @@ type Impersonation struct {
 	UserID     int    `db:"user_id"`
 }
 
-// MailSettings is the platform's own mailer, which sends signup verification
-// and the email of every tenant without a mailer of its own. Its fields match
+// MailSettings is the platform's own mailer, which sends the email of every
+// tenant without a mailer of its own. Its fields match
 // a tenant's notification.email.* settings.
 type MailSettings struct {
 	Enabled       bool   `json:"enabled"`

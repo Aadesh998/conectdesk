@@ -63,7 +63,6 @@ import (
 	"github.com/conectdesk/conectdesk/internal/role"
 	"github.com/conectdesk/conectdesk/internal/search"
 	"github.com/conectdesk/conectdesk/internal/setting"
-	"github.com/conectdesk/conectdesk/internal/signup"
 	"github.com/conectdesk/conectdesk/internal/sla"
 	"github.com/conectdesk/conectdesk/internal/softphone"
 	"github.com/conectdesk/conectdesk/internal/ssrf"
@@ -74,6 +73,7 @@ import (
 	"github.com/conectdesk/conectdesk/internal/user"
 	"github.com/conectdesk/conectdesk/internal/view"
 	"github.com/conectdesk/conectdesk/internal/webhook"
+	"github.com/conectdesk/conectdesk/internal/workspace"
 	"github.com/conectdesk/conectdesk/internal/ws"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
@@ -196,7 +196,7 @@ func initFlags() {
 	f.String("tenant-activate", "", "activate the tenant with this slug")
 	f.String("tenant-delete", "", "delete the tenant with this slug and all its data, at once")
 	f.String("tenant-restore", "", "restore the tenant with this slug from its scheduled deletion")
-	f.String("tenant-create", "", "create a workspace with this slug and its admin, without email verification; takes --tenant-name, --tenant-admin-name and --tenant-admin-email, and the password on stdin")
+	f.String("tenant-create", "", "create a workspace with this slug and its admin; takes --tenant-name, --tenant-admin-name and --tenant-admin-email, and the password on stdin")
 	f.String("tenant-name", "", "the name of the workspace --tenant-create creates")
 	f.String("tenant-admin-name", "", "the full name of the admin --tenant-create creates")
 	f.String("tenant-admin-email", "", "the email of the admin --tenant-create creates")
@@ -403,15 +403,15 @@ func initTag(db *sqlx.DB, i18n *i18ncat.Catalog) *tag.Manager {
 	return mgr
 }
 
-// initSignup inits workspace creation, nil without multi-tenancy. Only
+// initWorkspace inits workspace creation, nil without multi-tenancy. Only
 // platform admins create workspaces with it; there is no public signup.
-func initSignup(db *sqlx.DB, tenants *tenant.Manager) *signup.Manager {
+func initWorkspace(db *sqlx.DB, tenants *tenant.Manager) *workspace.Manager {
 	if !tenants.Enabled() {
 		return nil
 	}
-	return signup.New(signup.Opts{
+	return workspace.New(workspace.Opts{
 		DB:      db,
-		Lo:      initLogger("signup"),
+		Lo:      initLogger("workspace"),
 		Tenants: tenants,
 		Plan:    cmp.Or(ko.String("app.tenancy.default_plan"), "free"),
 	})

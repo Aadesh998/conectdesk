@@ -17,11 +17,11 @@ import (
 	notifier "github.com/conectdesk/conectdesk/internal/notification"
 	"github.com/conectdesk/conectdesk/internal/platform"
 	pmodels "github.com/conectdesk/conectdesk/internal/platform/models"
-	"github.com/conectdesk/conectdesk/internal/signup"
 	"github.com/conectdesk/conectdesk/internal/stringutil"
 	"github.com/conectdesk/conectdesk/internal/tenant"
 	tmodels "github.com/conectdesk/conectdesk/internal/tenant/models"
 	"github.com/conectdesk/conectdesk/internal/totp"
+	"github.com/conectdesk/conectdesk/internal/workspace"
 	realip "github.com/ferluci/fast-realip"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
@@ -409,20 +409,35 @@ func handlePlatformSetStatus(r *fastglue.Request) error {
 	return handlePlatformWorkspace(r)
 }
 
+// sendWorkspaceError answers a workspace that couldn't be created: which field
+// is invalid, a taken slug, or a generic error.
+func sendWorkspaceError(r *fastglue.Request, err error) error {
+	app := r.Context.(*App)
+	var ve workspace.ValidationError
+	switch {
+	case errors.As(err, &ve):
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.For(tenantID(r)).T("workspace.invalid."+ve.Field), map[string]string{"field": ve.Field}, envelope.InputError)
+	case errors.Is(err, workspace.ErrSlugTaken):
+		return r.SendErrorEnvelope(fasthttp.StatusConflict, app.i18n.For(tenantID(r)).T("workspace.slugTaken"), map[string]string{"field": "slug"}, envelope.ConflictError)
+	}
+	app.lo.Error("error creating workspace", "error", err)
+	return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.For(tenantID(r)).T("globals.messages.somethingWentWrong"), nil, envelope.GeneralError)
+}
+
 // handlePlatformCreateWorkspace creates a workspace with its first admin, on
 // a plan and with the inbox channels the platform admin picked.
 func handlePlatformCreateWorkspace(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 		req struct {
-			signup.Request
+			workspace.Request
 			Plan     string   `json:"plan"`
 			Channels []string `json:"channels"`
 			// AllChannels leaves every channel open, now and as channels are added.
 			AllChannels bool `json:"all_channels"`
 		}
 	)
-	if app.signup == nil {
+	if app.workspace == nil {
 		return r.SendErrorEnvelope(fasthttp.StatusNotFound, app.i18n.T("globals.messages.pageNotFound"), nil, envelope.NotFoundError)
 	}
 	if err := r.Decode(&req, "json"); err != nil {
@@ -431,7 +446,7 @@ func handlePlatformCreateWorkspace(r *fastglue.Request) error {
 	if req.Plan != "" && !slices.Contains(platformPlans(), req.Plan) {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("platform.unknownPlan"), nil, envelope.InputError)
 	}
-	opts := signup.CreateOpts{Plan: req.Plan}
+	opts := workspace.CreateOpts{Plan: req.Plan}
 	if !req.AllChannels {
 		channels, ok := platformChannels(req.Channels)
 		if !ok {
@@ -439,9 +454,9 @@ func handlePlatformCreateWorkspace(r *fastglue.Request) error {
 		}
 		opts.Channels = channels
 	}
-	t, err := app.signup.CreateWith(r.RequestCtx, req.Request, opts)
+	t, err := app.workspace.CreateWith(r.RequestCtx, req.Request, opts)
 	if err != nil {
-		return sendSignupError(r, err)
+		return sendWorkspaceError(r, err)
 	}
 	app.platform.Audit(platformAdmin(r), platform.ActionCreate, t.ID, t.Slug,
 		map[string]any{"name": t.Name, "plan": t.Plan, "admin_email": strings.ToLower(strings.TrimSpace(req.Email)), "channels": opts.Channels},

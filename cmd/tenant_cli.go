@@ -13,10 +13,10 @@ import (
 
 	"github.com/conectdesk/conectdesk/internal/demo"
 	"github.com/conectdesk/conectdesk/internal/platform"
-	"github.com/conectdesk/conectdesk/internal/signup"
 	"github.com/conectdesk/conectdesk/internal/tenant"
 	tmodels "github.com/conectdesk/conectdesk/internal/tenant/models"
 	"github.com/conectdesk/conectdesk/internal/user"
+	"github.com/conectdesk/conectdesk/internal/workspace"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/stuffbin"
 	"golang.org/x/term"
@@ -95,15 +95,14 @@ func runTenantCommand(db *sqlx.DB, fs stuffbin.FileSystem) bool {
 	return true
 }
 
-// createTenantCommand creates a workspace with its admin, without the email
-// verification signing up asks for, e.g. a demo workspace. The admin's
-// password is read from the terminal, or from stdin.
+// createTenantCommand creates a workspace with its admin, e.g. a demo
+// workspace. The admin's password is read from the terminal, or from stdin.
 func createTenantCommand(db *sqlx.DB, mgr *tenant.Manager, slug string) {
 	if !mgr.Enabled() {
 		log.Fatalf("workspaces can only be created with multi-tenancy on (app.tenancy.enabled)")
 	}
 	first, last, _ := strings.Cut(strings.TrimSpace(ko.String("tenant-admin-name")), " ")
-	req := signup.Request{
+	req := workspace.Request{
 		Company:   ko.String("tenant-name"),
 		Slug:      slug,
 		FirstName: first,
@@ -111,7 +110,7 @@ func createTenantCommand(db *sqlx.DB, mgr *tenant.Manager, slug string) {
 		Email:     ko.String("tenant-admin-email"),
 		Password:  readPassword("Password for " + ko.String("tenant-admin-email") + ": "),
 	}
-	m := signup.New(signup.Opts{DB: db, Lo: initLogger("signup"), Tenants: mgr, Plan: cmp.Or(ko.String("app.tenancy.default_plan"), "free")})
+	m := workspace.New(workspace.Opts{DB: db, Lo: initLogger("workspace"), Tenants: mgr, Plan: cmp.Or(ko.String("app.tenancy.default_plan"), "free")})
 	t, err := m.Create(context.Background(), req)
 	if err != nil {
 		log.Fatalf("error creating workspace %q: %v", slug, err)

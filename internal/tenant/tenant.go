@@ -185,7 +185,8 @@ func (m *Manager) BaseDomain() string {
 	return m.baseDomain
 }
 
-// BaseURL returns the URL of the bare base domain, where signup is served.
+// BaseURL returns the URL of the bare base domain, which serves the login
+// page and the OAuth redirects every workspace shares.
 func (m *Manager) BaseURL() string {
 	return m.urlScheme + "://" + m.baseDomain + m.urlPort
 }

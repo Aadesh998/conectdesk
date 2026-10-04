@@ -36,11 +36,11 @@ import (
 	"github.com/conectdesk/conectdesk/internal/platform"
 	"github.com/conectdesk/conectdesk/internal/report"
 	"github.com/conectdesk/conectdesk/internal/search"
-	"github.com/conectdesk/conectdesk/internal/signup"
 	"github.com/conectdesk/conectdesk/internal/sla"
 	"github.com/conectdesk/conectdesk/internal/softphone"
 	umodels "github.com/conectdesk/conectdesk/internal/user/models"
 	"github.com/conectdesk/conectdesk/internal/view"
+	"github.com/conectdesk/conectdesk/internal/workspace"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/conectdesk/conectdesk/internal/automation"
@@ -123,9 +123,9 @@ type App struct {
 	rootURL func(tenantID int) string
 	// mailer sends each tenant's notification email.
 	mailer *emailnotifier.TenantRouter
-	// signup creates workspaces, from the platform dashboard only; nil without
+	// workspace creates workspaces, from the platform dashboard only; nil without
 	// multi-tenancy.
-	signup *signup.Manager
+	workspace *workspace.Manager
 	// platform backs the platform admin dashboard, served on platformHost;
 	// nil without multi-tenancy.
 	platform     *platform.Manager
@@ -395,7 +395,7 @@ func main() {
 	app.consts.Store(constants)
 	template.SetTenantFuncs(tenantTemplateFuncs(app))
 	app.mailer = mailer
-	app.signup = initSignup(db, tenants)
+	app.workspace = initWorkspace(db, tenants)
 	app.platform, app.platformHost = initPlatform(db, tenants)
 	if app.platform != nil {
 		mailer.SetPlatformSettings(func() (emailnotifier.Settings, error) {

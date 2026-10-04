@@ -1,6 +1,6 @@
-// Package signup creates a new tenant: its row, its default data and its
+// Package workspace creates a new tenant: its row, its default data and its
 // first admin, all in one transaction.
-package signup
+package workspace
 
 import (
 	"cmp"
@@ -73,7 +73,7 @@ type Opts struct {
 	Plan string
 }
 
-// New returns a signup Manager.
+// New returns a workspace Manager.
 func New(opts Opts) *Manager {
 	return &Manager{db: opts.DB, lo: opts.Lo, tenants: opts.Tenants, plan: opts.Plan}
 }

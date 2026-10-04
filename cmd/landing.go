@@ -2,30 +2,13 @@ package main
 
 import (
 	"cmp"
-	"errors"
 	"strings"
 
 	"github.com/conectdesk/conectdesk/internal/envelope"
-	"github.com/conectdesk/conectdesk/internal/signup"
 	"github.com/conectdesk/conectdesk/internal/tenant"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
-
-// sendSignupError answers a workspace that couldn't be created: which field
-// is invalid, a taken slug, or a generic error.
-func sendSignupError(r *fastglue.Request, err error) error {
-	app := r.Context.(*App)
-	var ve signup.ValidationError
-	switch {
-	case errors.As(err, &ve):
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.For(tenantID(r)).T("signup.invalid."+ve.Field), map[string]string{"field": ve.Field}, envelope.InputError)
-	case errors.Is(err, signup.ErrSlugTaken):
-		return r.SendErrorEnvelope(fasthttp.StatusConflict, app.i18n.For(tenantID(r)).T("signup.slugTaken"), map[string]string{"field": "slug"}, envelope.ConflictError)
-	}
-	app.lo.Error("error creating workspace", "error", err)
-	return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.For(tenantID(r)).T("globals.messages.somethingWentWrong"), nil, envelope.GeneralError)
-}
 
 // landingOr serves the bare base domain's page, a box to find a workspace
 // and log in to it, and next on every other host.
