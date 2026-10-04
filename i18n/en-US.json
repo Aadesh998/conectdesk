@@ -2410,5 +2410,6 @@
   "softphone.admin.remove": "Remove",
   "softphone.admin.removed": "Browser calling removed. Calls ring the agent's phone.",
   "softphone.admin.ringsBrowser": "Calls ring their browser",
-  "softphone.admin.ringsPhone": "They switched calls to their phone"
+  "softphone.admin.ringsPhone": "They switched calls to their phone",
+  "voice.recovered": "Logged from Exotel's call list: the phone flow didn't report this call."
 }

@@ -14,6 +14,8 @@
     <p v-if="call.transferred_from" class="text-xs text-muted-foreground">
       {{ $t('voice.transferredFrom', { name: call.transferred_from }) }}
     </p>
+    <!-- Logged from Exotel's call list: the flow didn't report it. -->
+    <p v-if="call.recovered" class="text-xs text-muted-foreground">{{ $t('voice.recovered') }}</p>
     <audio v-if="recording" :src="recording.url" controls preload="none" class="w-full max-w-xs" />
     <p v-else-if="call.recording_error" class="text-xs text-muted-foreground">
       {{ $t('voice.recordingUnavailable') }}

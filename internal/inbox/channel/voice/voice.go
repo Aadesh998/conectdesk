@@ -176,6 +176,9 @@ type CallEvent struct {
 	CustomField string
 	// Pressed is the digits the caller pressed in a Gather applet.
 	Pressed string
+	// Recovered is a call found in Exotel's call list that its flow never
+	// reported, or never reported the end of.
+	Recovered bool
 }
 
 // Call is a call's details on its message's meta.
@@ -198,6 +201,9 @@ type Call struct {
 	EndedAt         time.Time `json:"ended_at,omitzero"`
 	// RecordingError is why the recording couldn't be kept, if it couldn't.
 	RecordingError string `json:"recording_error,omitempty"`
+	// Recovered is a call the flow didn't report, logged from Exotel's call
+	// list instead.
+	Recovered bool `json:"recovered,omitempty"`
 }
 
 // Voice is a phone inbox.

@@ -143,6 +143,117 @@ func (e *Exotel) Connect(ctx context.Context, o ConnectOpts) (string, error) {
 	return out.Call.Sid, nil
 }
 
+// ExotelCall is a call as Exotel's Calls API lists it.
+type ExotelCall struct {
+	Sid          string `json:"Sid"`
+	Direction    string `json:"Direction"`
+	Status       string `json:"Status"`
+	From         string `json:"From"`
+	To           string `json:"To"`
+	PhoneNumber  string `json:"PhoneNumber"`
+	Duration     any    `json:"Duration"`
+	RecordingURL string `json:"RecordingUrl"`
+	DateCreated  string `json:"DateCreated"`
+	// Details is only filled in by CallDetails.
+	Details struct {
+		ConversationDuration any `json:"ConversationDuration"`
+	} `json:"Details"`
+}
+
+// ExotelZone is the time zone Exotel's call times and filters are in.
+var ExotelZone = time.FixedZone("IST", 5*3600+1800)
+
+// maxCallPages caps the pages ListCalls follows.
+const maxCallPages = 20
+
+// ListCalls returns the account's calls created since a time, every page of
+// them up to maxCallPages.
+func (e *Exotel) ListCalls(ctx context.Context, since time.Time) ([]ExotelCall, error) {
+	q := url.Values{
+		"DateCreated": {"gte:" + since.In(ExotelZone).Format(time.DateTime)},
+		"PageSize":    {"100"},
+	}
+	next := e.base + "/Calls.json?" + q.Encode()
+	var out []ExotelCall
+	for range maxCallPages {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, next, nil)
+		if err != nil {
+			return nil, err
+		}
+		var page struct {
+			Metadata struct {
+				NextPageURI string `json:"NextPageUri"`
+			} `json:"Metadata"`
+			Calls []ExotelCall `json:"Calls"`
+		}
+		if err := e.do(req, &page); err != nil {
+			return nil, err
+		}
+		out = append(out, page.Calls...)
+		if page.Metadata.NextPageURI == "" || len(page.Calls) == 0 {
+			return out, nil
+		}
+		// The next page is a path on the same host.
+		u, err := url.Parse(e.base)
+		if err != nil {
+			return nil, err
+		}
+		next = u.Scheme + "://" + u.Host + page.Metadata.NextPageURI
+	}
+	return out, nil
+}
+
+// CallDetails returns one call with its Details, which say how long the
+// caller and an agent were connected.
+func (e *Exotel) CallDetails(ctx context.Context, sid string) (ExotelCall, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, e.base+"/Calls/"+url.PathEscape(sid)+".json?details=true", nil)
+	if err != nil {
+		return ExotelCall{}, err
+	}
+	var out struct {
+		Call ExotelCall `json:"Call"`
+	}
+	if err := e.do(req, &out); err != nil {
+		return ExotelCall{}, err
+	}
+	return out.Call, nil
+}
+
+// IsInboundTo reports whether a listed call is a finished call into the
+// given ExoPhone. Calls still going on are left until they end.
+func (c ExotelCall) IsInboundTo(exophone string) bool {
+	if !strings.EqualFold(c.Direction, "inbound") || Digits(c.To) == "" || Digits(c.To) != Digits(exophone) {
+		return false
+	}
+	switch strings.ToLower(c.Status) {
+	case "completed", "busy", "no-answer", "failed", "canceled", "cancelled":
+		return true
+	}
+	return false
+}
+
+// MissedEvent is how an inbound call went, from its Details: answered when
+// the caller was connected to someone, else voicemail when they left a
+// recording, else missed.
+func (c ExotelCall) MissedEvent() CallEvent {
+	ev := CallEvent{
+		SID:          c.Sid,
+		Direction:    DirectionInbound,
+		From:         c.From,
+		To:           c.To,
+		RecordingURL: c.RecordingURL,
+		Status:       StatusNoAnswer,
+		Recovered:    true,
+	}
+	switch talked := toInt(c.Details.ConversationDuration); {
+	case talked > 0:
+		ev.Status, ev.Duration = StatusCompleted, talked
+	case c.RecordingURL != "":
+		ev.Status = StatusVoicemail
+	}
+	return ev
+}
+
 // DownloadRecording fetches a call recording, refusing anything off
 // Exotel's hosts or larger than maxBytes.
 func (e *Exotel) DownloadRecording(ctx context.Context, rawURL string, maxBytes int64) ([]byte, string, error) {

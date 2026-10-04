@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNumbers(t *testing.T) {
@@ -141,5 +142,68 @@ func TestSIP(t *testing.T) {
 		if got := SIPUser(in); got != want {
 			t.Errorf("SIPUser(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestListCalls(t *testing.T) {
+	var filters []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/v1/Accounts/acme1/Calls.json" && r.URL.Query().Get("Page") == "":
+			filters = append(filters, r.URL.Query().Get("DateCreated"))
+			w.Write([]byte(`{"Metadata": {"NextPageUri": "/v1/Accounts/acme1/Calls.json?Page=2"}, "Calls": [{"Sid": "c1", "Direction": "inbound"}]}`))
+		case r.URL.Path == "/v1/Accounts/acme1/Calls.json":
+			w.Write([]byte(`{"Metadata": {"NextPageUri": null}, "Calls": [{"Sid": "c2", "Direction": "outbound-api"}]}`))
+		case r.URL.Path == "/v1/Accounts/acme1/Calls/c1.json" && r.URL.Query().Get("details") == "true":
+			w.Write([]byte(`{"Call": {"Sid": "c1", "Details": {"ConversationDuration": 42}}}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	e := NewExotel("acme1", "key", "token", ExotelMumbai)
+	e.SetBaseURL(srv.URL + "/v1/Accounts/acme1")
+	since := time.Date(2026, 10, 4, 4, 30, 0, 0, time.UTC)
+	calls, err := e.ListCalls(context.Background(), since)
+	if err != nil || len(calls) != 2 || calls[0].Sid != "c1" || calls[1].Sid != "c2" {
+		t.Fatalf("got %+v, %v", calls, err)
+	}
+	// Exotel filters on its own time zone, India's.
+	if len(filters) != 1 || filters[0] != "gte:2026-10-04 10:00:00" {
+		t.Errorf("filters: %v", filters)
+	}
+	c, err := e.CallDetails(context.Background(), "c1")
+	if err != nil || toInt(c.Details.ConversationDuration) != 42 {
+		t.Fatalf("details: %+v, %v", c, err)
+	}
+}
+
+func TestRecoveredCalls(t *testing.T) {
+	in := ExotelCall{Sid: "c1", Direction: "inbound", Status: "completed", From: "09876543210", To: "08047112233"}
+	if !in.IsInboundTo("+918047112233") {
+		t.Error("an inbound call to the ExoPhone wasn't matched")
+	}
+	for _, c := range []ExotelCall{
+		{Direction: "inbound", Status: "in-progress", To: "08047112233"},
+		{Direction: "outbound-api", Status: "completed", To: "08047112233"},
+		{Direction: "inbound", Status: "completed", To: "08047112299"},
+	} {
+		if c.IsInboundTo("+918047112233") {
+			t.Errorf("matched %+v", c)
+		}
+	}
+
+	if ev := in.MissedEvent(); ev.Status != StatusNoAnswer || !ev.Recovered || ev.Direction != DirectionInbound {
+		t.Errorf("missed: %+v", ev)
+	}
+	in.Details.ConversationDuration = "65"
+	if ev := in.MissedEvent(); ev.Status != StatusCompleted || ev.Duration != 65 {
+		t.Errorf("answered: %+v", ev)
+	}
+	in.Details.ConversationDuration = 0.0
+	in.RecordingURL = "https://recordings.exotel.com/c1.mp3"
+	if ev := in.MissedEvent(); ev.Status != StatusVoicemail || ev.RecordingURL == "" {
+		t.Errorf("voicemail: %+v", ev)
 	}
 }

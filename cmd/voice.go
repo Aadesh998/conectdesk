@@ -249,10 +249,39 @@ func handleVoiceIncoming(r *fastglue.Request) error {
 		return nil
 	}
 
+	msg, call, err := logIncomingCall(app, v, ev)
+	if err != nil {
+		app.lo.Error("error logging incoming call", "inbox_id", record.ID, "call_sid", ev.SID, "error", err)
+	}
+
+	// Pop the call up for the agents about to be rung.
+	ids := []int{}
+	for _, a := range agentsToRing(app, record.TenantID, v.Config(), call.TeamID) {
+		ids = append(ids, a.ID)
+	}
+	app.conversation.BroadcastToAgents(record.TenantID, ids, wsmodels.MessageTypeIncomingCall, map[string]any{
+		"call_sid":          ev.SID,
+		"from":              voice.E164(ev.From),
+		"contact_name":      msg.Author.FirstName,
+		"conversation_uuid": msg.ConversationUUID,
+		"inbox_name":        record.Name,
+		"menu":              call.Menu,
+	})
+
+	r.RequestCtx.SetStatusCode(fasthttp.StatusOK)
+	r.RequestCtx.SetBodyString("OK")
+	return nil
+}
+
+// logIncomingCall logs an inbound call as ringing on the caller's
+// conversation in the voice inbox, a new one if they have none open, and
+// assigns it to the team the phone menu routed it to.
+func logIncomingCall(app *App, v *voice.Voice, ev voice.CallEvent) (cmodels.Message, voice.Call, error) {
+	tid := v.TenantID()
 	caller := voice.E164(ev.From)
 	call := voice.Call{
 		SID: ev.SID, Provider: voice.ProviderExotel, Direction: voice.DirectionInbound, Status: voice.StatusRinging,
-		From: caller, To: v.Config().CallerID, StartedAt: time.Now().UTC(),
+		From: caller, To: v.Config().CallerID, StartedAt: time.Now().UTC(), Recovered: ev.Recovered,
 	}
 	// The digit pressed in the flow's menu routes the call to a team.
 	if opt, ok := v.Config().MenuChoice(ev.Pressed); ok {
@@ -261,9 +290,9 @@ func handleVoiceIncoming(r *fastglue.Request) error {
 	metaJSON, _ := json.Marshal(map[string]any{voice.MetaCallKey: call})
 	digits := voice.Digits(ev.From)
 	in := cmodels.IncomingMessage{
-		TenantID:    record.TenantID,
+		TenantID:    tid,
 		Channel:     inbox.ChannelVoice,
-		InboxID:     record.ID,
+		InboxID:     v.Identifier(),
 		SourceID:    null.StringFrom(callSourceID(ev.SID)),
 		Content:     voice.StatusLabel(call) + " " + caller,
 		ContentType: cmodels.ContentTypeText,
@@ -282,33 +311,16 @@ func handleVoiceIncoming(r *fastglue.Request) error {
 	// Processed here, not queued, so the call's end finds its message.
 	msg, err := app.conversation.ProcessIncomingMessage(in)
 	if err != nil {
-		app.lo.Error("error logging incoming call", "inbox_id", record.ID, "call_sid", ev.SID, "error", err)
+		return msg, call, err
 	}
 	if call.TeamID > 0 && msg.ConversationUUID != "" {
-		if sys, err := app.user.GetSystemUser(record.TenantID); err == nil {
-			if err := app.conversation.UpdateConversationTeamAssignee(record.TenantID, msg.ConversationUUID, call.TeamID, sys); err != nil {
+		if sys, err := app.user.GetSystemUser(tid); err == nil {
+			if err := app.conversation.UpdateConversationTeamAssignee(tid, msg.ConversationUUID, call.TeamID, sys); err != nil {
 				app.lo.Error("error assigning call to team", "call_sid", ev.SID, "team_id", call.TeamID, "error", err)
 			}
 		}
 	}
-
-	// Pop the call up for the agents about to be rung.
-	ids := []int{}
-	for _, a := range agentsToRing(app, record.TenantID, v.Config(), call.TeamID) {
-		ids = append(ids, a.ID)
-	}
-	app.conversation.BroadcastToAgents(record.TenantID, ids, wsmodels.MessageTypeIncomingCall, map[string]any{
-		"call_sid":          ev.SID,
-		"from":              caller,
-		"contact_name":      msg.Author.FirstName,
-		"conversation_uuid": msg.ConversationUUID,
-		"inbox_name":        record.Name,
-		"menu":              call.Menu,
-	})
-
-	r.RequestCtx.SetStatusCode(fasthttp.StatusOK)
-	r.RequestCtx.SetBodyString("OK")
-	return nil
+	return msg, call, nil
 }
 
 // agentsToRing returns who an inbound call rings: the online agents with a
@@ -622,6 +634,9 @@ func finishCall(app *App, v *voice.Voice, tid int, ev voice.CallEvent) {
 		}
 		if recErr != "" {
 			call.RecordingError = recErr
+		}
+		if ev.Recovered {
+			call.Recovered = true
 		}
 		meta[voice.MetaCallKey] = call
 		label := voice.StatusLabel(call)

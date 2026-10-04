@@ -371,3 +371,12 @@ requests_per_minute = 1200
 [rate_limit.teams_webhook]
 enabled = true
 requests_per_minute = 1200
+
+[voice]
+# How often each phone inbox's calls are read from Exotel's Calls API, to log
+# inbound calls the ExoPhone's flow didn't report (a missing Passthru, a
+# failed webhook) and finish calls left ringing. "0" switches it off.
+# (minimum 1m)
+reconcile_interval = "5m"
+# How far back each check looks. (minimum 30m)
+reconcile_lookback = "2h"

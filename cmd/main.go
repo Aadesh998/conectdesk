@@ -420,6 +420,10 @@ func main() {
 	go app.dailyReport.Run(ctx, time.Minute, sendDailyReport(app))
 	app.notifDispatcher = notifDispatcher
 	go app.callback.RunOverdueChecker(ctx, time.Minute, onCallBackOverdue(app))
+	// Inbound calls Exotel's flow didn't report are logged from its call list.
+	if d := callReconcileInterval(); d > 0 {
+		go runCallReconciler(ctx, app, d, callReconcileLookback())
+	}
 	app.export = initExport(db, app)
 	go app.export.RunCleaner(ctx)
 	go initRetention(db).Run(ctx, time.Hour, onRetentionApplied(app))
