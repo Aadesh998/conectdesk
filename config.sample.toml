@@ -34,11 +34,8 @@ url_scheme = "https"
 # Workspaces are only created by platform admins, from the platform dashboard,
 # where they pick the inbox channels each one may use. There is no public
 # signup.
-# Product name on the landing page at the base domain.
+# Product name on the login page at the base domain.
 product_name = "ConectDesk"
-# Where the landing page's "Book a demo" buttons go, e.g. a calendar booking
-# page or a https://wa.me/ link. Leave empty to hide them.
-demo_url = ""
 # Plan new workspaces start on; its limits are under [app.tenancy.plans.<name>].
 default_plan = "free"
 # Where a workspace's Admin > Usage page sends admins to upgrade their plan: a

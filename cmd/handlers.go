@@ -46,7 +46,6 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// The OAuth redirect URL every workspace shares, on the bare base domain.
 	g.GET("/oauth/{provider}/callback", rateLimit(handleOAuthRelay, "public"))
 
-
 	// Authentication.
 	g.POST("/api/v1/auth/login", rateLimit(handleLogin, "auth"))
 	g.POST("/api/v1/auth/login/2fa", rateLimit(handleLoginTwoFactor, "auth"))

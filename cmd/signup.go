@@ -27,8 +27,8 @@ func sendSignupError(r *fastglue.Request, err error) error {
 	return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.For(tenantID(r)).T("globals.messages.somethingWentWrong"), nil, envelope.GeneralError)
 }
 
-// landingOr serves the landing page on the bare base domain, and next on
-// every other host.
+// landingOr serves the bare base domain's page, a box to find a workspace
+// and log in to it, and next on every other host.
 func landingOr(next fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		app := r.Context.(*App)
@@ -39,9 +39,6 @@ func landingOr(next fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 			"Data": map[string]any{
 				"Product":    cmp.Or(ko.String("app.tenancy.product_name"), "ConectDesk"),
 				"BaseDomain": ko.String("app.tenancy.base_domain"),
-				// DemoURL is where "Book a demo" goes, e.g. a calendar or a
-				// wa.me link; the button is hidden without it.
-				"DemoURL": ko.String("app.tenancy.demo_url"),
 			},
 		})
 	}
