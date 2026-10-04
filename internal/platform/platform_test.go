@@ -155,7 +155,7 @@ func TestWorkspacesAndOverview(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if o.Workspaces != 3 || o.Active != 2 || o.Suspended != 1 || o.Signups7d != 3 || o.ActiveWorkspaces7d != 1 || len(o.DailySignups) != 30 {
+	if o.Workspaces != 3 || o.Active != 2 || o.Suspended != 1 || o.Signups7d != 3 || o.ActiveWorkspaces7d != 1 {
 		t.Errorf("overview: %+v", o)
 	}
 

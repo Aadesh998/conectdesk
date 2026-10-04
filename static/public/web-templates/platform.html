@@ -12,7 +12,7 @@
 		--panel: var(--card); --text: var(--fg); --subtle: var(--muted-fg);
 		--accent: var(--primary); --accent-text: var(--primary-fg);
 		--ok: var(--success); --ok-bg: var(--success-bg); --bad: var(--destructive); --bad-bg: var(--destructive-bg);
-		--bar: var(--primary); --hover: var(--muted);
+		--hover: var(--muted);
 	}
 	* { box-sizing: border-box; }
 	body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 "Instrument Sans", system-ui, sans-serif; }
@@ -55,10 +55,6 @@
 	button:disabled { opacity: 0.5; cursor: default; }
 	.toolbar { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; align-items: center; }
 	.toolbar input[type=search] { flex: 1; min-width: 220px; }
-	.chart { display: flex; align-items: flex-end; gap: 3px; height: 110px; padding: 0.75rem 1rem; }
-	.chart div { flex: 1; background: var(--bar); border-radius: 3px 3px 0 0; min-height: 2px; }
-	.two { display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem; }
-	@media (max-width: 800px) { .two { grid-template-columns: 1fr; } }
 	/* Phones: two number cards a row, a compact header, and tables that
 	   scroll sideways inside their panel instead of widening the page. */
 	@media (max-width: 600px) {
@@ -249,7 +245,6 @@
 	function overview() {
 		layout('overview', el('p', { class: 'muted', text: 'Loading…' }));
 		api('GET', 'overview').then(function (o) {
-			var peak = Math.max.apply(null, o.daily_signups.map(function (d) { return d.count; }).concat([1]));
 			layout('overview', [
 				el('h1', { text: 'Overview' }),
 				el('div', { class: 'cards' },
@@ -257,14 +252,10 @@
 					card(o.active_workspaces_7d, 'Used in the last 7 days'), card(o.signups_7d, 'New workspaces, 7 days'),
 					card(o.signups_30d, 'New workspaces, 30 days'),
 					card(o.agents, 'Agents'), card(o.conversations_30d, 'Conversations, 30 days')),
-				el('div', { class: 'two' },
-					el('div', null, el('h2', { text: 'New workspaces, last 30 days' }), el('div', { class: 'panel chart' },
-						o.daily_signups.map(function (d) {
-							return el('div', { title: date(d.day) + ': ' + d.count, style: 'height:' + Math.round(d.count / peak * 100) + '%' });
-						}))),
-					el('div', null, el('h2', { text: 'Plans' }), table(['Plan', 'Workspaces'], o.plans.map(function (p) {
-						return { cells: [p.plan, String(p.count)] };
-					}))))
+				el('h2', { text: 'Plans' }),
+				table(['Plan', 'Workspaces'], o.plans.map(function (p) {
+					return { cells: [p.plan, String(p.count)] };
+				}))
 			]);
 		}).catch(fail);
 	}

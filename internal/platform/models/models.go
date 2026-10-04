@@ -22,28 +22,21 @@ type Admin struct {
 
 // Overview sums up every workspace.
 type Overview struct {
-	Workspaces         int        `db:"workspaces" json:"workspaces"`
-	Active             int        `db:"active" json:"active"`
-	Suspended          int        `db:"suspended" json:"suspended"`
-	Signups7d          int        `db:"signups_7d" json:"signups_7d"`
-	Signups30d         int        `db:"signups_30d" json:"signups_30d"`
-	ActiveWorkspaces7d int        `db:"active_workspaces_7d" json:"active_workspaces_7d"`
-	Agents             int        `db:"agents" json:"agents"`
-	Conversations30d   int        `db:"conversations_30d" json:"conversations_30d"`
-	Plans              []Count    `db:"-" json:"plans"`
-	DailySignups       []DayCount `db:"-" json:"daily_signups"`
+	Workspaces         int     `db:"workspaces" json:"workspaces"`
+	Active             int     `db:"active" json:"active"`
+	Suspended          int     `db:"suspended" json:"suspended"`
+	Signups7d          int     `db:"signups_7d" json:"signups_7d"`
+	Signups30d         int     `db:"signups_30d" json:"signups_30d"`
+	ActiveWorkspaces7d int     `db:"active_workspaces_7d" json:"active_workspaces_7d"`
+	Agents             int     `db:"agents" json:"agents"`
+	Conversations30d   int     `db:"conversations_30d" json:"conversations_30d"`
+	Plans              []Count `db:"-" json:"plans"`
 }
 
 // Count is how many workspaces are on a plan.
 type Count struct {
 	Plan  string `db:"plan" json:"plan"`
 	Count int    `db:"count" json:"count"`
-}
-
-// DayCount is how many workspaces signed up on a day.
-type DayCount struct {
-	Day   time.Time `db:"day" json:"day"`
-	Count int       `db:"count" json:"count"`
 }
 
 // Workspace is a tenant as the platform lists it.

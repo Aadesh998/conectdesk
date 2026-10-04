@@ -111,7 +111,6 @@ type queries struct {
 	GetAudit                    *sqlx.Stmt `query:"get-audit"`
 	GetOverview                 *sqlx.Stmt `query:"get-overview"`
 	GetPlanCounts               *sqlx.Stmt `query:"get-plan-counts"`
-	GetDailySignups             *sqlx.Stmt `query:"get-daily-signups"`
 	GetWorkspaces               *sqlx.Stmt `query:"get-workspaces"`
 	GetWorkspaceCounts          *sqlx.Stmt `query:"get-workspace-counts"`
 	GetWorkspaceAgents          *sqlx.Stmt `query:"get-workspace-agents"`
@@ -368,9 +367,6 @@ func (m *Manager) Overview() (models.Overview, error) {
 		return o, err
 	}
 	if err := m.q.GetPlanCounts.Select(&o.Plans); err != nil {
-		return o, err
-	}
-	if err := m.q.GetDailySignups.Select(&o.DailySignups); err != nil {
 		return o, err
 	}
 	return o, nil

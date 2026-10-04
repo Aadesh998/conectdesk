@@ -71,13 +71,6 @@ SELECT
 -- tenant: all, the platform overview counts across every workspace.
 SELECT "plan", COUNT(*) AS count FROM tenants GROUP BY "plan" ORDER BY count DESC, "plan";
 
--- name: get-daily-signups
--- tenant: all, the platform overview counts across every workspace.
-SELECT d::date AS day, COUNT(t.id) AS count
-FROM generate_series(CURRENT_DATE - 29, CURRENT_DATE, INTERVAL '1 day') d
-LEFT JOIN tenants t ON t.created_at::date = d::date
-GROUP BY d ORDER BY d;
-
 -- name: get-workspaces
 -- tenant: all, the platform lists every workspace.
 -- $1 searches slug, name, custom domain and agent emails; $2 filters by status.
