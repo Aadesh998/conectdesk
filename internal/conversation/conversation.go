@@ -800,6 +800,17 @@ func (c *Manager) UpdateConversationUserAssignee(tenantID int, uuid string, assi
 		return nil
 	}
 
+	// An assistant can't reply through a disabled inbox and would hand the conversation straight back.
+	if assignee, err := c.userStore.GetAgentCachedOrLoad(tenantID, assigneeID); err == nil && assignee.Type == umodels.UserTypeAIAssistant {
+		inb, err := c.inboxStore.GetDBRecord(tenantID, previousConversation.InboxID)
+		if err != nil {
+			return err
+		}
+		if !inb.Enabled {
+			return envelope.NewError(envelope.InputError, c.i18n.For(tenantID).T("conversation.ai.inboxDisabled"), nil)
+		}
+	}
+
 	if err := c.updateAssignee(tenantID, uuid, assigneeID, models.AssigneeTypeUser); err != nil {
 		return envelope.NewError(envelope.GeneralError, c.i18n.For(tenantID).T("globals.messages.somethingWentWrong"), nil)
 	}

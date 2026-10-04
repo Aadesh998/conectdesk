@@ -1028,6 +1028,7 @@
   "conversation.ai.takeOver": "Take over",
   "conversation.ai.tookOver": "You took this conversation over from {name}. If the customer waits on you, {name} takes it back.",
   "conversation.ai.handBack": "Hand back to AI",
+  "conversation.ai.inboxDisabled": "This inbox is disabled, so an AI assistant can't reply here. Enable the inbox first.",
   "conversation.summarizing": "Summarizing conversation with AI. This may take a few seconds.",
   "conversation.summarizeAdded": "Summary added to the conversation as a private note.",
   "conversation.deletePrivateNote": "Delete note",

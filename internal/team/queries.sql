@@ -1,14 +1,14 @@
 -- name: get-teams
-SELECT id, created_at, updated_at, name, emoji, conversation_assignment_type, max_auto_assigned_conversations, business_hours_id, sla_policy_id, timezone from teams where tenant_id = $1 order by updated_at desc;
+SELECT id, created_at, updated_at, name, emoji, conversation_assignment_type, max_auto_assigned_conversations, business_hours_id, sla_policy_id, COALESCE(timezone, '') AS timezone from teams where tenant_id = $1 order by updated_at desc;
 
 -- name: get-teams-compact
 SELECT id, name, emoji from teams where tenant_id = $1 order by name;
 
 -- name: get-user-teams
-SELECT id, created_at, updated_at, name, emoji, conversation_assignment_type, max_auto_assigned_conversations, business_hours_id, sla_policy_id, timezone from teams WHERE tenant_id = $1 AND id IN (SELECT team_id FROM team_members WHERE tenant_id = $1 AND user_id = $2) order by updated_at desc;
+SELECT id, created_at, updated_at, name, emoji, conversation_assignment_type, max_auto_assigned_conversations, business_hours_id, sla_policy_id, COALESCE(timezone, '') AS timezone from teams WHERE tenant_id = $1 AND id IN (SELECT team_id FROM team_members WHERE tenant_id = $1 AND user_id = $2) order by updated_at desc;
 
 -- name: get-team
-SELECT id, created_at, updated_at, name, emoji, conversation_assignment_type, max_auto_assigned_conversations, business_hours_id, sla_policy_id, timezone from teams where tenant_id = $1 AND id = $2;
+SELECT id, created_at, updated_at, name, emoji, conversation_assignment_type, max_auto_assigned_conversations, business_hours_id, sla_policy_id, COALESCE(timezone, '') AS timezone from teams where tenant_id = $1 AND id = $2;
 
 -- name: get-team-members
 SELECT u.id, t.id as team_id, u.availability_status
