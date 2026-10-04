@@ -782,7 +782,7 @@ func handlePlatformTestMail(r *fastglue.Request) error {
 		TenantID:        0,
 		RecipientEmails: []string{to.Address},
 		Subject:         "Test email from the platform",
-		Content:         "<p>This is a test email from your platform's mailer. Signup verification and the email of workspaces without their own mail settings go out this way.</p>",
+		Content:         "<p>This is a test email from your platform's mailer. The email of workspaces without their own mail settings goes out this way.</p>",
 		Provider:        notifier.ProviderEmail,
 	})
 	app.platform.Audit(platformAdmin(r), platform.ActionTestMail, 0, "", map[string]any{"to": to.Address, "ok": err == nil}, realip.FromRequest(r.RequestCtx))
