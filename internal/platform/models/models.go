@@ -22,13 +22,12 @@ type Admin struct {
 
 // Overview sums up every workspace.
 type Overview struct {
-	Workspaces         int     `db:"workspaces" json:"workspaces"`
-	Active             int     `db:"active" json:"active"`
-	Suspended          int     `db:"suspended" json:"suspended"`
-	ActiveWorkspaces7d int     `db:"active_workspaces_7d" json:"active_workspaces_7d"`
-	Agents             int     `db:"agents" json:"agents"`
-	Conversations30d   int     `db:"conversations_30d" json:"conversations_30d"`
-	Plans              []Count `db:"-" json:"plans"`
+	Workspaces       int     `db:"workspaces" json:"workspaces"`
+	Active           int     `db:"active" json:"active"`
+	Suspended        int     `db:"suspended" json:"suspended"`
+	Agents           int     `db:"agents" json:"agents"`
+	Conversations30d int     `db:"conversations_30d" json:"conversations_30d"`
+	Plans            []Count `db:"-" json:"plans"`
 }
 
 // Count is how many workspaces are on a plan.
