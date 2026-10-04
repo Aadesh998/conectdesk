@@ -249,8 +249,7 @@
 				el('h1', { text: 'Overview' }),
 				el('div', { class: 'cards' },
 					card(o.workspaces, 'Workspaces'), card(o.active, 'Active'), card(o.suspended, 'Suspended'),
-					card(o.active_workspaces_7d, 'Used in the last 7 days'), card(o.signups_7d, 'New workspaces, 7 days'),
-					card(o.signups_30d, 'New workspaces, 30 days'),
+					card(o.active_workspaces_7d, 'Used in the last 7 days'),
 					card(o.agents, 'Agents'), card(o.conversations_30d, 'Conversations, 30 days')),
 				el('h2', { text: 'Plans' }),
 				table(['Plan', 'Workspaces'], o.plans.map(function (p) {

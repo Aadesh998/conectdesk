@@ -25,8 +25,6 @@ type Overview struct {
 	Workspaces         int     `db:"workspaces" json:"workspaces"`
 	Active             int     `db:"active" json:"active"`
 	Suspended          int     `db:"suspended" json:"suspended"`
-	Signups7d          int     `db:"signups_7d" json:"signups_7d"`
-	Signups30d         int     `db:"signups_30d" json:"signups_30d"`
 	ActiveWorkspaces7d int     `db:"active_workspaces_7d" json:"active_workspaces_7d"`
 	Agents             int     `db:"agents" json:"agents"`
 	Conversations30d   int     `db:"conversations_30d" json:"conversations_30d"`
