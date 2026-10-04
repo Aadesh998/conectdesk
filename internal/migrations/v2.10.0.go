@@ -27,7 +27,7 @@ var TenantScopedTables = []string{
 
 // PlatformTables belong to the installation rather than to a tenant, and have
 // no tenant_id.
-var PlatformTables = []string{"tenants", "pending_signups"}
+var PlatformTables = []string{"tenants"}
 
 // V2_10_0 introduces tenants. Existing rows are assigned to tenant 1, the
 // default tenant, and the column default keeps single-tenant queries working
