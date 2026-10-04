@@ -68,12 +68,9 @@ func tenantHandler(app *App, next fasthttp.RequestHandler) fasthttp.RequestHandl
 			return
 		}
 
-		// The bare base domain has no tenant; it only serves signup.
+		// The bare base domain has no tenant. Workspaces are only created by
+		// platform admins, so it serves no signup.
 		if app.tenant.IsBaseDomain(string(ctx.Host())) {
-			if publicSignup(app) && isSignupPath(string(ctx.Path())) {
-				next(ctx)
-				return
-			}
 			// The landing page, and finding a workspace to log in to.
 			if p := string(ctx.Path()); p == "/" || p == "/api/v1/workspaces/lookup" || strings.HasPrefix(p, "/static/public/static/") {
 				next(ctx)

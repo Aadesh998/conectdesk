@@ -1,0 +1,50 @@
+{{ define "app-theme" }}
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+	/* The app's own theme (frontend/shared-ui/assets/styles/main.scss). */
+	:root {
+		--bg: hsl(0 0% 99.2%); --fg: hsl(0 0% 1%); --card: hsl(0 0% 100%);
+		--muted: hsl(0 0% 96%); --muted-fg: hsl(0 0% 27%);
+		--border: hsl(0 0% 91%); --input: hsl(0 0% 85%);
+		--primary: hsl(152 39% 30%); --primary-fg: hsl(0 0% 100%); --ring: hsl(151 41% 45%);
+		--destructive: hsl(2 47% 46%); --destructive-bg: hsl(2 47% 46% / 0.1);
+		--success: hsl(142 72% 37%); --success-bg: hsl(142 72% 37% / 0.12);
+		--radius: 0.5rem;
+	}
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--bg: hsl(120 2.6% 7.6%); --fg: hsl(150 6% 93%); --card: hsl(120 2% 10%);
+			--muted: hsl(150 3% 13%); --muted-fg: hsl(120 1% 74%);
+			--border: hsl(150 2% 16%); --input: hsl(150 2% 19%);
+			--primary: hsl(152 58% 54%); --primary-fg: hsl(120 2.6% 7.6%); --ring: hsl(152 45% 33%);
+			--destructive: hsl(4 92% 74%); --destructive-bg: hsl(4 92% 74% / 0.12);
+			--success: hsl(142 55% 55%); --success-bg: hsl(142 55% 55% / 0.14);
+		}
+	}
+	* { box-sizing: border-box; }
+	body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 "Instrument Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+	a { color: var(--primary); }
+	input, select, button, textarea { font: inherit; color: inherit; }
+	input, select { width: 100%; background: transparent; border: 1px solid var(--input); border-radius: var(--radius); padding: 0.55rem 0.75rem; outline: none; }
+	input:focus, select:focus { border-color: var(--ring); box-shadow: 0 0 0 3px hsl(152 45% 40% / 0.2); }
+	button { background: var(--primary); color: var(--primary-fg); border: 0; border-radius: var(--radius); padding: 0.6rem 1rem; font-weight: 500; cursor: pointer; }
+	button:hover { filter: brightness(1.06); }
+	button:disabled { opacity: 0.55; cursor: default; filter: none; }
+	.card { background: var(--card); border: 1px solid var(--border); border-radius: calc(var(--radius) + 4px); }
+	.muted { color: var(--muted-fg); }
+	.page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; }
+	.auth { width: 100%; max-width: 440px; padding: 1.75rem; }
+	.auth h1 { font-size: 1.4rem; font-weight: 600; text-align: center; margin: 0 0 0.25rem; }
+	.auth .sub { text-align: center; color: var(--muted-fg); margin: 0 0 1.25rem; }
+	.auth label { display: block; margin: 0.9rem 0 0.35rem; font-size: 0.875rem; color: var(--muted-fg); }
+	.auth .hint { font-size: 0.8rem; color: var(--muted-fg); margin-top: 0.3rem; }
+	.auth .hint.ok { color: var(--success); }
+	.auth .hint.bad { color: var(--destructive); }
+	.auth .alert { margin-top: 1rem; padding: 0.7rem 0.8rem; border: 1px solid var(--destructive); background: var(--destructive-bg); color: var(--destructive); border-radius: var(--radius); font-size: 0.875rem; }
+	.auth .alert:empty { display: none; }
+	.auth button.wide { width: 100%; margin-top: 1.4rem; }
+	.powered { margin-top: 1.5rem; font-size: 0.75rem; color: var(--muted-fg); }
+</style>
+{{ end }}

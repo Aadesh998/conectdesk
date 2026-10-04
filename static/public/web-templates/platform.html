@@ -7,7 +7,7 @@
 <title>Platform admin</title>
 {{ template "app-theme" . }}
 <style>
-	/* Colours come from the app's theme (app-theme, in signup.html). */
+	/* Colours come from the app's theme (app-theme.html). */
 	:root {
 		--panel: var(--card); --text: var(--fg); --subtle: var(--muted-fg);
 		--accent: var(--primary); --accent-text: var(--primary-fg);
@@ -254,11 +254,11 @@
 				el('h1', { text: 'Overview' }),
 				el('div', { class: 'cards' },
 					card(o.workspaces, 'Workspaces'), card(o.active, 'Active'), card(o.suspended, 'Suspended'),
-					card(o.active_workspaces_7d, 'Used in the last 7 days'), card(o.signups_7d, 'Signups, 7 days'),
-					card(o.signups_30d, 'Signups, 30 days'), card(o.pending_signups, 'Awaiting email verification'),
+					card(o.active_workspaces_7d, 'Used in the last 7 days'), card(o.signups_7d, 'New workspaces, 7 days'),
+					card(o.signups_30d, 'New workspaces, 30 days'),
 					card(o.agents, 'Agents'), card(o.conversations_30d, 'Conversations, 30 days')),
 				el('div', { class: 'two' },
-					el('div', null, el('h2', { text: 'Signups, last 30 days' }), el('div', { class: 'panel chart' },
+					el('div', null, el('h2', { text: 'New workspaces, last 30 days' }), el('div', { class: 'panel chart' },
 						o.daily_signups.map(function (d) {
 							return el('div', { title: date(d.day) + ': ' + d.count, style: 'height:' + Math.round(d.count / peak * 100) + '%' });
 						}))),
@@ -505,8 +505,8 @@
 		}).catch(fail);
 	}
 
-	// The platform's own mailer: signup verification, and the email of every
-	// workspace without mail settings of its own.
+	// The platform's own mailer: the email of every workspace without mail
+	// settings of its own.
 	function settingsPage() {
 		layout('settings', el('p', { class: 'muted', text: 'Loading…' }));
 		api('GET', 'mail').then(function (d) {
@@ -555,7 +555,7 @@
 
 			layout('settings', [
 				el('h1', { text: 'Email' }),
-				el('p', { class: 'muted', text: 'The platform\u2019s mail server. It sends signup verification links, and the email of every workspace that hasn\u2019t set up its own under Admin \u2192 Notifications \u2192 Email; those go out with the workspace\u2019s name on your From address.' }),
+				el('p', { class: 'muted', text: 'The platform\u2019s mail server. It sends the email of every workspace that hasn\u2019t set up its own under Admin \u2192 Notifications \u2192 Email; those go out with the workspace\u2019s name on your From address.' }),
 				el('div', { class: 'note' }, 'Mailgun: host ', el('code', { text: 'smtp.mailgun.org' }), ', port 587, STARTTLS, login; the username and password are the domain\u2019s SMTP credentials (Mailgun \u2192 Sending \u2192 Domain settings \u2192 SMTP credentials), and From is an address on that domain.'),
 				el('h2', { text: 'Mail server' }), form,
 				el('h2', { text: 'Test' }), el('p', { class: 'muted', text: 'Save first, then send a test to check the settings work.' }), test

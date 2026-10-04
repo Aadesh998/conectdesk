@@ -71,7 +71,6 @@
 		<nav>
 			<a class="btn ghost" href="#login">Log in</a>
 			{{ if .Data.DemoURL }}<a class="btn ghost" href="{{ .Data.DemoURL }}">Book a demo</a>{{ end }}
-			{{ if .Data.SignupEnabled }}<a class="btn" href="/signup">Get started</a>{{ end }}
 		</nav>
 	</header>
 
@@ -80,8 +79,7 @@
 		<h1>Never lose an <em>admission enquiry</em> again</h1>
 		<p>Parents call, WhatsApp and DM you on Instagram. {{ .Data.Product }} puts all of it on one screen for your counsellors, replies on WhatsApp when a call is missed, and makes sure someone calls back.</p>
 		<div class="cta">
-			{{ if .Data.SignupEnabled }}<a class="btn lg" href="/signup">Create your workspace</a>{{ end }}
-			{{ if .Data.DemoURL }}<a class="btn lg{{ if .Data.SignupEnabled }} ghost{{ end }}" href="{{ .Data.DemoURL }}">Book a 10-minute demo</a>{{ else }}<a class="btn lg ghost" href="#login">Log in to your workspace</a>{{ end }}
+			{{ if .Data.DemoURL }}<a class="btn lg" href="{{ .Data.DemoURL }}">Book a 10-minute demo</a>{{ else }}<a class="btn lg ghost" href="#login">Log in to your workspace</a>{{ end }}
 		</div>
 	</section>
 
@@ -129,12 +127,11 @@
 		<div class="err" id="login-error" role="alert"></div>
 	</section>
 
-	{{ if or .Data.SignupEnabled .Data.DemoURL }}
+	{{ if .Data.DemoURL }}
 	<section class="band card" style="margin-top: 3rem;">
 		<h2>Stop losing enquiries this admission season</h2>
-		<p>Set up your workspace, or see it with your own calls in a 10-minute demo.</p>
-		{{ if .Data.SignupEnabled }}<a class="btn lg" href="/signup">Get started</a>{{ end }}
-		{{ if .Data.DemoURL }}<a class="btn lg{{ if .Data.SignupEnabled }} ghost{{ end }}" href="{{ .Data.DemoURL }}">Book a demo</a>{{ end }}
+		<p>See it with your own calls in a 10-minute demo.</p>
+		<a class="btn lg" href="{{ .Data.DemoURL }}">Book a demo</a>
 	</section>
 	{{ end }}
 

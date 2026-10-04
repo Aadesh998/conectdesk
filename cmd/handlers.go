@@ -46,12 +46,6 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// The OAuth redirect URL every workspace shares, on the bare base domain.
 	g.GET("/oauth/{provider}/callback", rateLimit(handleOAuthRelay, "public"))
 
-	// Workspace signup, served on the bare base domain.
-	g.GET("/signup", rateLimit(handleSignupPage, "public"))
-	g.POST("/api/v1/signup", rateLimit(handleSignup, "auth"))
-	g.GET("/api/v1/signup/slug", rateLimit(handleSignupSlugAvailable, "public"))
-	g.GET("/signup/verify", rateLimit(handleSignupVerifyPage, "public"))
-	g.POST("/api/v1/signup/verify", rateLimit(handleSignupVerify, "auth"))
 
 	// Authentication.
 	g.POST("/api/v1/auth/login", rateLimit(handleLogin, "auth"))

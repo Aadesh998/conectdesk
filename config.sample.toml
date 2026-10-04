@@ -31,18 +31,14 @@ enabled = false
 base_domain = ""
 # Scheme of tenant URLs in links and emails. Set "http" for local development.
 url_scheme = "https"
-# Let anyone create a workspace at https://<base_domain>/signup. Off, only
-# platform admins create workspaces, from the platform dashboard, and pick
-# the inbox channels each one may use.
-signup_enabled = false
+# Workspaces are only created by platform admins, from the platform dashboard,
+# where they pick the inbox channels each one may use. There is no public
+# signup.
 # Product name on the landing page at the base domain.
 product_name = "ConectDesk"
 # Where the landing page's "Book a demo" buttons go, e.g. a calendar booking
 # page or a https://wa.me/ link. Leave empty to hide them.
 demo_url = ""
-# Email a verification link and only create the workspace once it's opened.
-# Needs the notification mailer (notification.email) to be on.
-signup_verify_email = true
 # Plan new workspaces start on; its limits are under [app.tenancy.plans.<name>].
 default_plan = "free"
 # Where a workspace's Admin > Usage page sends admins to upgrade their plan: a

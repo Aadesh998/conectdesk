@@ -63,7 +63,6 @@ SELECT
     (SELECT COUNT(*) FROM tenants WHERE status = 'suspended') AS suspended,
     (SELECT COUNT(*) FROM tenants WHERE created_at > NOW() - INTERVAL '7 days') AS signups_7d,
     (SELECT COUNT(*) FROM tenants WHERE created_at > NOW() - INTERVAL '30 days') AS signups_30d,
-    (SELECT COUNT(*) FROM pending_signups WHERE expires_at > NOW()) AS pending_signups,
     (SELECT COUNT(DISTINCT tenant_id) FROM users WHERE type = 'agent' AND last_active_at > NOW() - INTERVAL '7 days') AS active_workspaces_7d,
     (SELECT COUNT(*) FROM users WHERE type = 'agent' AND deleted_at IS NULL AND email <> 'System') AS agents,
     (SELECT COUNT(*) FROM conversations WHERE created_at > NOW() - INTERVAL '30 days') AS conversations_30d;

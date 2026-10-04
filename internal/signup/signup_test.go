@@ -96,13 +96,6 @@ func TestSignup(t *testing.T) {
 		t.Fatal("an invalid signup created a tenant")
 	}
 
-	if ok, _ := m.SlugAvailable(ctx, "acme"); ok {
-		t.Error("acme reported available")
-	}
-	if ok, _ := m.SlugAvailable(ctx, "globex"); !ok {
-		t.Error("globex reported taken")
-	}
-
 	// The same email can sign up a second workspace.
 	r := req
 	r.Slug = "acme-eu"
@@ -113,96 +106,5 @@ func TestSignup(t *testing.T) {
 	db.Get(&admins, `SELECT COUNT(*) FROM users WHERE email = 'ann@acme.test' AND type = $1`, umodels.UserTypeAgent)
 	if admins != 2 {
 		t.Fatalf("admins with the email: %d, want 2", admins)
-	}
-}
-
-func TestSignupVerification(t *testing.T) {
-	db := testutil.NewDB(t, "signup_verify")
-	lo := logf.New(logf.Opts{})
-	tenants, err := tenant.New(tenant.Opts{DB: db, Lo: &lo, Enabled: true, BaseDomain: "yourapp.test"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	m := New(Opts{DB: db, Lo: &lo, Tenants: tenants, Plan: "free"})
-	ctx := context.Background()
-	req := Request{Company: "Initech", Slug: "initech", FirstName: "Peter", Email: "peter@initech.test", Password: password}
-
-	token, err := m.Start(ctx, req)
-	if err != nil || len(token) < 32 {
-		t.Fatalf("Start: %q, %v", token, err)
-	}
-
-	// Nothing exists until the email is verified, but the slug is held.
-	var n int
-	db.Get(&n, `SELECT COUNT(*) FROM tenants WHERE slug = 'initech'`)
-	if n != 0 {
-		t.Fatal("Start created the tenant before verification")
-	}
-	var stored string
-	db.Get(&stored, `SELECT token_hash FROM pending_signups WHERE slug = 'initech'`)
-	if stored == token || stored == "" {
-		t.Fatal("the token itself is stored")
-	}
-	if ok, _ := m.SlugAvailable(ctx, "initech"); ok {
-		t.Error("a pending signup's slug reported available")
-	}
-	other := req
-	other.Email = "someone@else.test"
-	if _, err := m.Start(ctx, other); !errors.Is(err, ErrSlugTaken) {
-		t.Errorf("another email took the held slug: %v", err)
-	}
-	if _, err := m.Create(ctx, other); !errors.Is(err, ErrSlugTaken) {
-		t.Errorf("instant signup took the held slug: %v", err)
-	}
-
-	// Signing up again replaces the earlier link.
-	token2, err := m.Start(ctx, req)
-	if err != nil {
-		t.Fatalf("Start again: %v", err)
-	}
-	if _, err := m.Pending(ctx, token); !errors.Is(err, ErrInvalidToken) {
-		t.Errorf("replaced link still valid: %v", err)
-	}
-	p, err := m.Pending(ctx, token2)
-	if err != nil || p.Company != "Initech" || p.Email != "peter@initech.test" {
-		t.Fatalf("Pending: %+v, %v", p, err)
-	}
-
-	// Confirming creates the tenant with its admin, once.
-	if _, err := m.Confirm(ctx, "not-a-token"); !errors.Is(err, ErrInvalidToken) {
-		t.Errorf("bad token: %v", err)
-	}
-	it, err := m.Confirm(ctx, token2)
-	if err != nil || it.Slug != "initech" {
-		t.Fatalf("Confirm: %+v, %v", it, err)
-	}
-	users, _ := user.New(testutil.NewI18n(t), user.Opts{DB: db, Lo: &lo})
-	if _, err := users.VerifyPassword(it.ID, "peter@initech.test", []byte(password)); err != nil {
-		t.Fatalf("admin can't log in after verifying: %v", err)
-	}
-	if _, err := m.Confirm(ctx, token2); !errors.Is(err, ErrInvalidToken) {
-		t.Errorf("link used twice: %v", err)
-	}
-	db.Get(&n, `SELECT COUNT(*) FROM pending_signups`)
-	if n != 0 {
-		t.Errorf("%d pending signups left after confirming", n)
-	}
-
-	// An expired link doesn't work, and its slug is released.
-	late := Request{Company: "Late", Slug: "late", FirstName: "L", Email: "l@late.test", Password: password}
-	lateToken, err := m.Start(ctx, late)
-	if err != nil {
-		t.Fatal(err)
-	}
-	db.MustExec(`UPDATE pending_signups SET expires_at = NOW() - INTERVAL '1 minute' WHERE slug = 'late'`)
-	if _, err := m.Confirm(ctx, lateToken); !errors.Is(err, ErrInvalidToken) {
-		t.Errorf("expired link: %v", err)
-	}
-	if ok, _ := m.SlugAvailable(ctx, "late"); !ok {
-		t.Error("an expired signup still holds its slug")
-	}
-	late.Email = "new@late.test"
-	if _, err := m.Start(ctx, late); err != nil {
-		t.Errorf("slug of an expired signup can't be taken: %v", err)
 	}
 }

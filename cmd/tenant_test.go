@@ -46,6 +46,9 @@ func TestTenantHandler(t *testing.T) {
 		{"nobody.yourapp.com", "/api/v1/config", fasthttp.StatusNotFound, 0},
 		{"yourapp.com", "/api/v1/config", fasthttp.StatusNotFound, 0},
 		{"yourapp.com", "/health", fasthttp.StatusOK, 0},
+		// There is no public signup: only platform admins create workspaces.
+		{"yourapp.com", "/signup", fasthttp.StatusNotFound, 0},
+		{"yourapp.com", "/api/v1/signup", fasthttp.StatusNotFound, 0},
 	} {
 		seen = tmodels.Tenant{}
 		var ctx fasthttp.RequestCtx
