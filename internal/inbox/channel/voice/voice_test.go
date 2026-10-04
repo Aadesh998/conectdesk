@@ -126,3 +126,20 @@ func TestMenuAndVoicemail(t *testing.T) {
 		t.Error("voicemail label")
 	}
 }
+
+func TestSIP(t *testing.T) {
+	if SIPLeg("asha") != "sip:asha" {
+		t.Error("SIPLeg")
+	}
+	for in, want := range map[string]string{
+		"sip:Asha@acme.voip.exotel.com": "asha",
+		"SIP:asha":                      "asha",
+		"asha@acme.voip.exotel.com":     "asha",
+		" asha ":                        "asha",
+		"":                              "",
+	} {
+		if got := SIPUser(in); got != want {
+			t.Errorf("SIPUser(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

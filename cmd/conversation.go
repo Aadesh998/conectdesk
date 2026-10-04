@@ -922,9 +922,10 @@ func handleCreateConversation(r *fastglue.Request) error {
 	// Send initial message based on the initiator of conversation.
 	switch {
 	case channel == inbox.ChannelVoice:
-		// Call the customer from the agent's phone; the call is the first
-		// message. A call that can't be placed leaves nothing behind.
-		if _, err := placeCall(app, tenantID(r), user, conversationUUID, voice.E164(req.PhoneNumber), req.InboxID); err != nil {
+		// Call the customer from the agent, on their phone or in their browser;
+		// the call is the first message. A call that can't be placed leaves
+		// nothing behind.
+		if _, _, err := placeCall(app, tenantID(r), user, conversationUUID, voice.E164(req.PhoneNumber), req.InboxID); err != nil {
 			if err := app.conversation.DeleteConversation(tenantID(r), conversationUUID); err != nil {
 				app.lo.Error("error deleting conversation", "error", err)
 			}

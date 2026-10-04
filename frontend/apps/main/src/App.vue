@@ -94,6 +94,7 @@ import { useTagStore } from './stores/tag'
 import { useCustomAttributeStore } from './stores/customAttributes'
 import { useIdleDetection } from './composables/useIdleDetection'
 import { useNotificationStore } from './stores/notification'
+import { useSoftphoneStore } from './stores/softphone'
 import { initAudioContext } from '@shared-ui/composables/useNotificationSound'
 import PageHeader from './components/layout/PageHeader.vue'
 import ViewForm from '@/features/view/ViewForm.vue'
@@ -162,6 +163,7 @@ const openCreateViewForm = ref(false)
 const openCreateConversationDialog = ref(false)
 const { t } = useI18n()
 const notificationStore = useNotificationStore()
+const softphoneStore = useSoftphoneStore()
 
 // Update browser tab title with unread notification count.
 // Watch both unreadCount and route so the prefix is preserved after navigation.
@@ -193,6 +195,8 @@ const initStores = async () => {
   if (!userStore.userID) {
     await userStore.getCurrentUser()
   }
+  // Browser calling signs in once the agent is known.
+  softphoneStore.load()
   await Promise.allSettled([
     getUserViews(),
     sharedViewStore.loadSharedViews(),

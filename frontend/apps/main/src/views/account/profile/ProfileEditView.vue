@@ -45,6 +45,20 @@
       </Button>
     </form>
 
+    <!-- Where calls ring: this browser, over Exotel's WebRTC, or the phone
+         above. Shown once an admin has set up the agent's SIP account. -->
+    <div v-if="softphone.configured" class="flex flex-col space-y-3">
+      <div class="space-y-1">
+        <span class="sub-title">{{ $t('softphone.title') }}</span>
+        <p class="text-muted-foreground text-xs">{{ $t('softphone.profileDescription') }}</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <Switch id="ring_browser" :checked="softphone.ringsBrowser" :disabled="isSwitching" @update:checked="setRingBrowser" />
+        <label for="ring_browser" class="text-sm">{{ $t('softphone.ringBrowser') }}</label>
+      </div>
+      <p class="text-xs" :class="statusClass">{{ statusText }}</p>
+    </div>
+
     <div class="flex flex-col space-y-5">
       <div class="space-y-1">
         <span class="sub-title">{{ $t('account.publicAvatar') }}</span>
@@ -77,6 +91,8 @@ import { Button } from '@shared-ui/components/ui/button'
 import { AvatarUpload } from '@shared-ui/components/ui/avatar'
 import { ref, computed, watch } from 'vue'
 import { Input } from '@shared-ui/components/ui/input'
+import { Switch } from '@shared-ui/components/ui/switch'
+import { useSoftphoneStore } from '../../../stores/softphone'
 import { useAppSettingsStore } from '../../../stores/appSettings'
 import { useEmitter } from '../../../composables/useEmitter'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
@@ -90,6 +106,27 @@ const isSaving = ref(false)
 const userStore = useUserStore()
 const pendingFile = ref(null)
 const settingsStore = useAppSettingsStore()
+const softphone = useSoftphoneStore()
+
+// Browser calling: whether calls ring this browser, and how it's doing.
+const isSwitching = ref(false)
+const setRingBrowser = async (on) => {
+  try {
+    isSwitching.value = true
+    await softphone.setRingBrowser(on)
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { variant: 'destructive', description: handleHTTPError(error).message })
+  } finally {
+    isSwitching.value = false
+  }
+}
+const statusText = computed(() => {
+  if (!softphone.ringsBrowser) return t('softphone.status.phone')
+  return t(`softphone.status.${softphone.status}`)
+})
+const statusClass = computed(() =>
+  ['failed', 'mic_blocked'].includes(softphone.status) && softphone.ringsBrowser ? 'text-destructive' : 'text-muted-foreground'
+)
 
 // Name, editable; the rest of the account is shown as it is.
 const firstName = ref(userStore.firstName)

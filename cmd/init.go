@@ -65,6 +65,7 @@ import (
 	"github.com/conectdesk/conectdesk/internal/setting"
 	"github.com/conectdesk/conectdesk/internal/signup"
 	"github.com/conectdesk/conectdesk/internal/sla"
+	"github.com/conectdesk/conectdesk/internal/softphone"
 	"github.com/conectdesk/conectdesk/internal/ssrf"
 	"github.com/conectdesk/conectdesk/internal/tag"
 	"github.com/conectdesk/conectdesk/internal/team"
@@ -450,6 +451,15 @@ func initRetention(db *sqlx.DB) *retention.Manager {
 	m, err := retention.New(retention.Opts{DB: db, Lo: initLogger("retention")})
 	if err != nil {
 		log.Fatalf("error initializing data retention: %v", err)
+	}
+	return m
+}
+
+// initSoftphone inits agents' SIP accounts for browser calling.
+func initSoftphone(db *sqlx.DB) *softphone.Manager {
+	m, err := softphone.New(softphone.Opts{DB: db, Lo: initLogger("softphone"), EncryptionKey: ko.MustString("app.encryption_key")})
+	if err != nil {
+		log.Fatalf("error initializing browser calling: %v", err)
 	}
 	return m
 }

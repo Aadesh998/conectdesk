@@ -484,6 +484,15 @@ const callContact = (id, inboxID) =>
   http.post(`/api/v1/contacts/${id}/call`, { inbox_id: inboxID }, {
     headers: { 'Content-Type': 'application/json' }
   })
+// Browser calling: the agent's SIP account at Exotel. Admins set it; the
+// agent's own copy carries the password their browser signs in with.
+const getOwnSoftphone = () => http.get('/api/v1/agents/me/softphone')
+const updateOwnSoftphone = (data) =>
+  http.put('/api/v1/agents/me/softphone', data, { headers: { 'Content-Type': 'application/json' } })
+const getAgentSoftphone = (id) => http.get(`/api/v1/agents/${id}/softphone`)
+const updateAgentSoftphone = (id, data) =>
+  http.put(`/api/v1/agents/${id}/softphone`, data, { headers: { 'Content-Type': 'application/json' } })
+const deleteAgentSoftphone = (id) => http.delete(`/api/v1/agents/${id}/softphone`)
 const importContacts = (data) =>
   http.post('/api/v1/contacts/import', data, { headers: { 'Content-Type': 'multipart/form-data' } })
 const getContactImportStatus = () => http.get('/api/v1/contacts/import/status')
@@ -824,6 +833,11 @@ export default {
   startCall,
   dial,
   callContact,
+  getOwnSoftphone,
+  updateOwnSoftphone,
+  getAgentSoftphone,
+  updateAgentSoftphone,
+  deleteAgentSoftphone,
   importContacts,
   getContactImportStatus,
   getPhoneAgents,

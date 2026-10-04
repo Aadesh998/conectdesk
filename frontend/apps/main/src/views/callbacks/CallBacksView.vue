@@ -80,8 +80,8 @@
               v-if="cb.status === 'pending'"
               size="sm"
               class="h-8 gap-1"
-              :disabled="!userStore.phoneNumber"
-              :title="userStore.phoneNumber ? '' : $t('voice.callDisabled.noAgentPhone')"
+              :disabled="!!leg.notReadyReason.value"
+              :title="leg.notReadyReason.value"
               :is-loading="calling === cb.id"
               @click="callBack(cb)"
             >
@@ -123,8 +123,8 @@ import { getRelativeTime } from '@shared-ui/utils/datetime.js'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
 import api from '@main/api'
 import { useCallBackStore } from '@main/stores/callBacks'
-import { useUserStore } from '@main/stores/user'
 import { useEmitter } from '@main/composables/useEmitter'
+import { useCallLeg } from '@main/composables/useCallLeg'
 import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
 
 const PER_PAGE = 50
@@ -133,7 +133,7 @@ const { t } = useI18n()
 const router = useRouter()
 const emitter = useEmitter()
 const store = useCallBackStore()
-const userStore = useUserStore()
+const leg = useCallLeg()
 
 const status = ref('pending')
 const mineOnly = ref(false)
@@ -187,13 +187,16 @@ const whatsAppText = (cb) => {
 const whatsAppClass = (cb) =>
   cb.whatsapp_error || cb.whatsapp_status === 'failed' ? 'text-destructive' : 'text-emerald-700 dark:text-emerald-400'
 
-// Calls the contact from their phone conversation's line: the agent's phone
-// rings first. The call-back closes by itself once the call connects.
+// Calls the contact from their phone conversation's line: the agent is rung
+// first, on their phone or in this browser. The call-back closes by itself
+// once the call connects.
 const callBack = async (cb) => {
   calling.value = cb.id
   try {
-    await api.startCall(cb.conversation_uuid, cb.inbox_id)
-    toast(t('voice.callStarted'))
+    leg.expectCall()
+    const resp = await api.startCall(cb.conversation_uuid, cb.inbox_id)
+    leg.expectCall(leg.callSID(resp.data.data))
+    toast(leg.startedMessage.value)
   } catch (error) {
     toast(handleHTTPError(error).message, 'destructive')
   } finally {

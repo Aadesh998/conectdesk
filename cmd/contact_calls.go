@@ -28,7 +28,8 @@ type callContactRequest struct {
 
 // handleCallContact calls a contact from the contacts list: the call is
 // logged on their open conversation in the voice inbox, or on a new one
-// assigned to the calling agent, and Exotel rings the agent's phone first.
+// assigned to the calling agent, and Exotel rings the agent first, on their
+// phone or in their browser.
 func handleCallContact(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
@@ -44,18 +45,18 @@ func handleCallContact(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	if voice.E164(agent.PhoneNumber.String) == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.For(tid).T("voice.agentNoPhone"), nil, envelope.InputError)
+	if _, err := agentLeg(app, tid, agent, "voice.agentNoPhone"); err != nil {
+		return sendErrorEnvelope(r, err)
 	}
 	contact, err := app.user.GetContactOrVisitor(tid, id, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	cuuid, err := callContact(app, tid, agent, contact, req.InboxID)
+	cuuid, sid, err := callContact(app, tid, agent, contact, req.InboxID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(map[string]any{"conversation_uuid": cuuid})
+	return r.SendEnvelope(map[string]any{"conversation_uuid": cuuid, "call_sid": sid})
 }
 
 // dialRequest is a number typed into the dialer.
@@ -68,7 +69,7 @@ type dialRequest struct {
 }
 
 // handleDial calls a number typed into the dialer. The caller ID is the
-// voice inbox's ExoPhone and Exotel rings the agent's own phone first. The
+// voice inbox's ExoPhone and Exotel rings the agent first. The
 // number becomes a contact, or is matched to the one it already is.
 func handleDial(r *fastglue.Request) error {
 	var (
@@ -88,8 +89,8 @@ func handleDial(r *fastglue.Request) error {
 	if phone == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.For(tid).T("voice.invalidDialNumber"), nil, envelope.InputError)
 	}
-	if voice.E164(agent.PhoneNumber.String) == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.For(tid).T("voice.agentNoPhone"), nil, envelope.InputError)
+	if _, err := agentLeg(app, tid, agent, "voice.agentNoPhone"); err != nil {
+		return sendErrorEnvelope(r, err)
 	}
 	if _, _, err := runningVoiceInbox(app, tid, req.InboxID); err != nil {
 		return sendErrorEnvelope(r, err)
@@ -125,11 +126,11 @@ func handleDial(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	cuuid, err := callContact(app, tid, agent, saved, req.InboxID)
+	cuuid, sid, err := callContact(app, tid, agent, saved, req.InboxID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(map[string]any{"conversation_uuid": cuuid, "contact_id": saved.ID})
+	return r.SendEnvelope(map[string]any{"conversation_uuid": cuuid, "contact_id": saved.ID, "call_sid": sid})
 }
 
 // dialNumber is a typed number with its country code, e.g. +919876543210,
@@ -157,18 +158,18 @@ func dialNumber(typed string) string {
 // their open conversation in the inbox if the agent can see it, else on a
 // new one assigned to the agent, which is removed again if the call can't
 // be placed. It returns the conversation's UUID.
-func callContact(app *App, tid int, agent umodels.User, contact umodels.User, inboxID int) (string, error) {
+func callContact(app *App, tid int, agent umodels.User, contact umodels.User, inboxID int) (string, string, error) {
 	phone := voice.ContactE164(contact.PhoneNumberCountryCode.String, contact.PhoneNumber.String)
 	if len(phone) < 9 {
-		return "", envelope.NewError(envelope.InputError, app.i18n.For(tid).T("voice.contactNoPhone"), nil)
+		return "", "", envelope.NewError(envelope.InputError, app.i18n.For(tid).T("voice.contactNoPhone"), nil)
 	}
 	if _, _, err := runningVoiceInbox(app, tid, inboxID); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	cuuid, err := app.conversation.LatestContactConversation(tid, contact.ID, inboxID)
 	if err != nil {
-		return "", envelope.NewError(envelope.GeneralError, app.i18n.For(tid).T("globals.messages.somethingWentWrong"), nil)
+		return "", "", envelope.NewError(envelope.GeneralError, app.i18n.For(tid).T("globals.messages.somethingWentWrong"), nil)
 	}
 	if cuuid != "" {
 		if _, err := enforceConversationAccess(app, tid, cuuid, agent); err != nil {
@@ -185,7 +186,7 @@ func callContact(app *App, tid int, agent umodels.User, contact umodels.User, in
 			"Call: "+name, true, nil, nil, 0, 0)
 		if err != nil {
 			app.lo.Error("error creating conversation for a call", "contact_id", contact.ID, "error", err)
-			return "", envelope.NewError(envelope.GeneralError, app.i18n.For(tid).T("globals.messages.somethingWentWrong"), nil)
+			return "", "", envelope.NewError(envelope.GeneralError, app.i18n.For(tid).T("globals.messages.somethingWentWrong"), nil)
 		}
 		created = true
 		if err := app.conversation.UpdateConversationUserAssignee(tid, cuuid, agent.ID, agent); err != nil {
@@ -193,15 +194,16 @@ func callContact(app *App, tid int, agent umodels.User, contact umodels.User, in
 		}
 	}
 
-	if _, err := placeCall(app, tid, agent, cuuid, phone, inboxID); err != nil {
+	_, sid, err := placeCall(app, tid, agent, cuuid, phone, inboxID)
+	if err != nil {
 		if created {
 			if err := app.conversation.DeleteConversation(tid, cuuid); err != nil {
 				app.lo.Error("error deleting conversation", "error", err)
 			}
 		}
-		return "", err
+		return "", "", err
 	}
-	return cuuid, nil
+	return cuuid, sid, nil
 }
 
 // handleImportContacts imports contacts from a CSV: one per row, with

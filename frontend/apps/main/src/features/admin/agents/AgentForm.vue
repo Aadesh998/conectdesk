@@ -249,6 +249,9 @@
       </Button>
     </div>
 
+    <!-- Browser calling -->
+    <AgentSoftphoneForm v-if="!isNewForm && initialValues?.id" :agent-id="initialValues.id" />
+
     <!-- API Key Display Dialog -->
     <Dialog v-model:open="showAPIKeyDialog">
       <DialogContent class="sm:max-w-md">
@@ -320,6 +323,7 @@ import { Button } from '@shared-ui/components/ui/button/index.js'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { createFormSchema } from './formSchema.js'
+import AgentSoftphoneForm from './AgentSoftphoneForm.vue'
 import { Checkbox } from '@shared-ui/components/ui/checkbox/index.js'
 import { Label } from '@shared-ui/components/ui/label/index.js'
 import { vAutoAnimate } from '@formkit/auto-animate/vue'

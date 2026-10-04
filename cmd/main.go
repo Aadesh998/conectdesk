@@ -38,6 +38,7 @@ import (
 	"github.com/conectdesk/conectdesk/internal/search"
 	"github.com/conectdesk/conectdesk/internal/signup"
 	"github.com/conectdesk/conectdesk/internal/sla"
+	"github.com/conectdesk/conectdesk/internal/softphone"
 	umodels "github.com/conectdesk/conectdesk/internal/user/models"
 	"github.com/conectdesk/conectdesk/internal/view"
 	"github.com/redis/go-redis/v9"
@@ -131,6 +132,9 @@ type App struct {
 	platformHost string
 	// mfa manages agents' two-factor login.
 	mfa *mfa.Manager
+
+	// softphone keeps the SIP accounts agents take calls on in their browser.
+	softphone *softphone.Manager
 	// export builds workspaces' data exports.
 	export *export.Manager
 	// tenantConsts caches each tenant's constants; see tenantConsts().
@@ -404,6 +408,7 @@ func main() {
 		})
 	}
 	app.mfa = initMFA(db)
+	app.softphone = initSoftphone(db)
 	app.callback = initCallback(db, i18n)
 	app.lead = initLead(db, settings, i18n)
 	conversation.SetNewConversationHook(onNewContactConversation(app))

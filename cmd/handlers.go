@@ -190,6 +190,8 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/v1/agents/me/2fa/enable", rateLimit(auth(handleEnableTwoFactor), "auth"))
 	g.POST("/api/v1/agents/me/2fa/disable", rateLimit(auth(handleDisableTwoFactor), "auth"))
 	g.POST("/api/v1/agents/me/2fa/recovery-codes", rateLimit(auth(handleNewRecoveryCodes), "auth"))
+	g.GET("/api/v1/agents/me/softphone", auth(handleGetOwnSoftphone))
+	g.PUT("/api/v1/agents/me/softphone", auth(handleUpdateOwnSoftphone))
 	g.PUT("/api/v1/agents/me", auth(handleUpdateCurrentAgent))
 	g.GET("/api/v1/agents/me/teams", auth(handleGetCurrentAgentTeams))
 	g.PUT("/api/v1/agents/me/availability", auth(handleUpdateAgentAvailability))
@@ -206,6 +208,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/v1/agents/{id}/api-key", perm(handleGenerateAPIKey, "users:manage"))
 	g.DELETE("/api/v1/agents/{id}/api-key", perm(handleRevokeAPIKey, "users:manage"))
 	g.DELETE("/api/v1/agents/{id}/2fa", perm(handleResetAgentTwoFactor, "users:manage"))
+	g.GET("/api/v1/agents/{id}/softphone", perm(handleGetAgentSoftphone, "users:manage"))
+	g.PUT("/api/v1/agents/{id}/softphone", perm(handleUpdateAgentSoftphone, "users:manage"))
+	g.DELETE("/api/v1/agents/{id}/softphone", perm(handleDeleteAgentSoftphone, "users:manage"))
 	g.POST("/api/v1/agents/reset-password", rateLimit(tryAuth(handleResetPassword), "auth"))
 	g.POST("/api/v1/agents/set-password", rateLimit(tryAuth(handleSetPassword), "auth"))
 

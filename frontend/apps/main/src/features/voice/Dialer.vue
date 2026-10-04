@@ -1,6 +1,7 @@
 <template>
   <!-- Call any number: the caller ID is the phone inbox's ExoPhone, and
-       Exotel rings the agent's own phone first, then the number typed. -->
+       Exotel rings the agent first, on their phone or in this browser, then
+       the number typed. -->
   <Dialog v-model:open="open">
     <DialogContent class="sm:max-w-md">
       <DialogHeader>
@@ -50,7 +51,12 @@
         </div>
 
         <div class="rounded-md border px-3 py-2 text-sm">
-          <template v-if="userStore.phoneNumber">
+          <template v-if="leg.inBrowser.value && !leg.notReadyReason.value">
+            <span class="text-muted-foreground">{{ $t('voice.dialer.ringsFirst') }}</span>
+            <span class="font-medium"> {{ $t('softphone.thisBrowser') }}</span>
+          </template>
+          <span v-else-if="leg.inBrowser.value" class="text-destructive">{{ leg.notReadyReason.value }}</span>
+          <template v-else-if="userStore.phoneNumber">
             <span class="text-muted-foreground">{{ $t('voice.dialer.ringsFirst') }}</span>
             <span class="font-medium"> {{ userStore.phoneNumber }}</span>
           </template>
@@ -79,7 +85,6 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import { Phone } from 'lucide-vue-next'
 import {
   Dialog,
@@ -97,9 +102,9 @@ import api from '@/api'
 import { useInboxStore } from '@/stores/inbox'
 import { useUserStore } from '@/stores/user'
 import { useEmitter } from '@/composables/useEmitter'
+import { useCallLeg } from '@/composables/useCallLeg'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
-const { t } = useI18n()
 const router = useRouter()
 const emitter = useEmitter()
 const inboxStore = useInboxStore()
@@ -112,12 +117,13 @@ const contactId = ref(null)
 const inboxID = ref(null)
 const calling = ref(false)
 const numberInput = ref(null)
+const leg = useCallLeg()
 
 const voiceInboxes = computed(() => inboxStore.inboxes.filter((i) => i.channel === 'voice' && i.enabled))
 const selectedInbox = computed(() => voiceInboxes.value.find((i) => i.id === inboxID.value))
 const digits = computed(() => phone.value.replace(/\D/g, ''))
 const canCall = computed(
-  () => digits.value.length >= 10 && !!selectedInbox.value && !!userStore.phoneNumber && !calling.value
+  () => digits.value.length >= 10 && !!selectedInbox.value && !leg.notReadyReason.value && !calling.value
 )
 
 watch(
@@ -142,13 +148,15 @@ const call = async () => {
   if (!canCall.value) return
   calling.value = true
   try {
+    leg.expectCall()
     const resp = await api.dial({
       phone: phone.value,
       name: name.value,
       inbox_id: inboxID.value,
       contact_id: contactId.value || 0
     })
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: t('voice.callStarted') })
+    leg.expectCall(leg.callSID(resp.data.data))
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: leg.startedMessage.value })
     open.value = false
     const uuid = resp.data.data?.conversation_uuid
     if (uuid) router.push({ name: 'inbox-conversation', params: { type: 'all', uuid } })

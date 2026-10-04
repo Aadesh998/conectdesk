@@ -3,9 +3,10 @@
 // Calls are logged as messages: a caller becomes a conversation in the voice
 // inbox, and an agent can call any contact with a phone number from any
 // conversation. Exotel does the calling: for an outbound call it rings the
-// agent's own phone first and then the customer (click-to-call); inbound
-// calls reach agents through a flow set up in Exotel's App Bazaar, which asks
-// ConectDesk who to ring and reports how the call went.
+// agent first, on their own phone or in their browser over WebRTC, and then
+// the customer (click-to-call); inbound calls reach agents through a flow set
+// up in Exotel's App Bazaar, which asks ConectDesk who to ring and reports how
+// the call went.
 package voice
 
 import (
@@ -264,10 +265,11 @@ func (v *Voice) Send(models.OutboundMessage) error {
 	return ErrNoWrittenReplies
 }
 
-// Call starts a click-to-call from the agent's phone to the customer's.
-func (v *Voice) Call(ctx context.Context, agentPhone, customerPhone, statusURL, ref string) (string, error) {
+// Call starts a click-to-call from the agent to the customer's phone. The
+// agent's leg is their phone number, or their browser's SIPLeg.
+func (v *Voice) Call(ctx context.Context, agentLeg, customerPhone, statusURL, ref string) (string, error) {
 	return v.exotel.Connect(ctx, ConnectOpts{
-		Agent:       agentPhone,
+		Agent:       agentLeg,
 		Customer:    customerPhone,
 		CallerID:    v.config.CallerID,
 		StatusURL:   statusURL,
@@ -285,6 +287,21 @@ func ContactE164(country, number string) string { return phone.FromContact(count
 
 // Digits returns a number's digits in international form, for matching.
 func Digits(p string) string { return phone.Digits(p) }
+
+// SIPLeg is how Exotel is told to ring an agent's browser: their SIP user, in
+// place of a phone number, as a click-to-call's From or a number to dial.
+func SIPLeg(username string) string { return "sip:" + username }
+
+// SIPUser is the SIP user in what Exotel reports as the leg that answered,
+// e.g. sip:asha@acme.voip.exotel.com, for matching to an agent.
+func SIPUser(leg string) string {
+	leg = strings.TrimSpace(leg)
+	if len(leg) >= 4 && strings.EqualFold(leg[:4], "sip:") {
+		leg = leg[4:]
+	}
+	user, _, _ := strings.Cut(leg, "@")
+	return strings.ToLower(user)
+}
 
 // StatusLabel is a call outcome in words, for a call message's content.
 func StatusLabel(c Call) string {

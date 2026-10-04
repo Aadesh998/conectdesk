@@ -542,9 +542,12 @@ UPDATE users SET phone_number = NULLIF($3, ''), phone_number_country_code = NULL
 WHERE tenant_id = $1 AND id = $2 AND type = 'agent' AND deleted_at IS NULL;
 
 -- name: get-agents-with-phone
--- Agents who can take phone calls: enabled, with a number set.
-SELECT id, first_name, COALESCE(last_name, '') AS last_name, phone_number, availability_status
-FROM users
-WHERE tenant_id = $1 AND type = 'agent' AND enabled AND deleted_at IS NULL
-  AND phone_number IS NOT NULL AND phone_number <> ''
-ORDER BY id;
+-- Agents who can take phone calls: enabled, with a number set or calls ringing
+-- their browser.
+SELECT u.id, u.first_name, COALESCE(u.last_name, '') AS last_name, COALESCE(u.phone_number, '') AS phone_number,
+  u.availability_status, COALESCE(s.username, '') AS sip_username
+FROM users u
+LEFT JOIN agent_sip_accounts s ON s.tenant_id = u.tenant_id AND s.user_id = u.id AND s.ring_browser
+WHERE u.tenant_id = $1 AND u.type = 'agent' AND u.enabled AND u.deleted_at IS NULL
+  AND ((u.phone_number IS NOT NULL AND u.phone_number <> '') OR s.username IS NOT NULL)
+ORDER BY u.id;

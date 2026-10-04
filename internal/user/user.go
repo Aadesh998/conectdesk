@@ -367,9 +367,12 @@ type PhoneAgent struct {
 	LastName     string `db:"last_name"`
 	PhoneNumber  string `db:"phone_number"`
 	Availability string `db:"availability_status"`
+	// SIPUsername is set when calls ring the agent's browser instead.
+	SIPUsername string `db:"sip_username"`
 }
 
-// AgentsWithPhone returns the enabled agents who have a phone number set.
+// AgentsWithPhone returns the enabled agents who can take calls: on a phone
+// number, or in their browser.
 func (u *Manager) AgentsWithPhone(tenantID int) ([]PhoneAgent, error) {
 	var out []PhoneAgent
 	if err := u.q.GetAgentsWithPhone.Select(&out, tenantID); err != nil {

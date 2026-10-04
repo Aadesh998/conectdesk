@@ -1,5 +1,6 @@
 <template>
-  <!-- Click-to-call: Exotel rings the agent's own phone, then the customer.
+  <!-- Click-to-call: Exotel rings the agent, on their phone or in this
+       browser, then the customer.
        Shown whenever a phone inbox exists; disabled with the reason until the
        contact and the agent both have a number. -->
   <div v-if="voiceInboxes.length" class="flex items-center gap-1">
@@ -45,8 +46,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@shared-ui/components/u
 import { handleHTTPError } from '@shared-ui/utils/http.js'
 import api from '@/api'
 import { useInboxStore } from '@/stores/inbox'
-import { useUserStore } from '@/stores/user'
 import { useEmitter } from '@/composables/useEmitter'
+import { useCallLeg } from '@/composables/useCallLeg'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
 const props = defineProps({
@@ -58,9 +59,9 @@ const props = defineProps({
 const { t } = useI18n()
 const emitter = useEmitter()
 const inboxStore = useInboxStore()
-const userStore = useUserStore()
 const calling = ref(false)
 const inboxID = ref(null)
+const leg = useCallLeg()
 
 const voiceInboxes = computed(() => inboxStore.inboxes.filter((i) => i.channel === 'voice' && i.enabled))
 const hasPhone = computed(() => !!props.conversation?.contact?.phone_number)
@@ -69,8 +70,7 @@ const contactName = computed(() =>
 )
 const disabledReason = computed(() => {
   if (!hasPhone.value) return t('voice.callDisabled.noContactPhone')
-  if (!userStore.phoneNumber) return t('voice.callDisabled.noAgentPhone')
-  return ''
+  return leg.notReadyReason.value
 })
 
 // A phone conversation calls back on its own inbox; others use the first.
@@ -89,8 +89,10 @@ const call = async () => {
   if (!props.conversation?.uuid || !inboxID.value) return
   calling.value = true
   try {
-    await api.startCall(props.conversation.uuid, inboxID.value)
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: t('voice.callStarted') })
+    leg.expectCall()
+    const resp = await api.startCall(props.conversation.uuid, inboxID.value)
+    leg.expectCall(leg.callSID(resp.data.data))
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: leg.startedMessage.value })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { variant: 'destructive', description: handleHTTPError(error).message })
   } finally {

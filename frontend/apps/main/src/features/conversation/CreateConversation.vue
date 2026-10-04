@@ -212,11 +212,16 @@
             </div>
           </div>
 
-          <!-- A phone conversation opens with a call from the agent's phone. -->
+          <!-- A phone conversation opens with a call from the agent, on their
+               phone or in this browser. -->
           <div v-if="isVoice" class="mt-4 flex-shrink-0">
             <div class="box flex items-start gap-3 p-4 text-sm">
               <PhoneOutgoing :size="18" class="mt-0.5 shrink-0 text-muted-foreground" />
-              <p v-if="userStore.phoneNumber" class="text-muted-foreground">
+              <p v-if="leg.inBrowser.value && !leg.notReadyReason.value" class="text-muted-foreground">
+                {{ $t('softphone.newCallHint') }}
+              </p>
+              <p v-else-if="leg.inBrowser.value" class="text-destructive">{{ leg.notReadyReason.value }}</p>
+              <p v-else-if="userStore.phoneNumber" class="text-muted-foreground">
                 {{ $t('voice.newCallHint', { phone: userStore.phoneNumber }) }}
               </p>
               <p v-else class="text-destructive">
@@ -360,6 +365,7 @@ import api from '@/api'
 import WhatsAppTemplatePicker from '@/features/conversation/whatsapp/WhatsAppTemplatePicker.vue'
 import { hasPendingInlineUpload } from '@main/composables/useInlineImageUpload'
 import { useIsComposerCramped } from '@main/composables/useIsComposerCramped'
+import { useCallLeg } from '@main/composables/useCallLeg'
 
 const dialogOpen = defineModel({
   required: false,
@@ -368,6 +374,7 @@ const dialogOpen = defineModel({
 
 const inboxStore = useInboxStore()
 const userStore = useUserStore()
+const leg = useCallLeg()
 const { t } = useI18n()
 const uStore = useUsersStore()
 const teamStore = useTeamStore()
@@ -405,7 +412,7 @@ const isDisabled = computed(() => {
   if (loading.value || uploadingFiles.value.length > 0) return true
   if (hasPendingInlineUpload(form?.values?.content)) return true
   if (isWhatsApp.value && !whatsAppTemplate.value) return true
-  if (isVoice.value && !userStore.phoneNumber) return true
+  if (isVoice.value && leg.notReadyReason.value) return true
   return false
 })
 
@@ -609,6 +616,7 @@ const createConversation = form.handleSubmit(async (values) => {
     values.reuse_contact = true
     // Initiator of this conversation is always agent
     values.initiator = UserTypeAgent
+    if (isVoice.value) leg.expectCall()
     const conversation = await api.createConversation(values)
     const conversationUUID = conversation.data.data.uuid
 
@@ -625,7 +633,7 @@ const createConversation = form.handleSubmit(async (values) => {
       }
     }
     if (isVoice.value) {
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: t('voice.callStarted') })
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: leg.startedMessage.value })
     }
     dialogOpen.value = false
     form.resetForm()

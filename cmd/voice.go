@@ -105,8 +105,8 @@ type startCallRequest struct {
 	InboxID int `json:"inbox_id"`
 }
 
-// handleStartCall calls a conversation's contact: Exotel rings the agent's
-// own phone, then connects the customer. The call is logged in the
+// handleStartCall calls a conversation's contact: Exotel rings the agent, on
+// their own phone or in their browser, then connects the customer. The call is logged in the
 // conversation and updated as it goes.
 func handleStartCall(r *fastglue.Request) error {
 	var (
@@ -128,34 +128,52 @@ func handleStartCall(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 	customerPhone := voice.ContactE164(conv.Contact.PhoneNumberCountryCode.String, conv.Contact.PhoneNumber.String)
-	msg, err := placeCall(app, tid, agent, cuuid, customerPhone, req.InboxID)
+	msg, _, err := placeCall(app, tid, agent, cuuid, customerPhone, req.InboxID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(msg)
 }
 
-// placeCall rings an agent's own phone, then connects the customer from a
-// voice inbox's ExoPhone, and logs the call in the conversation.
-func placeCall(app *App, tid int, agent umodels.User, cuuid, customerPhone string, inboxID int) (cmodels.Message, error) {
+// agentLeg is where Exotel rings an agent for a call: their browser, when
+// they take calls there, else their own phone. noPhoneKey is the message for
+// an agent who can take calls on neither.
+func agentLeg(app *App, tid int, agent umodels.User, noPhoneKey string) (string, error) {
+	acc, found, err := app.softphone.Get(tid, agent.ID)
+	if err != nil {
+		return "", envelope.NewError(envelope.GeneralError, app.i18n.For(tid).T("globals.messages.somethingWentWrong"), nil)
+	}
+	if found && acc.RingBrowser {
+		return voice.SIPLeg(acc.Username), nil
+	}
+	if p := voice.E164(agent.PhoneNumber.String); p != "" {
+		return p, nil
+	}
+	return "", envelope.NewError(envelope.InputError, app.i18n.For(tid).T(noPhoneKey), nil)
+}
+
+// placeCall rings the agent, on their phone or in their browser, then
+// connects the customer from a voice inbox's ExoPhone, and logs the call in
+// the conversation.
+func placeCall(app *App, tid int, agent umodels.User, cuuid, customerPhone string, inboxID int) (cmodels.Message, string, error) {
 	v, record, err := runningVoiceInbox(app, tid, inboxID)
 	if err != nil {
-		return cmodels.Message{}, err
+		return cmodels.Message{}, "", err
 	}
-	agentPhone := voice.E164(agent.PhoneNumber.String)
-	if agentPhone == "" {
-		return cmodels.Message{}, envelope.NewError(envelope.InputError, app.i18n.For(tid).T("voice.agentNoPhone"), nil)
+	leg, err := agentLeg(app, tid, agent, "voice.agentNoPhone")
+	if err != nil {
+		return cmodels.Message{}, "", err
 	}
 	if len(customerPhone) < 9 {
-		return cmodels.Message{}, envelope.NewError(envelope.InputError, app.i18n.For(tid).T("voice.contactNoPhone"), nil)
+		return cmodels.Message{}, "", envelope.NewError(envelope.InputError, app.i18n.For(tid).T("voice.contactNoPhone"), nil)
 	}
 
 	c, cancel := context.WithTimeout(app.ctx, voiceTimeout)
 	defer cancel()
-	sid, err := v.Call(c, agentPhone, customerPhone, voiceWebhookURL(app, record, "status"), cuuid)
+	sid, err := v.Call(c, leg, customerPhone, voiceWebhookURL(app, record, "status"), cuuid)
 	if err != nil {
 		app.lo.Error("error starting exotel call", "conversation_uuid", cuuid, "error", err)
-		return cmodels.Message{}, envelope.NewError(envelope.GeneralError, app.i18n.For(tid).Ts("voice.callFailed", "error", err.Error()), nil)
+		return cmodels.Message{}, "", envelope.NewError(envelope.GeneralError, app.i18n.For(tid).Ts("voice.callFailed", "error", err.Error()), nil)
 	}
 
 	call := voice.Call{
@@ -169,7 +187,7 @@ func placeCall(app *App, tid int, agent umodels.User, cuuid, customerPhone strin
 		app.lo.Error("error logging outgoing call", "call_sid", sid, "error", err)
 	}
 	app.lo.Info("outgoing call started", "conversation_uuid", cuuid, "call_sid", sid, "agent_id", agent.ID)
-	return msg, nil
+	return msg, sid, nil
 }
 
 func callSourceID(sid string) string { return "exotel:" + sid }
@@ -294,7 +312,8 @@ func handleVoiceIncoming(r *fastglue.Request) error {
 }
 
 // agentsToRing returns who an inbound call rings: the online agents with a
-// phone number, only the menu's team's when the caller chose one.
+// phone number or browser calling, only the menu's team's when the caller
+// chose one.
 func agentsToRing(app *App, tid int, cfg voice.Config, teamID int) []user.PhoneAgent {
 	if !cfg.RingAgents {
 		return nil
@@ -326,7 +345,8 @@ func agentsToRing(app *App, tid int, cfg voice.Config, teamID int) []user.PhoneA
 }
 
 // handleVoiceDial answers the Connect applet's "dial whom" URL with the
-// numbers to ring: the online agents who have one, else the fallback list.
+// numbers to ring: the online agents who can take calls, each on their phone
+// or in their browser, else the fallback list.
 func handleVoiceDial(r *fastglue.Request) error {
 	app := r.Context.(*App)
 	v, record, ok := voiceWebhookInbox(r)
@@ -347,7 +367,9 @@ func handleVoiceDial(r *fastglue.Request) error {
 	}
 	var numbers []string
 	for _, a := range agentsToRing(app, record.TenantID, cfg, teamID) {
-		if n := voice.E164(a.PhoneNumber); n != "" {
+		if a.SIPUsername != "" {
+			numbers = append(numbers, voice.SIPLeg(a.SIPUsername))
+		} else if n := voice.E164(a.PhoneNumber); n != "" {
 			numbers = append(numbers, n)
 		}
 	}
@@ -439,8 +461,8 @@ type transferCallRequest struct {
 
 // handleTransferCall hands a customer over to another agent. Exotel can't
 // move a call that's already connected, so the conversation is assigned to
-// the other agent and a new call is placed from their phone to the
-// customer's, logged as transferred.
+// the other agent and a new call is placed from them, on their phone or in
+// their browser, to the customer, logged as transferred.
 func handleTransferCall(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
@@ -464,9 +486,9 @@ func handleTransferCall(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	targetPhone := voice.E164(target.PhoneNumber.String)
-	if targetPhone == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.For(tid).T("voice.transferNoPhone"), nil, envelope.InputError)
+	targetLeg, err := agentLeg(app, tid, target, "voice.transferNoPhone")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
 	}
 	customerPhone := voice.ContactE164(conv.Contact.PhoneNumberCountryCode.String, conv.Contact.PhoneNumber.String)
 	if len(customerPhone) < 9 {
@@ -482,7 +504,7 @@ func handleTransferCall(r *fastglue.Request) error {
 	}
 	c, cancel := context.WithTimeout(app.ctx, voiceTimeout)
 	defer cancel()
-	sid, err := v.Call(c, targetPhone, customerPhone, voiceWebhookURL(app, record, "status"), cuuid)
+	sid, err := v.Call(c, targetLeg, customerPhone, voiceWebhookURL(app, record, "status"), cuuid)
 	if err != nil {
 		app.lo.Error("error placing transfer call", "conversation_uuid", cuuid, "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusBadGateway, app.i18n.For(tid).Ts("voice.callFailed", "error", err.Error()), nil, envelope.GeneralError)
@@ -536,16 +558,27 @@ func handleVoiceStatus(r *fastglue.Request) error {
 	return nil
 }
 
+// answeredBy reports whether the leg Exotel says answered a call is the
+// agent's: their phone number, or their browser's SIP user.
+func answeredBy(a user.PhoneAgent, leg string) bool {
+	if a.SIPUsername != "" && voice.SIPUser(leg) == strings.ToLower(a.SIPUsername) {
+		return true
+	}
+	d := voice.Digits(leg)
+	return d != "" && voice.Digits(a.PhoneNumber) == d
+}
+
 // finishCall updates a call's message with how it ended, and attaches its
 // recording when there is one.
 func finishCall(app *App, v *voice.Voice, tid int, ev voice.CallEvent) {
-	// Who picked up an inbound call, matched on the number that answered.
+	// Who picked up an inbound call, matched on the number, or the browser's
+	// SIP user, that answered.
 	var agentID int
 	var agentName string
 	if ev.AnsweredBy != "" {
 		if agents, err := app.user.AgentsWithPhone(tid); err == nil {
 			for _, a := range agents {
-				if voice.Digits(a.PhoneNumber) == voice.Digits(ev.AnsweredBy) {
+				if answeredBy(a, ev.AnsweredBy) {
 					agentID, agentName = a.ID, strings.TrimSpace(a.FirstName+" "+a.LastName)
 					break
 				}

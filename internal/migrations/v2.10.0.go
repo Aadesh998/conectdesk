@@ -84,5 +84,5 @@ func V2_10_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 
 // AllTenantTables lists every tenant table, including those added after V2_10_0.
 func AllTenantTables() []string {
-	return slices.Concat(TenantScopedTables, TenantScopedTablesV2_14_0, TenantScopedTablesV2_16_0, TenantScopedTablesV2_20_0, TenantScopedTablesV2_27_0, TenantScopedTablesV2_31_0, TenantScopedTablesV2_32_0, TenantScopedTablesV2_33_0)
+	return slices.Concat(TenantScopedTables, TenantScopedTablesV2_14_0, TenantScopedTablesV2_16_0, TenantScopedTablesV2_20_0, TenantScopedTablesV2_27_0, TenantScopedTablesV2_31_0, TenantScopedTablesV2_32_0, TenantScopedTablesV2_33_0, TenantScopedTablesV2_35_0)
 }

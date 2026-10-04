@@ -36,7 +36,7 @@ func TestSchemaTenantTables(t *testing.T) {
 		t.Fatalf("listing tables: %v", err)
 	}
 
-	want := slices.Concat(TenantScopedTables, TenantScopedTablesV2_14_0, TenantScopedTablesV2_16_0, TenantScopedTablesV2_20_0, TenantScopedTablesV2_27_0, TenantScopedTablesV2_31_0, TenantScopedTablesV2_32_0, TenantScopedTablesV2_33_0)
+	want := slices.Concat(TenantScopedTables, TenantScopedTablesV2_14_0, TenantScopedTablesV2_16_0, TenantScopedTablesV2_20_0, TenantScopedTablesV2_27_0, TenantScopedTablesV2_31_0, TenantScopedTablesV2_32_0, TenantScopedTablesV2_33_0, TenantScopedTablesV2_35_0)
 	slices.Sort(want)
 	if !slices.Equal(all, want) {
 		t.Fatalf("schema tables differ from the tenant table lists:\nschema: %v\nlist:   %v", all, want)
@@ -53,7 +53,7 @@ func TestV2_10_0(t *testing.T) {
 
 	// Roll the fresh schema back to its pre-tenant shape. CASCADE also drops the
 	// tenant-scoped keys built on the column. Tables added later go entirely.
-	for _, tbl := range slices.Concat(TenantScopedTablesV2_14_0, TenantScopedTablesV2_16_0, TenantScopedTablesV2_20_0, TenantScopedTablesV2_27_0, TenantScopedTablesV2_31_0, TenantScopedTablesV2_32_0, TenantScopedTablesV2_33_0) {
+	for _, tbl := range slices.Concat(TenantScopedTablesV2_14_0, TenantScopedTablesV2_16_0, TenantScopedTablesV2_20_0, TenantScopedTablesV2_27_0, TenantScopedTablesV2_31_0, TenantScopedTablesV2_32_0, TenantScopedTablesV2_33_0, TenantScopedTablesV2_35_0) {
 		db.MustExec(`DROP TABLE ` + tbl)
 	}
 	for _, tbl := range TenantScopedTables {

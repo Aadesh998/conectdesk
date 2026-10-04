@@ -1,5 +1,6 @@
 <template>
-  <!-- Calls a contact from a phone inbox: Exotel rings the agent first. -->
+  <!-- Calls a contact from a phone inbox: Exotel rings the agent first, on
+       their phone or in this browser. -->
   <Tooltip v-if="voiceInboxes.length">
     <TooltipTrigger as-child>
       <span @click.stop>
@@ -31,8 +32,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@shared-ui/components/u
 import { handleHTTPError } from '@shared-ui/utils/http.js'
 import api from '@/api'
 import { useInboxStore } from '@/stores/inbox'
-import { useUserStore } from '@/stores/user'
 import { useEmitter } from '@/composables/useEmitter'
+import { useCallLeg } from '@/composables/useCallLeg'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
 const props = defineProps({
@@ -43,8 +44,8 @@ const { t } = useI18n()
 const router = useRouter()
 const emitter = useEmitter()
 const inboxStore = useInboxStore()
-const userStore = useUserStore()
 const calling = ref(false)
+const leg = useCallLeg()
 
 const voiceInboxes = computed(() => inboxStore.inboxes.filter((i) => i.channel === 'voice' && i.enabled))
 const fullName = computed(() =>
@@ -52,8 +53,7 @@ const fullName = computed(() =>
 )
 const disabledReason = computed(() => {
   if (!props.contact.phone_number) return t('voice.callDisabled.noContactPhone')
-  if (!userStore.phoneNumber) return t('voice.callDisabled.noAgentPhone')
-  return ''
+  return leg.notReadyReason.value
 })
 
 const call = async () => {
@@ -69,8 +69,10 @@ const call = async () => {
   }
   calling.value = true
   try {
+    leg.expectCall()
     const resp = await api.callContact(props.contact.id, voiceInboxes.value[0].id)
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: t('voice.callStarted') })
+    leg.expectCall(leg.callSID(resp.data.data))
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: leg.startedMessage.value })
     const uuid = resp.data.data?.conversation_uuid
     if (uuid) router.push({ name: 'inbox-conversation', params: { type: 'all', uuid } })
   } catch (error) {
