@@ -210,7 +210,7 @@ func (m *Manager) followUp(ctx context.Context, c followupCandidate) {
 
 // writeFollowup has the LLM write a follow-up in the assistant's voice.
 func (m *Manager) writeFollowup(ctx context.Context, conv cmodels.Conversation, a models.Assistant, msgs []cmodels.Message, quiet time.Duration) (string, error) {
-	systemPrompt := buildSystemPrompt(a) + "\n\n" + fmt.Sprintf(followupNote, int(quiet.Hours()))
+	systemPrompt := buildSystemPrompt(a, m.now(conv.TenantID)) + "\n\n" + promptSection("followup_task", fmt.Sprintf(followupNote, int(quiet.Hours())))
 	contactLines := contactFieldLines(conv.Contact)
 	history := m.buildHistory(conv.TenantID, msgs, conv.ContactID)
 	if block := customerContextBlock(conv, contactLines); block != "" {

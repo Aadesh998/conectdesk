@@ -312,9 +312,9 @@ func (m *Manager) handle(ctx context.Context, tenantID, convID int) {
 	}
 
 	contactLines := contactFieldLines(conv.Contact)
-	systemPrompt := buildSystemPrompt(assistant)
+	systemPrompt := buildSystemPrompt(assistant, m.now(tenantID))
 	if len(contactLines) == 0 {
-		systemPrompt += "\n\n" + noContactIdentityNote
+		systemPrompt += "\n\n" + promptSection("customer_identity", noContactIdentityNote)
 	}
 	history := m.buildHistory(tenantID, msgs, conv.ContactID)
 	// Keep customer-controlled data (contact fields, subject, attributes) out of the system prompt; it
@@ -353,7 +353,7 @@ func (m *Manager) handle(ctx context.Context, tenantID, convID int) {
 		tools = append(tools, &handoffTool{m: m, conv: conv, assistant: assistant, outcome: outcome})
 	}
 	if recent := m.recentContactConversations(tenantID, conv, runVerified); len(recent) > 0 {
-		systemPrompt += fmt.Sprintf("\n\nThis customer has %d other conversation(s) from the last %d days. Call get_previous_conversations if the current issue might be a follow-up or related to them.", len(recent), recentConversationDays)
+		systemPrompt += "\n\n" + promptSection("previous_conversations", fmt.Sprintf("This customer has %d other conversation(s) from the last %d days. Call get_previous_conversations if the current issue might be a follow-up or related to them.", len(recent), recentConversationDays))
 		tools = append(tools, &previousConversationsTool{m: m, tenantID: tenantID, conversations: recent})
 	}
 
@@ -372,7 +372,7 @@ func (m *Manager) handle(ctx context.Context, tenantID, convID int) {
 		m.lo.Debug("ai agent offering verification tools", "conversation_uuid", conv.UUID, "set_contact_email_offered", offerSetEmail)
 	}
 	if needsVerification && !runVerified {
-		systemPrompt += "\n\n" + verificationNote
+		systemPrompt += "\n\n" + promptSection("verification", verificationNote)
 	}
 
 	tctx := ai.ToolContext{
@@ -560,7 +560,7 @@ func (m *Manager) PreviewReply(tenantID int, ctx context.Context, assistantID in
 	runCtx, cancel := context.WithTimeout(ctx, livechatRunTimeout)
 	defer cancel()
 	// Preview is search-only: no custom tools (empty allowed set), no built-in, no side effects.
-	answer, err := m.ai.RunAgentWithTools(tenantID, runCtx, buildSystemPrompt(a), history, m.maxSteps, ai.ToolContext{}, []int{}, false, false, tools)
+	answer, err := m.ai.RunAgentWithTools(tenantID, runCtx, buildSystemPrompt(a, m.now(tenantID)), history, m.maxSteps, ai.ToolContext{}, []int{}, false, false, tools)
 	if err != nil {
 		return "", nil, err
 	}
