@@ -32,7 +32,7 @@ func TestSchemaTenantTables(t *testing.T) {
 	if err := db.Select(&all, `
 		SELECT table_name FROM information_schema.tables
 		WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND NOT (table_name = ANY($1))
-		ORDER BY table_name`, pq.Array(slices.Concat(PlatformTables, PlatformTablesV2_15_0, PlatformTablesV2_23_0))); err != nil {
+		ORDER BY table_name`, pq.Array(slices.Concat(PlatformTables, PlatformTablesV2_15_0, PlatformTablesV2_23_0, PlatformTablesV2_38_0))); err != nil {
 		t.Fatalf("listing tables: %v", err)
 	}
 

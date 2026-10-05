@@ -45,6 +45,11 @@ upgrade_url = ""
 # Use a host no workspace can take: "admin" and the other reserved slugs can't
 # be signed up for.
 platform_host = ""
+# Host of the internal documentation, "docs.<base_domain>" when empty, e.g.
+# docs.desk.arrlink.com. Only docs viewers log in there, and they can open
+# nothing else; add them under Docs access on the platform dashboard or with
+# --docs-viewer-add. Like platform_host, use a host no workspace can take.
+docs_host = ""
 # Make platform admins log in with a code from an authenticator app; they set
 # it up at their first login. Reset a lost one with --platform-admin-reset-2fa.
 platform_require_2fa = true

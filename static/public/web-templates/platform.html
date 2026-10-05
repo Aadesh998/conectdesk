@@ -283,7 +283,8 @@
 		external: 'M15 3h6v6 M10 14 21 3 M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6',
 		back: 'M19 12H5 M12 19l-7-7 7-7',
 		logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9',
-		plus: 'M12 5v14 M5 12h14'
+		plus: 'M12 5v14 M5 12h14',
+		docs: 'M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z'
 	};
 	function icon(name) {
 		var ns = 'http://www.w3.org/2000/svg';
@@ -475,7 +476,7 @@
 		app.replaceChildren(el('div', { class: 'shell' },
 			el('aside', { class: 'side' }, brand(),
 				el('nav', { 'aria-label': 'Sections' }, link('#/', 'Overview', 'overview'), link('#/workspaces', 'Workspaces', 'workspaces'),
-					link('#/audit', 'Audit log', 'audit'), link('#/settings', 'Settings', 'settings')),
+					link('#/audit', 'Audit log', 'audit'), link('#/docs', 'Docs access', 'docs'), link('#/settings', 'Settings', 'settings')),
 				el('div', { class: 'who' }, el('div', { class: 'email muted', title: me.email, text: me.email }),
 					el('button', { class: 'ghost sm', onclick: function () { api('POST', 'logout').then(function () { me = null; renderLogin(); }).catch(fail); } }, icon('logout'), 'Log out'))),
 			el('main', null, el('div', { class: 'content' }, content))));
@@ -775,7 +776,8 @@
 		login: 'Logged in', logout: 'Logged out', suspend: 'Suspended', activate: 'Activated', change_plan: 'Changed plan',
 		'delete': 'Deleted', impersonate: 'Logged in as an agent', enable_2fa: 'Turned on two-factor login',
 		schedule_delete: 'Scheduled deletion', restore: 'Restored', update_mail: 'Updated the mail server',
-		create: 'Created', set_channels: 'Changed channels', set_integrations: 'Changed integrations', test_mail: 'Sent a test email'
+		create: 'Created', set_channels: 'Changed channels', set_integrations: 'Changed integrations', test_mail: 'Sent a test email',
+		add_docs_viewer: 'Gave docs access', remove_docs_viewer: 'Removed docs access'
 	};
 
 	function listOf(names, list, all, everything) {
@@ -798,6 +800,7 @@
 		case 'impersonate': return d.user_id ? 'Agent #' + d.user_id : '';
 		case 'update_mail': return (d.host || '') + (d.enabled === false ? ', turned off' : '');
 		case 'test_mail': return (d.to || '') + (d.ok === false ? ', failed' : '');
+		case 'add_docs_viewer': case 'remove_docs_viewer': return d.email || '';
 		case 'suspend': case 'activate': case 'restore': case 'login': case 'logout': case 'enable_2fa': return '';
 		}
 		return Object.keys(d).length ? JSON.stringify(d) : '';
@@ -889,6 +892,44 @@
 		}).catch(fail);
 	}
 
+	// Docs viewers: accounts that can log in to the internal documentation and
+	// open nothing else, not this dashboard and no workspace.
+	function docsAccess() {
+		layout('docs', loading());
+		api('GET', 'docs-viewers').then(function (d) {
+			var save = el('button', { type: 'submit', text: 'Save' });
+			var form = el('form', { class: 'form', onsubmit: function (e) {
+				e.preventDefault();
+				var f = e.target;
+				save.disabled = true;
+				api('POST', 'docs-viewers', { email: f.email.value, password: f.password.value })
+					.then(function () { toast('Saved. They can log in at ' + d.url); docsAccess(); })
+					.catch(function (x) { save.disabled = false; fail(x); });
+			} },
+				field('Email', el('input', { id: 'd_email', name: 'email', type: 'email', required: true, autocomplete: 'off' })),
+				field('Password', el('input', { id: 'd_password', name: 'password', type: 'password', required: true, autocomplete: 'new-password' }),
+					'10 to 72 characters with an uppercase letter, a lowercase letter, a number and a symbol. An existing email gets this new password.'),
+				el('div', null, save));
+
+			var list = table(['Email', 'Added', 'Last login', ''], d.viewers.map(function (v) {
+				return { item: v, cells: [v.email, date(v.created_at), v.last_login_at ? ago(v.last_login_at) : 'Never',
+					el('button', { class: 'danger-ghost sm', onclick: function () {
+						if (!confirm('Remove docs access for ' + v.email + '? They are logged out at once.')) return;
+						api('POST', 'docs-viewers/remove', { email: v.email }).then(function () { toast('Removed ' + v.email); docsAccess(); }).catch(fail);
+					}, text: 'Remove' })] };
+			}), null, 'No one has docs access yet.');
+
+			layout('docs', [
+				pageHead('Docs access', null, d.url ? el('a', { href: d.url, target: '_blank', rel: 'noopener', class: 'button ghost' }, icon('external'), 'Open the docs') : null),
+				el('p', { class: 'muted', style: 'margin-top:-0.9rem;max-width:72ch' }, 'People listed here can log in to the internal documentation at ',
+					el('code', { text: d.url || 'docs.' + baseDomain }), ' and nothing else: not this dashboard and no workspace. A platform admin login doesn’t open the docs, so add yourself here too if you read them.'),
+				el('div', { class: 'ws-grid' },
+					el('div', { class: 'ws-main' }, panel('Docs viewers', null, list, { flush: true })),
+					el('div', { class: 'ws-side' }, panel('Add a viewer, or reset a password', 'Share the password securely.', form)))
+			]);
+		}).catch(fail);
+	}
+
 	function route() {
 		if (!me) return;
 		var h = location.hash.replace(/^#/, '') || '/';
@@ -898,6 +939,7 @@
 		else if (h === '/workspaces') workspaces();
 		else if (h === '/audit') audit();
 		else if (h === '/settings') settingsPage();
+		else if (h === '/docs') docsAccess();
 		else overview();
 	}
 

@@ -78,6 +78,10 @@ const (
 	ActionSetChannels     = "set_channels"
 	ActionSetIntegrations = "set_integrations"
 	ActionTestMail        = "test_mail"
+	// ActionAddDocsViewer and ActionRemoveDocsViewer give and take away access
+	// to the internal documentation.
+	ActionAddDocsViewer    = "add_docs_viewer"
+	ActionRemoveDocsViewer = "remove_docs_viewer"
 )
 
 // Manager manages platform admins, their sessions and the audit log, and
@@ -124,6 +128,15 @@ type queries struct {
 	UseAdminRecoveryCode        *sqlx.Stmt `query:"use-admin-recovery-code"`
 	GetPlatformSetting          *sqlx.Stmt `query:"get-platform-setting"`
 	SetPlatformSetting          *sqlx.Stmt `query:"set-platform-setting"`
+	UpsertDocsViewer            *sqlx.Stmt `query:"upsert-docs-viewer"`
+	GetDocsViewerByEmail        *sqlx.Stmt `query:"get-docs-viewer-by-email"`
+	GetDocsViewers              *sqlx.Stmt `query:"get-docs-viewers"`
+	DeleteDocsViewer            *sqlx.Stmt `query:"delete-docs-viewer"`
+	TouchDocsViewerLogin        *sqlx.Stmt `query:"touch-docs-viewer-login"`
+	InsertDocsSession           *sqlx.Stmt `query:"insert-docs-session"`
+	GetDocsSessionViewer        *sqlx.Stmt `query:"get-docs-session-viewer"`
+	DeleteDocsSession           *sqlx.Stmt `query:"delete-docs-session"`
+	DeleteExpiredDocsSessions   *sqlx.Stmt `query:"delete-expired-docs-sessions"`
 }
 
 // New creates and returns a new instance of the Manager.

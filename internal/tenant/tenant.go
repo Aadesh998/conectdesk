@@ -192,6 +192,12 @@ func (m *Manager) BaseURL() string {
 	return m.urlScheme + "://" + m.baseDomain + m.urlPort
 }
 
+// HostURL returns the URL of another host of the installation, such as the
+// documentation's, with the base domain's scheme and port.
+func (m *Manager) HostURL(host string) string {
+	return m.urlScheme + "://" + host + m.urlPort
+}
+
 // URLFor returns the URL the tenant is served on in multi-tenant mode.
 func (m *Manager) URLFor(t models.Tenant) string {
 	return m.rootURL(t)

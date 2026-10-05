@@ -73,3 +73,30 @@ CREATE TABLE platform_settings (
 	value JSONB NOT NULL DEFAULT '{}'::jsonb,
 	updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+-- People who may read the internal documentation on docs.<base_domain>, and
+-- nothing else: they aren't platform admins nor users of any workspace.
+-- Platform admins add and remove them.
+DROP TABLE IF EXISTS platform_docs_viewers CASCADE;
+CREATE TABLE platform_docs_viewers (
+	id SERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+	updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+	email TEXT NOT NULL,
+	password_hash TEXT NOT NULL,
+	last_login_at TIMESTAMPTZ NULL,
+	CONSTRAINT constraint_platform_docs_viewers_on_email CHECK (email = LOWER(email) AND length(email) <= 254)
+);
+CREATE UNIQUE INDEX index_platform_docs_viewers_on_email ON platform_docs_viewers (email);
+
+DROP TABLE IF EXISTS platform_docs_sessions CASCADE;
+CREATE TABLE platform_docs_sessions (
+	id SERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+	expires_at TIMESTAMPTZ NOT NULL,
+	viewer_id INT NOT NULL REFERENCES platform_docs_viewers(id) ON DELETE CASCADE,
+	-- SHA-256 of the session cookie; the cookie itself is never stored.
+	token_hash TEXT NOT NULL,
+	ip TEXT NOT NULL DEFAULT ''
+);
+CREATE UNIQUE INDEX index_platform_docs_sessions_on_token_hash ON platform_docs_sessions (token_hash);

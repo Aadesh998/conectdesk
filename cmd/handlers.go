@@ -41,6 +41,16 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/platform/mail", platformAuth(handlePlatformGetMail))
 	g.PUT("/api/platform/mail", platformAuth(handlePlatformSetMail))
 	g.POST("/api/platform/mail/test", rateLimit(platformAuth(handlePlatformTestMail), "auth"))
+	g.GET("/api/platform/docs-viewers", platformAuth(handlePlatformDocsViewers))
+	g.POST("/api/platform/docs-viewers", platformAuth(handlePlatformSetDocsViewer))
+	g.POST("/api/platform/docs-viewers/remove", platformAuth(handlePlatformRemoveDocsViewer))
+
+	// Internal documentation, on its own host to docs viewers only.
+	g.GET("/docs", handleDocsPage)
+	g.GET("/docs/{page}", handleDocsPage)
+	g.GET("/api/docs/search-index", handleDocsSearchIndex)
+	g.POST("/api/docs/login", rateLimit(handleDocsLogin, "auth"))
+	g.POST("/api/docs/logout", handleDocsLogout)
 	// Opened on a workspace host with a one-time link from the dashboard.
 	g.GET(impersonatePath, rateLimit(handleImpersonate, "auth"))
 

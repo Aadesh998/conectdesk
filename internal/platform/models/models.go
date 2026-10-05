@@ -110,3 +110,13 @@ type MailSettings struct {
 	IdleTimeout string `json:"idle_timeout"`
 	WaitTimeout string `json:"wait_timeout"`
 }
+
+// DocsViewer reads the internal documentation on the docs host and can open
+// nothing else: not the platform dashboard and no workspace.
+type DocsViewer struct {
+	ID           int       `db:"id" json:"id"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+	Email        string    `db:"email" json:"email"`
+	PasswordHash string    `db:"password_hash" json:"-"`
+	LastLoginAt  null.Time `db:"last_login_at" json:"last_login_at"`
+}

@@ -63,7 +63,20 @@ func tenantHandler(app *App, next fasthttp.RequestHandler) fasthttp.RequestHandl
 			}
 			return
 		}
-		if isPlatformPath(string(ctx.Path())) {
+		// Likewise the documentation's host serves only the documentation, to
+		// docs viewers, and no other host serves it.
+		if isDocsHost(app, string(ctx.Host())) {
+			switch path := string(ctx.Path()); {
+			case path == "/":
+				ctx.Redirect("/docs", fasthttp.StatusFound)
+			case isDocsPath(path):
+				next(ctx)
+			default:
+				writeTenantError(ctx, fasthttp.StatusNotFound, app.i18n.T("globals.messages.pageNotFound"), envelope.NotFoundError)
+			}
+			return
+		}
+		if isPlatformPath(string(ctx.Path())) || (isDocsPath(string(ctx.Path())) && app.docsHost != "") {
 			writeTenantError(ctx, fasthttp.StatusNotFound, app.i18n.T("globals.messages.pageNotFound"), envelope.NotFoundError)
 			return
 		}

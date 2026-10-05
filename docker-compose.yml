@@ -15,6 +15,9 @@ services:
       CONECTDESK_SYSTEM_USER_PASSWORD: ${CONECTDESK_SYSTEM_USER_PASSWORD:-}
       PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-}
       PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:-}
+      # An account that can only read the docs on docs.<base_domain>.
+      DOCS_VIEWER_EMAIL: ${DOCS_VIEWER_EMAIL:-}
+      DOCS_VIEWER_PASSWORD: ${DOCS_VIEWER_PASSWORD:-}
 
       CONECTDESK_db__host: db
       CONECTDESK_db__port: "5432"
@@ -55,6 +58,10 @@ services:
         if [ -n "$$PLATFORM_ADMIN_EMAIL" ]; then
           echo "$$PLATFORM_ADMIN_PASSWORD" | ./conectdesk --config /conectdesk/config.toml --platform-admin-add "$$PLATFORM_ADMIN_EMAIL" ||
             echo "platform admin not created, fix PLATFORM_ADMIN_EMAIL/PASSWORD; starting anyway";
+        fi &&
+        if [ -n "$$DOCS_VIEWER_EMAIL" ]; then
+          echo "$$DOCS_VIEWER_PASSWORD" | ./conectdesk --config /conectdesk/config.toml --docs-viewer-add "$$DOCS_VIEWER_EMAIL" ||
+            echo "docs viewer not created, fix DOCS_VIEWER_EMAIL/PASSWORD; starting anyway";
         fi &&
         exec ./conectdesk --config /conectdesk/config.toml
 

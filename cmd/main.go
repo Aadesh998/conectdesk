@@ -27,6 +27,7 @@ import (
 	"github.com/conectdesk/conectdesk/internal/csat"
 	customAttribute "github.com/conectdesk/conectdesk/internal/custom_attribute"
 	"github.com/conectdesk/conectdesk/internal/dailyreport"
+	"github.com/conectdesk/conectdesk/internal/docs"
 	"github.com/conectdesk/conectdesk/internal/export"
 	"github.com/conectdesk/conectdesk/internal/lead"
 	"github.com/conectdesk/conectdesk/internal/macro"
@@ -130,6 +131,9 @@ type App struct {
 	// nil without multi-tenancy.
 	platform     *platform.Manager
 	platformHost string
+	// docs is the internal documentation, served on docsHost to docs viewers.
+	docs     *docs.Docs
+	docsHost string
 	// mfa manages agents' two-factor login.
 	mfa *mfa.Manager
 
@@ -248,6 +252,10 @@ func main() {
 	}
 
 	if runPlatformAdminCommand(db) {
+		os.Exit(0)
+	}
+
+	if runDocsViewerCommand(db) {
 		os.Exit(0)
 	}
 	if runTenantCommand(db, fs) {
@@ -399,6 +407,7 @@ func main() {
 	app.mailer = mailer
 	app.workspace = initWorkspace(db, tenants)
 	app.platform, app.platformHost = initPlatform(db, tenants)
+	app.docs, app.docsHost = initDocs(tenants, app.platform)
 	if app.platform != nil {
 		mailer.SetPlatformSettings(func() (emailnotifier.Settings, error) {
 			ms, err := app.platform.MailSettings()

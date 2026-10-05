@@ -206,6 +206,65 @@ func runPlatformAdminCommand(db *sqlx.DB) bool {
 	return true
 }
 
+// runDocsViewerCommand runs a --docs-viewer-* command, reporting whether one
+// was given. Docs viewers can log in to the internal documentation only. The
+// password is read as for --platform-admin-add.
+func runDocsViewerCommand(db *sqlx.DB) bool {
+	var (
+		add    = ko.String("docs-viewer-add")
+		remove = ko.String("docs-viewer-remove")
+		list   = ko.Bool("docs-viewer-list")
+	)
+	if add == "" && remove == "" && !list {
+		return false
+	}
+	mgr, err := platform.New(platform.Opts{DB: db, Lo: initLogger("platform"), EncryptionKey: ko.MustString("app.encryption_key")})
+	if err != nil {
+		log.Fatalf("error initializing platform dashboard: %v", err)
+	}
+
+	switch {
+	case list:
+		viewers, err := mgr.DocsViewers()
+		if err != nil {
+			log.Fatalf("error listing docs viewers: %v", err)
+		}
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		fmt.Fprintln(w, "ID\tEMAIL\tCREATED\tLAST LOGIN")
+		for _, v := range viewers {
+			last := "never"
+			if v.LastLoginAt.Valid {
+				last = v.LastLoginAt.Time.Format("2006-01-02 15:04")
+			}
+			fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", v.ID, v.Email, v.CreatedAt.Format("2006-01-02"), last)
+		}
+		w.Flush()
+	case remove != "":
+		ok, err := mgr.RemoveDocsViewer(remove)
+		if err != nil {
+			log.Fatalf("error removing docs viewer: %v", err)
+		}
+		if !ok {
+			log.Fatalf("no docs viewer %q", remove)
+		}
+		fmt.Printf("removed docs viewer %q\n", remove)
+	case add != "":
+		password := readPassword("Password for " + add + ": ")
+		if !user.IsStrongPassword(password) {
+			log.Fatalf("the password needs 10 to 72 characters with an uppercase letter, a lowercase letter, a number and a symbol")
+		}
+		if term.IsTerminal(int(os.Stdin.Fd())) && readPassword("Repeat it: ") != password {
+			log.Fatalf("the passwords don't match")
+		}
+		v, err := mgr.SetDocsViewer(add, password)
+		if err != nil {
+			log.Fatalf("error saving docs viewer: %v", err)
+		}
+		fmt.Printf("docs viewer %q can log in to the documentation\n", v.Email)
+	}
+	return true
+}
+
 func readPassword(prompt string) string {
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
