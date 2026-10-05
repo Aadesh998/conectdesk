@@ -142,7 +142,7 @@ func aiAgentHooks(app *App) aiagent.Hooks {
 // alone, and so is one the assistant recently handed to people.
 func assignToInboxAssistant(app *App, tid int, conv cmodels.Conversation) {
 	if conv.AssignedUserID.Valid {
-		app.lo.Debug("not assigning to ai assistant: conversation already assigned", "conversation_uuid", conv.UUID, "assigned_user_id", conv.AssignedUserID.Int)
+		app.lo.Info("not assigning to ai assistant: conversation already assigned", "conversation_uuid", conv.UUID, "assigned_user_id", conv.AssignedUserID.Int)
 		return
 	}
 	record, err := app.inbox.GetDBRecord(tid, conv.InboxID)
