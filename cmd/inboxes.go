@@ -500,9 +500,10 @@ func validateMetaConfig(app *App, tenantID int, configJSON json.RawMessage) erro
 }
 
 // validateInboxAssistant checks that the assistant an inbox's new
-// conversations go to, if any, is one of this workspace's.
+// conversations go to, if one is picked, is one of this workspace's. 0 is
+// the workspace's assistant and -1 is off.
 func validateInboxAssistant(app *App, tenantID, assistantID int) error {
-	if assistantID < 0 {
+	if assistantID < inboxAssistantOff {
 		return envelope.NewError(envelope.InputError, app.i18n.For(tenantID).T("ai.jev.invalidAssistant"), nil)
 	}
 	if assistantID > 0 {

@@ -196,11 +196,18 @@ SELECT EXISTS (
 -- Open conversations on an inbox with an AI assistant set, assigned to a person, where the customer
 -- wrote last and has waited at least $1 minutes, or at least $2 minutes when that person isn't
 -- online. Conversations an assistant handed off in the last $3 hours stay with people.
-SELECT c.tenant_id, c.id AS conversation_id, c.uuid AS conversation_uuid, (i.config->>'ai_assistant_id')::int AS assistant_id,
+-- An inbox's ai_assistant_id is its assistant, 0 for the workspace's first enabled one, or -1 for off.
+SELECT c.tenant_id, c.id AS conversation_id, c.uuid AS conversation_uuid, aa.assistant_id,
   c.assigned_user_id AS agent_id, u.availability_status::text AS agent_status, lm.created_at AS waiting_since
 FROM conversations c
 JOIN inboxes i ON i.id = c.inbox_id AND i.tenant_id = c.tenant_id AND i.deleted_at IS NULL AND i.enabled
-  AND COALESCE(NULLIF(i.config->>'ai_assistant_id', ''), '0')::int > 0
+  AND i.channel IN ('whatsapp', 'messenger', 'instagram', 'telegram', 'livechat')
+CROSS JOIN LATERAL (
+  SELECT CASE WHEN cfg.id > 0 THEN cfg.id WHEN cfg.id = 0 THEN (
+    SELECT min(a.id) FROM ai_assistants a WHERE a.tenant_id = c.tenant_id AND a.enabled
+  ) END AS assistant_id
+  FROM (SELECT COALESCE(NULLIF(i.config->>'ai_assistant_id', ''), '0')::int AS id) cfg
+) aa
 JOIN users u ON u.id = c.assigned_user_id AND u.tenant_id = c.tenant_id AND u.type = 'agent'
 JOIN conversation_statuses s ON s.id = c.status_id AND s.category NOT IN ('waiting', 'resolved')
 CROSS JOIN LATERAL (
@@ -208,7 +215,8 @@ CROSS JOIN LATERAL (
   WHERE m.tenant_id = c.tenant_id AND m.conversation_id = c.id AND m.private = false AND m.type IN ('incoming', 'outgoing')
   ORDER BY m.created_at DESC, m.id DESC LIMIT 1
 ) lm
-WHERE lm.type = 'incoming' AND lm.sender_id = c.contact_id
+WHERE aa.assistant_id IS NOT NULL
+  AND lm.type = 'incoming' AND lm.sender_id = c.contact_id
   AND lm.created_at >= now() - interval '2 days'
   AND (lm.created_at <= now() - make_interval(mins => $1)
        OR (u.availability_status <> 'online' AND lm.created_at <= now() - make_interval(mins => $2)))

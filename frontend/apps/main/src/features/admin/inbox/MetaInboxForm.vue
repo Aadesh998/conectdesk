@@ -101,7 +101,8 @@
               class="w-full max-w-sm rounded-md border bg-background px-2 py-2 text-sm"
               @change="componentField['onUpdate:modelValue'](Number($event.target.value))"
             >
-              <option :value="0">{{ $t('admin.inbox.aiAssistant.none') }}</option>
+              <option :value="0">{{ $t('admin.inbox.aiAssistant.auto') }}</option>
+                  <option :value="-1">{{ $t('admin.inbox.aiAssistant.off') }}</option>
               <option v-for="a in assistants" :key="a.id" :value="a.id">{{ a.name }}</option>
             </select>
           </FormControl>
@@ -261,7 +262,7 @@ const schema = computed(() =>
           }),
         mark_seen: z.boolean().optional(),
         allow_groups: z.boolean().optional(),
-        ai_assistant_id: z.coerce.number().int().min(0).optional()
+        ai_assistant_id: z.coerce.number().int().min(-1).optional()
       })
     })
   )

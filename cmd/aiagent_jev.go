@@ -154,9 +154,17 @@ func assignToInboxAssistant(app *App, tid int, conv cmodels.Conversation) {
 		return
 	}
 	assistantID := inboxAssistantID(record.Config)
-	if assistantID == 0 {
-		app.lo.Info("not assigning to ai assistant: inbox has no ai assistant set", "conversation_uuid", conv.UUID, "inbox_id", conv.InboxID)
+	switch assistantID {
+	case inboxAssistantOff:
+		app.lo.Info("not assigning to ai assistant: ai is turned off for this inbox", "conversation_uuid", conv.UUID, "inbox_id", conv.InboxID)
 		return
+	case inboxAssistantAuto:
+		id, ok := defaultAssistantID(app, tid)
+		if !ok {
+			app.lo.Info("not assigning to ai assistant: the workspace has no enabled ai assistant", "conversation_uuid", conv.UUID, "inbox_id", conv.InboxID)
+			return
+		}
+		assistantID = id
 	}
 	a, err := app.aiAgent.GetAssistant(tid, assistantID)
 	if err != nil {
@@ -183,8 +191,31 @@ func assignToInboxAssistant(app *App, tid int, conv cmodels.Conversation) {
 	app.lo.Info("assigned conversation to the inbox's ai assistant", "conversation_uuid", conv.UUID, "assistant_id", a.ID)
 }
 
+// An inbox's ai_assistant_id is an assistant's ID, or one of these: by default
+// new conversations go to the workspace's assistant, unless AI is turned off.
+const (
+	inboxAssistantAuto = 0
+	inboxAssistantOff  = -1
+)
+
+// defaultAssistantID is the assistant an inbox without one of its own sends
+// new conversations to: the workspace's first enabled assistant.
+func defaultAssistantID(app *App, tid int) (int, bool) {
+	assistants, err := app.aiAgent.GetAssistants(tid)
+	if err != nil {
+		return 0, false
+	}
+	id := 0
+	for _, a := range assistants {
+		if a.Enabled && (id == 0 || a.ID < id) {
+			id = a.ID
+		}
+	}
+	return id, id > 0
+}
+
 // inboxAssistantID is the AI assistant an inbox's config sends new
-// conversations to, 0 for none. It is read whether stored as a number or as
+// conversations to, or inboxAssistantAuto / inboxAssistantOff. It is read whether stored as a number or as
 // a string of one.
 func inboxAssistantID(config json.RawMessage) int {
 	var cfg struct {
