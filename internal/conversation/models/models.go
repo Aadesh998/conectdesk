@@ -623,6 +623,11 @@ func Transcript(msgs []Message, max int) string {
 	return b.String()
 }
 
+// IsCall reports whether the message is a call with a transcript or summary.
+func (m *Message) IsCall() bool {
+	return m.callText() != ""
+}
+
 // callText returns what was said on a call message, from the transcript or else the summary kept in its meta; "" when there is neither.
 func (m *Message) callText() string {
 	if len(m.Meta) == 0 {

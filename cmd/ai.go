@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -476,11 +477,13 @@ func enforceAIConversationAccess(r *fastglue.Request, uuid string) (*cmodels.Con
 
 // conversationTranscript builds a plaintext transcript of a conversation's public messages for use as AI context.
 func conversationTranscript(app *App, tenantID int, uuid string) string {
-	private := false
-	msgs, err := app.conversation.GetAllConversationMessages(tenantID, uuid, &private, []string{cmodels.MessageIncoming, cmodels.MessageOutgoing}, maxTranscriptMessages)
+	msgs, err := app.conversation.GetAllConversationMessages(tenantID, uuid, nil, []string{cmodels.MessageIncoming, cmodels.MessageOutgoing}, maxTranscriptMessages)
 	if err != nil {
 		app.lo.Error("error building conversation transcript for AI", "error", err)
 		return ""
 	}
+	// Calls are kept as private notes; what was said on them belongs in the
+	// transcript, other private notes don't.
+	msgs = slices.DeleteFunc(msgs, func(m cmodels.Message) bool { return m.Private && !m.IsCall() })
 	return cmodels.Transcript(msgs, maxTranscriptMessages)
 }
