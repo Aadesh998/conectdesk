@@ -1,8 +1,9 @@
 <template>
   <div class="space-y-2">
-    <div class="flex justify-between items-start">
-      <div class="relative">
-        <Avatar class="size-20">
+    <!-- Avatar and name on one row, so the details below start higher up. -->
+    <div class="flex items-center gap-3">
+      <div class="relative shrink-0">
+        <Avatar class="size-11">
           <AvatarImage
             :src="conversation?.contact?.avatar_url || ''"
           />
@@ -13,32 +14,29 @@
         <StatusDot
           v-if="isLivechat"
           :status="contactStatus"
-          size="lg"
-          class="absolute bottom-1 right-1 border-2 border-background"
+          size="sm"
+          class="absolute bottom-0 right-0 border-2 border-background"
         />
+      </div>
+      <div class="min-w-0 flex-1">
+        <router-link
+          v-if="userStore.can('contacts:read') && conversation?.contact_id"
+          :to="{ name: 'contact-detail', params: { id: conversation.contact_id } }"
+          class="flex items-center gap-1.5 font-medium hover:underline cursor-pointer"
+        >
+          <span class="truncate">{{ contactName }}</span>
+          <ExternalLink size="14" class="text-muted-foreground flex-shrink-0" />
+        </router-link>
+        <span v-else class="block truncate font-medium">{{ contactName }}</span>
       </div>
       <Button
         variant="ghost"
         size="icon"
-        class="h-11 w-11 md:h-7 md:w-7"
+        class="h-11 w-11 md:h-7 md:w-7 shrink-0"
         @click="emitter.emit(EMITTER_EVENTS.CONVERSATION_SIDEBAR_TOGGLE)"
       >
         <ViewVerticalIcon />
       </Button>
-    </div>
-
-    <div class="h-6 flex items-center gap-2">
-      <router-link
-        v-if="userStore.can('contacts:read') && conversation?.contact_id"
-        :to="{ name: 'contact-detail', params: { id: conversation.contact_id } }"
-        class="flex items-center gap-2 hover:underline cursor-pointer"
-      >
-        {{ conversation?.contact?.first_name + ' ' + conversation?.contact?.last_name }}
-        <ExternalLink size="16" class="text-muted-foreground flex-shrink-0" />
-      </router-link>
-      <span v-else>
-        {{ conversation?.contact?.first_name + ' ' + conversation?.contact?.last_name }}
-      </span>
     </div>
     <div class="flex gap-2 items-center">
       <Mail size="16" class="text-muted-foreground flex-shrink-0" />
@@ -139,6 +137,10 @@ import api from '../../../api'
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
 const conversation = computed(() => conversationStore.current)
+// The contact's name, without "undefined" when a part of it is missing.
+const contactName = computed(() =>
+  [conversation.value?.contact?.first_name, conversation.value?.contact?.last_name].filter(Boolean).join(' ')
+)
 const { t } = useI18n()
 const userStore = useUserStore()
 

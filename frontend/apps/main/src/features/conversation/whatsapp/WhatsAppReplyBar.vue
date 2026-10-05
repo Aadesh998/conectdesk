@@ -1,14 +1,15 @@
 <template>
   <!-- WhatsApp takes free text only within 24 hours of the contact's last
        message; after that the agent has to send an approved template. -->
-  <div class="mx-2 mt-2 flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
-    :class="isOpen ? 'text-muted-foreground' : 'border-amber-500/50 bg-amber-500/10'">
+  <!-- A slim line while the window is open; a prominent one once it has closed. -->
+  <div class="mx-2 mt-2 flex items-center justify-between gap-3 rounded-md border"
+    :class="isOpen ? 'px-3 py-1 text-xs text-muted-foreground' : 'px-3 py-2 text-sm border-amber-500/50 bg-amber-500/10'">
     <span v-if="isOpen && replyWindow.closes_at">
       {{ $t('whatsapp.windowOpenUntil', { time: formatTime(replyWindow.closes_at) }) }}
     </span>
     <span v-else-if="!isOpen">{{ $t('whatsapp.windowClosedHint') }}</span>
     <span v-else />
-    <Button type="button" size="sm" :variant="isOpen ? 'outline' : 'default'" @click="open = true">
+    <Button type="button" size="sm" :variant="isOpen ? 'ghost' : 'default'" :class="{ 'h-7 text-xs': isOpen }" @click="open = true">
       {{ $t('whatsapp.sendTemplate') }}
     </Button>
   </div>
