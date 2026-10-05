@@ -36,6 +36,16 @@
             {{ t('conversation.snoozedUntil', { time: snoozedUntilLabel }) }}
           </TooltipContent>
         </Tooltip>
+        <Button
+          v-if="canResolve"
+          variant="outline"
+          size="sm"
+          class="h-11 md:h-8 gap-1"
+          @click="handleUpdateStatus(CONVERSATION_DEFAULT_STATUSES.RESOLVED)"
+        >
+          <CheckCircle2 class="w-4 h-4" />
+          {{ t('globals.terms.resolve') }}
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger>
             <div
@@ -113,7 +123,7 @@
 import { computed, ref } from 'vue'
 import { useConversationStore } from '@main/stores/conversation'
 import { useUserStore } from '@main/stores/user'
-import { Clock, MoreHorizontal, ChevronLeft, PanelRight } from 'lucide-vue-next'
+import { Clock, MoreHorizontal, ChevronLeft, PanelRight, CheckCircle2 } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import { useIsMobile } from '@shared-ui/composables'
 import {
@@ -162,6 +172,17 @@ const goBackToList = () => {
   if (window.history.state?.back?.split('?')[0] === target.path) router.back()
   else router.push(target)
 }
+
+// A one-click resolve, beside the status menu, for conversations still open.
+const canResolve = computed(() => {
+  const status = conversationStore.current?.status
+  return (
+    !!status &&
+    status !== CONVERSATION_DEFAULT_STATUSES.RESOLVED &&
+    status !== CONVERSATION_DEFAULT_STATUSES.CLOSED &&
+    userStore.can('conversations:update_status')
+  )
+})
 
 const isSnoozed = computed(
   () => conversationStore.current?.status === CONVERSATION_DEFAULT_STATUSES.SNOOZED
