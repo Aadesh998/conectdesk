@@ -236,13 +236,20 @@ The banner reads "**Scheduled for deletion.** It and all its data are deleted on
 
 The default workspace (ID 1) always shows no limits.
 
-**Agents panel** is a table with the columns Name (with email), Roles, Last active, Last login, and an action column.
+**Agents panel** lists the workspace's agents (not the hidden System user or AI assistants) with the columns Name (with email), Roles, **Status** (Active or Suspended), Last active, Last login, and buttons. Use it to help a workspace whose admin is locked out, or to manage its people for them.
 
-| Action cell | Meaning |
-|---|---|
-| **Log in as ↗** | Shown when the agent is enabled **and** the workspace is active. Hovering shows "Opens the workspace logged in as this agent. Recorded in both audit logs." See 1.11. |
-| "Workspace suspended" | The agent is enabled, but the workspace isn't active. |
-| "Disabled" | The agent's account is disabled. |
+| Button | What it does | Typical use |
+|---|---|---|
+| **+ Add agent** (panel header) | Opens **Add an agent to <workspace>**: **First name** (required), **Last name**, **Email**, **Roles** (a switch per role in that workspace; Agent is on by default), **Password** (leave empty to generate one, or type one that meets the rules) and **Email the password to them** (on by default). **Add agent** creates the agent and shows the password once (see below). Counts against the plan's agent limit: "Your plan allows {max} agents. Upgrade your plan to add more". Audited as **Added an agent**. | Set up a workspace for a customer; add someone their admin can't. |
+| **Log in as ↗** | Shown when the agent is active **and** the workspace is active. Opens the workspace logged in as this agent. See 1.11. | Support. |
+| **New password** | Opens **New password for <name>** with the same **Password** and **Email the new password to <email>** fields. **Set password** replaces the password; the old one stops working at once. Audited as **New agent password**, and also written to the workspace's own activity log as "Platform support <your email> set password for <agent>". | An agent or workspace admin is locked out or forgot their password. |
+| **Suspend** | After confirming ("They are logged out and can't log in until you activate them. Their conversations stay assigned to them."), disables the account. Their next click in the app logs them out, and logging in shows "Your account is disabled". Audited as **Suspended an agent**. | Someone is on leave or under review. |
+| **Activate** | Shown for suspended agents; lets them log in again. Audited as **Activated an agent**. | They're back. |
+| **Delete** | After confirming, deletes the agent the same way Admin → Agents does: they can't log in, they're logged out, and their open conversations are unassigned. Their past messages stay. Audited as **Deleted an agent**. | Someone has left. |
+
+**The new password dialog.** After **Add agent** or **Set password**, a dialog shows the password **once**, with **Copy**, and either "Emailed to <email>." (green) or, if the email didn't go out, the mail server's error and "Share the password with them another way." The email ("Your ConectDesk login") goes through the workspace's own mail server, or the platform's (Settings) when it has none, with the workspace's name as sender. It gives the workspace address, the email and the new password.
+
+> A new password doesn't log out sessions already open with the old one; use **Suspend** then **Activate** if you need them logged out.
 
 **Domains panel** is a table with the columns Domain, Status ("Verified <date>" or "Not verified") and "Used for" ("Workspace address" and/or "Help center <name>"). With no domains it reads "No custom domains. It is served on <slug>.<base_domain>." This panel is **read-only**. Domains are managed by the workspace's own admin (section 4.2).
 
@@ -453,7 +460,13 @@ The page shows "Everything platform admins did, newest first. Hover a time or a 
 | `update_mail` | Updated the mail server | Mail settings saved | "<host>", plus ", turned off" if disabled |
 | `test_mail` | Sent a test email | Test email sent | "<to address>", plus ", failed" if sending failed |
 | `add_docs_viewer` | Gave docs access | A docs viewer added, or their password reset, on Docs access | The viewer's email |
-| `remove_docs_viewer` | Removed docs access | A docs viewer removed on Docs access | The viewer's email |
+| `remove_docs_viewer` | Removed docs access | A docs viewer deleted on Docs access | The viewer's email |
+| `suspend_docs_viewer` / `activate_docs_viewer` | Suspended / Restored docs access | Suspend / Restore on Docs access | The viewer's email |
+| `reset_docs_password` | New docs password | New password on Docs access | The email, ", emailed" if it went out |
+| `create_agent` | Added an agent | **Add agent** on a workspace | Email, roles, ", emailed" |
+| `reset_agent_password` | New agent password | **New password** on an agent | Email, ", emailed" |
+| `suspend_agent` / `activate_agent` | Suspended / Activated an agent | **Suspend** / **Activate** on an agent | The agent's email |
+| `delete_agent` | Deleted an agent | **Delete** on an agent | The agent's email |
 
 Command-line actions (`--tenant-*`, `--docs-viewer-*`) are **not** recorded in the audit log.
 
@@ -543,13 +556,17 @@ The page explains: "People listed here can log in to the internal documentation 
 | Element | What it does | Typical use |
 |---|---|---|
 | **Open the docs ↗** (top right) | Opens the documentation's address in a new tab. | Check what a viewer sees. |
-| **Docs viewers** table | One row per viewer: **Email**, **Added** (date), **Last login** ("3h ago", or "Never"). Shows "No one has docs access yet." when empty. | See who has access and whether they use it. |
-| **Remove** (on each row) | Asks "Remove docs access for <email>? They are logged out at once.", then deletes the account and ends every one of its sessions immediately. Toast: "Removed <email>". Audited as **Removed docs access**. | Someone leaves the team. |
-| **Add a viewer, or reset a password** panel: **Email** | The person's email (upper or lower case doesn't matter). | |
-| **Password** | 10 to 72 characters with an uppercase letter, a lowercase letter, a number and a symbol. Otherwise: "The password must be 10-72 characters with an uppercase letter, a lowercase letter, a number and a symbol". | |
-| **Save** | Creates the viewer. If the email already has docs access, it **sets this new password** instead (their current sessions stay logged in). Toast: "Saved. They can log in at <docs URL>". Audited as **Gave docs access**. | Give a new teammate the manual; reset a forgotten password. |
+| **Docs viewers** table | One row per viewer: **Email**, **Status** (Active or Suspended), **Added** (date), **Last login** ("3h ago", or "Never"). Shows "No one has docs access yet." when empty. | See who has access and whether they use it. |
+| **New password** (on each row) | Opens **New password for <email>**: **Password** (leave empty to generate one) and **Email the password to <email>**. **Set password** replaces it; the old one stops working at once. Audited as **New docs password**. | They forgot their password. |
+| **Suspend** (on each row) | After confirming, blocks the account and logs them out at once. Logging in then shows "This account is suspended. Ask a platform admin to let you back in". Audited as **Suspended docs access**. | Pause someone's access without losing their account. |
+| **Restore** (suspended rows) | Lets them log in again. Audited as **Restored docs access**. | |
+| **Delete** (on each row) | After confirming, deletes the account and logs them out at once. Audited as **Removed docs access**. | Someone leaves the team. |
+| **Add a viewer** panel: **Email** | The person's email (upper or lower case doesn't matter). | |
+| **Password** | Leave empty for a strong generated password, or type one with 10 to 72 characters, an uppercase letter, a lowercase letter, a number and a symbol. | |
+| **Email the password to them** | On by default. Sends "Your ConectDesk login" with the docs address, the email and the password, through the platform's mail server (Settings). | |
+| **Add viewer** | Creates the viewer (or, for an email already listed, sets this new password) and shows the password once, with **Copy**, plus whether the email went out. Audited as **Gave docs access**. | Give a new teammate the manual. |
 
-Share the password securely; viewers can't change it themselves. The same can be done from the command line with `--docs-viewer-add`, `--docs-viewer-remove` and `--docs-viewer-list` (see Operations).
+Viewers can't change their password themselves; use **New password**. The same can be done from the command line with `--docs-viewer-add`, `--docs-viewer-remove` and `--docs-viewer-list` (see Operations).
 
 ### What a docs viewer sees
 

@@ -69,6 +69,7 @@ It is **multi-tenant**: each customer organisation gets its own **workspace** wi
 | Create a workspace for a new customer | [Platform admin → Create workspace](/docs/platform-admin#17-create-workspace) |
 | Change a workspace's plan, channels or integrations | [Platform admin → Workspace detail](/docs/platform-admin#16-workspace-detail) |
 | Log in as an agent to help them | [Platform admin → Log in as](/docs/platform-admin#111-impersonate-log-in-as) |
+| Reset a workspace agent's password, suspend or delete them | [Platform admin → Workspace detail → Agents panel](/docs/platform-admin#16-workspace-detail) |
 | Give someone access to these docs | [Platform admin → Docs access](/docs/platform-admin#115-docs-access) |
 | Add a platform admin, run upgrades | [Operations → CLI](/docs/operations) |
 

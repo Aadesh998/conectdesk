@@ -63,7 +63,35 @@ func TestDocsViewers(t *testing.T) {
 		t.Fatalf("expired session: %v", err)
 	}
 
+	// Suspending ends their sessions and stops them logging in, until restored.
 	_, token, _ = m.DocsLogin("reader@example.com", "Str0ng!Passw0rd#1", "")
+	if err := m.SetDocsViewerEnabled("Reader@example.com", false); err != nil {
+		t.Fatalf("suspend: %v", err)
+	}
+	if _, err := m.DocsSessionViewer(token); !errors.Is(err, ErrNoSession) {
+		t.Fatalf("session of a suspended viewer: %v", err)
+	}
+	if _, _, err := m.DocsLogin("reader@example.com", "Str0ng!Passw0rd#1", ""); !errors.Is(err, ErrSuspended) {
+		t.Fatalf("suspended login: %v, want ErrSuspended", err)
+	}
+	if _, _, err := m.DocsLogin("reader@example.com", "wrong", ""); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("suspended login, wrong password: %v, want ErrInvalidCredentials", err)
+	}
+	// A new password keeps them suspended.
+	if v, err := m.SetDocsViewer("reader@example.com", "N3w!Passw0rd#2026"); err != nil || v.Enabled {
+		t.Fatalf("new password of a suspended viewer: %+v %v", v, err)
+	}
+	if err := m.SetDocsViewerEnabled("reader@example.com", true); err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+	if err := m.SetDocsViewerEnabled("nobody@example.com", true); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("unknown viewer: %v, want ErrNotFound", err)
+	}
+
+	_, token, err = m.DocsLogin("reader@example.com", "N3w!Passw0rd#2026", "")
+	if err != nil {
+		t.Fatalf("login after restore: %v", err)
+	}
 	if ok, err := m.RemoveDocsViewer("reader@example.com"); !ok || err != nil {
 		t.Fatalf("RemoveDocsViewer: %v %v", ok, err)
 	}

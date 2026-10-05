@@ -12,7 +12,6 @@ import (
 	"github.com/conectdesk/conectdesk/internal/platform"
 	pmodels "github.com/conectdesk/conectdesk/internal/platform/models"
 	"github.com/conectdesk/conectdesk/internal/tenant"
-	"github.com/conectdesk/conectdesk/internal/user"
 	realip "github.com/ferluci/fast-realip"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
@@ -150,6 +149,9 @@ func handleDocsLogin(r *fastglue.Request) error {
 			app.lo.Warn("failed docs login", "email", req.Email, "ip", ip)
 			return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, app.i18n.T("platform.invalidCredentials"), nil, envelope.PermissionError)
 		}
+		if errors.Is(err, platform.ErrSuspended) {
+			return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.T("platform.docsSuspended"), nil, envelope.PermissionError)
+		}
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.T("globals.messages.somethingWentWrong"), nil, envelope.GeneralError)
 	}
 	setDocsCookie(r, token, false)
@@ -201,29 +203,74 @@ func handlePlatformDocsViewers(r *fastglue.Request) error {
 	return r.SendEnvelope(map[string]any{"viewers": viewers, "url": url})
 }
 
-// handlePlatformSetDocsViewer adds a docs viewer, or sets the password of one.
+// handlePlatformSetDocsViewer adds a docs viewer, or gives one a new password:
+// the typed one, or a generated one when it's empty. With send_email the
+// password is emailed to them through the platform's mailer.
 func handlePlatformSetDocsViewer(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 		req struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
+			Email     string `json:"email"`
+			Password  string `json:"password"`
+			SendEmail bool   `json:"send_email"`
 		}
 	)
 	if err := r.Decode(&req, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.badRequest"), nil, envelope.InputError)
 	}
-	if !user.IsStrongPassword(req.Password) {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("platform.docsViewerPassword"), nil, envelope.InputError)
+	password, err := newPassword(req.Password)
+	if err != nil {
+		return sendPasswordError(r, err)
 	}
-	v, err := app.platform.SetDocsViewer(req.Email, req.Password)
+	existing, err := app.platform.DocsViewers()
+	if err != nil {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.somethingWentWrong"), nil))
+	}
+	v, err := app.platform.SetDocsViewer(req.Email, password)
 	if err != nil {
 		if errors.Is(err, platform.ErrInvalidEmail) {
 			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("validation.invalidEmail"), nil, envelope.InputError)
 		}
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.somethingWentWrong"), nil))
 	}
-	app.platform.Audit(platformAdmin(r), platform.ActionAddDocsViewer, 0, "", map[string]any{"email": v.Email}, realip.FromRequest(r.RequestCtx))
+	action, reason := platform.ActionAddDocsViewer, "A platform administrator gave you access to the internal documentation."
+	for _, e := range existing {
+		if e.Email == v.Email {
+			action, reason = platform.ActionResetDocsPassword, "A platform administrator set a new password for your documentation login. Your old password no longer works."
+		}
+	}
+	out := credentialsResp{Password: password}
+	if req.SendEmail {
+		out = sendCredentials(app, 0, v.Email, "", app.tenant.HostURL(app.docsHost)+"/docs", password, reason)
+	}
+	app.platform.Audit(platformAdmin(r), action, 0, "", map[string]any{"email": v.Email, "emailed": out.Emailed}, realip.FromRequest(r.RequestCtx))
+	return r.SendEnvelope(out)
+}
+
+// handlePlatformSetDocsViewerStatus suspends a docs viewer, logging them out,
+// or lets them back in.
+func handlePlatformSetDocsViewerStatus(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+		req struct {
+			Email   string `json:"email"`
+			Enabled bool   `json:"enabled"`
+		}
+	)
+	if err := r.Decode(&req, "json"); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.badRequest"), nil, envelope.InputError)
+	}
+	if err := app.platform.SetDocsViewerEnabled(req.Email, req.Enabled); err != nil {
+		if errors.Is(err, platform.ErrNotFound) {
+			return r.SendErrorEnvelope(fasthttp.StatusNotFound, app.i18n.T("platform.docsViewerNotFound"), nil, envelope.NotFoundError)
+		}
+		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.somethingWentWrong"), nil))
+	}
+	action := platform.ActionActivateDocsViewer
+	if !req.Enabled {
+		action = platform.ActionSuspendDocsViewer
+	}
+	app.platform.Audit(platformAdmin(r), action, 0, "", map[string]any{"email": strings.ToLower(strings.TrimSpace(req.Email))}, realip.FromRequest(r.RequestCtx))
 	return handlePlatformDocsViewers(r)
 }
 

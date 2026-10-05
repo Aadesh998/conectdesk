@@ -240,6 +240,18 @@
 		.search { min-width: 0; flex-basis: 100%; }
 		.dist .row { grid-template-columns: 80px minmax(0, 1fr) 40px; }
 	}
+	/* Dialogs for adding people and giving them passwords. */
+	dialog.dlg { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); color: var(--text); padding: 0; width: min(460px, calc(100vw - 32px)); box-shadow: 0 20px 50px rgb(0 0 0 / 0.25); }
+	dialog.dlg::backdrop { background: rgb(0 0 0 / 0.4); }
+	dialog.dlg .dlg-head { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+	dialog.dlg .dlg-head h2 { font-size: 1rem; margin: 0; }
+	dialog.dlg .dlg-body { padding: 1.1rem 1.25rem 1.25rem; }
+	dialog.dlg .acts { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.25rem; }
+	.secret { display: flex; gap: 0.5rem; align-items: center; }
+	.secret code { flex: 1; font-size: 1.05rem; padding: 0.55rem 0.7rem; background: var(--hover); border-radius: var(--radius); user-select: all; word-break: break-all; }
+	.row-acts { display: flex; gap: 0.35rem; justify-content: flex-end; flex-wrap: wrap; }
+	.warn-note { color: var(--bad); background: var(--bad-bg); border-radius: var(--radius); padding: 0.6rem 0.75rem; font-size: 0.85rem; }
+	.ok-note { color: var(--ok); background: var(--ok-bg); border-radius: var(--radius); padding: 0.6rem 0.75rem; font-size: 0.85rem; }
 </style>
 </head>
 <body>
@@ -594,6 +606,52 @@
 		return el('div', null, el('label', { class: 'f', for: input.id || null, text: label }), input, hint ? el('div', { class: 'hint', text: hint }) : null);
 	}
 
+	// modal opens a dialog with a title and body, removed from the page once closed.
+	function modal(title, body) {
+		var d = el('dialog', { class: 'dlg' },
+			el('div', { class: 'dlg-head' }, el('h2', { text: title }),
+				el('button', { class: 'ghost sm', 'aria-label': 'Close', onclick: function () { d.close(); }, text: '✕' })),
+			el('div', { class: 'dlg-body' }, body));
+		d.addEventListener('close', function () { d.remove(); });
+		document.body.appendChild(d);
+		d.showModal();
+		return d;
+	}
+
+	// passwordFields are the choice between a generated and a typed password,
+	// and whether to email it; read() returns { password, send_email }.
+	function passwordFields(emailLabel) {
+		var typed = el('input', { type: 'text', autocomplete: 'off', placeholder: 'Leave empty to generate one', style: 'width:100%' });
+		var send = el('input', { type: 'checkbox', checked: true });
+		return {
+			nodes: [
+				field('Password', typed, '10 to 72 characters with an uppercase letter, a lowercase letter, a number and a symbol. Leave it empty for a strong generated one.'),
+				el('label', { class: 'inline', style: 'font-size:0.88rem' }, send, emailLabel || 'Email the password to them')
+			],
+			read: function () { return { password: typed.value.trim(), send_email: send.checked }; }
+		};
+	}
+
+	// showCredentials shows a new password once, and whether it was emailed.
+	function showCredentials(title, email, res) {
+		var copy = el('button', { class: 'ghost sm', type: 'button', text: 'Copy', onclick: function () {
+			navigator.clipboard.writeText(res.password).then(function () { copy.textContent = 'Copied'; });
+		} });
+		var note = res.emailed
+			? el('div', { class: 'ok-note', text: 'Emailed to ' + email + '.' })
+			: res.email_error
+				? el('div', { class: 'warn-note', text: 'The email didn’t go out (' + res.email_error + '). Share the password with them another way.' })
+				: el('div', { class: 'muted', style: 'font-size:0.85rem', text: 'Not emailed. Share it with them securely.' });
+		var d = modal(title, el('div', { class: 'form' },
+			el('div', null, el('div', { class: 'muted', style: 'font-size:0.85rem;margin-bottom:0.35rem', text: 'New password for ' + email + '. It is shown only this once.' }),
+				el('div', { class: 'secret' }, el('code', { text: res.password }), copy)),
+			note,
+			el('div', { class: 'acts' }, el('button', { text: 'Done', onclick: function () { d.close(); } }))));
+	}
+
+	// confirmThen asks before an action and runs it.
+	function confirmThen(question, run) { if (confirm(question)) run(); }
+
 	function newWorkspace() {
 		var plan = el('select', { name: 'plan', id: 'plan' }, me.plans.map(function (p) {
 			return el('option', { value: p, selected: p === me.default_plan, text: cap(p) });
@@ -741,14 +799,71 @@
 			}).catch(fail);
 		}
 
-		var agents = panel('Agents', null, table(['Name', 'Roles', 'Last active', 'Last login', ''], d.agents.map(function (a) {
+		function agentPath(a) { return 'workspaces/' + w.id + '/agents/' + a.id; }
+		function agentName(a) { return (a.first_name + ' ' + a.last_name).trim() || a.email; }
+		function resetAgentPassword(a) {
+			var pw = passwordFields('Email the new password to ' + a.email);
+			var save = el('button', { type: 'submit', text: 'Set password' });
+			var dlg = modal('New password for ' + agentName(a), el('form', { class: 'form', onsubmit: function (e) {
+				e.preventDefault();
+				save.disabled = true;
+				api('POST', agentPath(a) + '/password', pw.read()).then(function (res) {
+					dlg.close(); showCredentials('Password set', a.email, res); workspace(w.id);
+				}).catch(function (x) { save.disabled = false; fail(x); });
+			} }, el('p', { class: 'muted', style: 'margin:0;font-size:0.88rem', text: 'Their old password stops working at once.' }), pw.nodes, el('div', { class: 'acts' }, save)));
+		}
+		function setAgentStatus(a, enabled) {
+			var q = enabled ? 'Let ' + agentName(a) + ' log in again?' : 'Suspend ' + agentName(a) + '? They are logged out and can’t log in until you activate them. Their conversations stay assigned to them.';
+			confirmThen(q, function () {
+				api('PUT', agentPath(a) + '/status', { enabled: enabled }).then(function () { toast(enabled ? 'Activated' : 'Suspended'); workspace(w.id); }).catch(fail);
+			});
+		}
+		function deleteAgent(a) {
+			confirmThen('Delete ' + agentName(a) + ' (' + a.email + ')? They can’t log in any more and their open conversations are unassigned. Their past messages stay.', function () {
+				api('POST', agentPath(a) + '/delete').then(function () { toast('Deleted ' + a.email); workspace(w.id); }).catch(fail);
+			});
+		}
+		function addAgent() {
+			var roles = el('div', { class: 'opts' }, (d.roles || []).map(function (name) {
+				return el('label', { class: 'opt' }, el('span', { text: name }), el('input', { type: 'checkbox', class: 'switch', name: 'role', value: name, checked: name === 'Agent' }));
+			}));
+			var pw = passwordFields();
+			var save = el('button', { type: 'submit', text: 'Add agent' });
+			var dlg = modal('Add an agent to ' + w.name, el('form', { class: 'form', onsubmit: function (e) {
+				e.preventDefault();
+				var f = e.target, body = pw.read();
+				body.first_name = f.first_name.value; body.last_name = f.last_name.value; body.email = f.email.value;
+				body.roles = Array.prototype.filter.call(f.querySelectorAll('input[name=role]'), function (x) { return x.checked; }).map(function (x) { return x.value; });
+				save.disabled = true;
+				api('POST', 'workspaces/' + w.id + '/agents', body).then(function (res) {
+					dlg.close(); showCredentials('Agent added', body.email, res); workspace(w.id);
+				}).catch(function (x) { save.disabled = false; fail(x); });
+			} },
+				el('div', { class: 'even' },
+					field('First name', el('input', { name: 'first_name', required: true, maxlength: '140', style: 'width:100%' })),
+					field('Last name', el('input', { name: 'last_name', maxlength: '140', style: 'width:100%' }))),
+				field('Email', el('input', { name: 'email', type: 'email', required: true, autocomplete: 'off', style: 'width:100%' })),
+				el('div', null, el('label', { class: 'f', text: 'Roles' }), roles),
+				pw.nodes,
+				el('div', { class: 'acts' }, save)));
+		}
+
+		var agents = panel('Agents', null, table(['Name', 'Roles', 'Status', 'Last active', 'Last login', ''], d.agents.map(function (a) {
 			return { cells: [
-				el('div', null, el('div', { text: (a.first_name + ' ' + a.last_name).trim(), style: 'font-weight:500' }), el('div', { class: 'sub', text: a.email || '' })),
-				a.roles.join(', '), ago(a.last_active_at), ago(a.last_login_at),
-				a.enabled && w.status === 'active'
-					? el('button', { class: 'ghost sm', title: 'Opens the workspace logged in as this agent. Recorded in both audit logs.', onclick: function () { impersonate(a); } }, 'Log in as', icon('external'))
-					: el('span', { class: 'muted', text: a.enabled ? 'Workspace suspended' : 'Disabled' })] };
-		}), null, 'No agents yet.'), { flush: true });
+				el('div', null, el('div', { text: agentName(a), style: 'font-weight:500' }), el('div', { class: 'sub', text: a.email || '' })),
+				a.roles.join(', '),
+				el('span', { class: 'badge ' + (a.enabled ? 'active' : 'suspended'), text: a.enabled ? 'Active' : 'Suspended' }),
+				ago(a.last_active_at), ago(a.last_login_at),
+				el('div', { class: 'row-acts' },
+					a.enabled && w.status === 'active'
+						? el('button', { class: 'ghost sm', title: 'Opens the workspace logged in as this agent. Recorded in both audit logs.', onclick: function () { impersonate(a); } }, 'Log in as', icon('external'))
+						: null,
+					el('button', { class: 'ghost sm', title: 'Set a new password and email it to them', onclick: function () { resetAgentPassword(a); }, text: 'New password' }),
+					a.enabled
+						? el('button', { class: 'ghost sm', onclick: function () { setAgentStatus(a, false); }, text: 'Suspend' })
+						: el('button', { class: 'ghost sm', onclick: function () { setAgentStatus(a, true); }, text: 'Activate' }),
+					el('button', { class: 'danger-ghost sm', onclick: function () { deleteAgent(a); }, text: 'Delete' }))] };
+		}), null, 'No agents yet.'), { flush: true, actions: el('button', { class: 'sm', onclick: addAgent }, icon('plus'), 'Add agent') });
 
 		var domains = panel('Domains', null, table(['Domain', 'Status', 'Used for'], d.domains.map(function (x) {
 			var uses = (x.primary ? ['Workspace address'] : []).concat(x.help_centers.map(function (h) { return 'Help center ' + h; }));
@@ -777,7 +892,10 @@
 		'delete': 'Deleted', impersonate: 'Logged in as an agent', enable_2fa: 'Turned on two-factor login',
 		schedule_delete: 'Scheduled deletion', restore: 'Restored', update_mail: 'Updated the mail server',
 		create: 'Created', set_channels: 'Changed channels', set_integrations: 'Changed integrations', test_mail: 'Sent a test email',
-		add_docs_viewer: 'Gave docs access', remove_docs_viewer: 'Removed docs access'
+		add_docs_viewer: 'Gave docs access', remove_docs_viewer: 'Removed docs access',
+		suspend_docs_viewer: 'Suspended docs access', activate_docs_viewer: 'Restored docs access', reset_docs_password: 'New docs password',
+		create_agent: 'Added an agent', reset_agent_password: 'New agent password', suspend_agent: 'Suspended an agent',
+		activate_agent: 'Activated an agent', delete_agent: 'Deleted an agent'
 	};
 
 	function listOf(names, list, all, everything) {
@@ -800,7 +918,10 @@
 		case 'impersonate': return d.user_id ? 'Agent #' + d.user_id : '';
 		case 'update_mail': return (d.host || '') + (d.enabled === false ? ', turned off' : '');
 		case 'test_mail': return (d.to || '') + (d.ok === false ? ', failed' : '');
-		case 'add_docs_viewer': case 'remove_docs_viewer': return d.email || '';
+		case 'add_docs_viewer': case 'remove_docs_viewer': case 'suspend_docs_viewer': case 'activate_docs_viewer':
+		case 'suspend_agent': case 'activate_agent': case 'delete_agent': return d.email || '';
+		case 'reset_docs_password': case 'reset_agent_password': return (d.email || '') + (d.emailed ? ', emailed' : '');
+		case 'create_agent': return (d.email || '') + (d.roles ? ', ' + d.roles.join(', ') : '') + (d.emailed ? ', emailed' : '');
 		case 'suspend': case 'activate': case 'restore': case 'login': case 'logout': case 'enable_2fa': return '';
 		}
 		return Object.keys(d).length ? JSON.stringify(d) : '';
@@ -897,26 +1018,51 @@
 	function docsAccess() {
 		layout('docs', loading());
 		api('GET', 'docs-viewers').then(function (d) {
-			var save = el('button', { type: 'submit', text: 'Save' });
+			function setPassword(email, title) {
+				var pw = passwordFields('Email the password to ' + email);
+				var save = el('button', { type: 'submit', text: 'Set password' });
+				var dlg = modal(title, el('form', { class: 'form', onsubmit: function (e) {
+					e.preventDefault();
+					save.disabled = true;
+					var body = pw.read(); body.email = email;
+					api('POST', 'docs-viewers', body).then(function (res) {
+						dlg.close(); showCredentials('Password set', email, res); docsAccess();
+					}).catch(function (x) { save.disabled = false; fail(x); });
+				} }, el('p', { class: 'muted', style: 'margin:0;font-size:0.88rem', text: 'Their old password stops working at once.' }), pw.nodes, el('div', { class: 'acts' }, save)));
+			}
+			function setStatus(v, enabled) {
+				confirmThen(enabled ? 'Let ' + v.email + ' read the docs again?' : 'Suspend docs access for ' + v.email + '? They are logged out at once and can’t log in until you restore it.', function () {
+					api('PUT', 'docs-viewers/status', { email: v.email, enabled: enabled }).then(function () { toast(enabled ? 'Restored' : 'Suspended'); docsAccess(); }).catch(fail);
+				});
+			}
+
+			var pw = passwordFields();
+			var save = el('button', { type: 'submit', text: 'Add viewer' });
 			var form = el('form', { class: 'form', onsubmit: function (e) {
 				e.preventDefault();
-				var f = e.target;
+				var body = pw.read(); body.email = e.target.email.value;
 				save.disabled = true;
-				api('POST', 'docs-viewers', { email: f.email.value, password: f.password.value })
-					.then(function () { toast('Saved. They can log in at ' + d.url); docsAccess(); })
+				api('POST', 'docs-viewers', body).then(function (res) { showCredentials('Docs viewer added', body.email, res); docsAccess(); })
 					.catch(function (x) { save.disabled = false; fail(x); });
 			} },
-				field('Email', el('input', { id: 'd_email', name: 'email', type: 'email', required: true, autocomplete: 'off' })),
-				field('Password', el('input', { id: 'd_password', name: 'password', type: 'password', required: true, autocomplete: 'new-password' }),
-					'10 to 72 characters with an uppercase letter, a lowercase letter, a number and a symbol. An existing email gets this new password.'),
+				field('Email', el('input', { id: 'd_email', name: 'email', type: 'email', required: true, autocomplete: 'off', style: 'width:100%' })),
+				pw.nodes,
 				el('div', null, save));
 
-			var list = table(['Email', 'Added', 'Last login', ''], d.viewers.map(function (v) {
-				return { item: v, cells: [v.email, date(v.created_at), v.last_login_at ? ago(v.last_login_at) : 'Never',
-					el('button', { class: 'danger-ghost sm', onclick: function () {
-						if (!confirm('Remove docs access for ' + v.email + '? They are logged out at once.')) return;
-						api('POST', 'docs-viewers/remove', { email: v.email }).then(function () { toast('Removed ' + v.email); docsAccess(); }).catch(fail);
-					}, text: 'Remove' })] };
+			var list = table(['Email', 'Status', 'Added', 'Last login', ''], d.viewers.map(function (v) {
+				return { item: v, cells: [v.email,
+					el('span', { class: 'badge ' + (v.enabled ? 'active' : 'suspended'), text: v.enabled ? 'Active' : 'Suspended' }),
+					date(v.created_at), v.last_login_at ? ago(v.last_login_at) : 'Never',
+					el('div', { class: 'row-acts' },
+						el('button', { class: 'ghost sm', onclick: function () { setPassword(v.email, 'New password for ' + v.email); }, text: 'New password' }),
+						v.enabled
+							? el('button', { class: 'ghost sm', onclick: function () { setStatus(v, false); }, text: 'Suspend' })
+							: el('button', { class: 'ghost sm', onclick: function () { setStatus(v, true); }, text: 'Restore' }),
+						el('button', { class: 'danger-ghost sm', onclick: function () {
+							confirmThen('Delete ' + v.email + '? Their docs login is removed and they are logged out at once.', function () {
+								api('POST', 'docs-viewers/remove', { email: v.email }).then(function () { toast('Deleted ' + v.email); docsAccess(); }).catch(fail);
+							});
+						}, text: 'Delete' }))] };
 			}), null, 'No one has docs access yet.');
 
 			layout('docs', [
@@ -925,7 +1071,7 @@
 					el('code', { text: d.url || 'docs.' + baseDomain }), ' and nothing else: not this dashboard and no workspace. A platform admin login doesn’t open the docs, so add yourself here too if you read them.'),
 				el('div', { class: 'ws-grid' },
 					el('div', { class: 'ws-main' }, panel('Docs viewers', null, list, { flush: true })),
-					el('div', { class: 'ws-side' }, panel('Add a viewer, or reset a password', 'Share the password securely.', form)))
+					el('div', { class: 'ws-side' }, panel('Add a viewer', 'Passwords go out through the platform’s mail server (Settings).', form)))
 			]);
 		}).catch(fail);
 	}

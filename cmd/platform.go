@@ -359,6 +359,15 @@ func handlePlatformWorkspace(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.For(tenantID(r)).T("globals.messages.somethingWentWrong"), nil))
 	}
+	// Role names, for adding an agent.
+	roles, err := app.role.GetAll(t.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.For(tenantID(r)).T("globals.messages.somethingWentWrong"), nil))
+	}
+	roleNames := make([]string, 0, len(roles))
+	for _, ro := range roles {
+		roleNames = append(roleNames, ro.Name)
+	}
 
 	channels, allChannels := t.AllowedChannels()
 	integrations, allIntegrations := t.AllowedIntegrations()
@@ -377,6 +386,7 @@ func handlePlatformWorkspace(r *fastglue.Request) error {
 		"agents":           agents,
 		"domains":          domains,
 		"audit":            audit,
+		"roles":            roleNames,
 	})
 }
 

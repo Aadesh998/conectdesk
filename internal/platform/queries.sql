@@ -157,15 +157,15 @@ ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
 -- tenant: all, docs viewers read the installation's documentation and belong to no tenant.
 INSERT INTO platform_docs_viewers (email, password_hash) VALUES ($1, $2)
 ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, updated_at = NOW()
-RETURNING id, created_at, email, password_hash, last_login_at;
+RETURNING id, created_at, email, password_hash, last_login_at, enabled;
 
 -- name: get-docs-viewer-by-email
 -- tenant: all, docs viewers read the installation's documentation and belong to no tenant.
-SELECT id, created_at, email, password_hash, last_login_at FROM platform_docs_viewers WHERE email = $1;
+SELECT id, created_at, email, password_hash, last_login_at, enabled FROM platform_docs_viewers WHERE email = $1;
 
 -- name: get-docs-viewers
 -- tenant: all, docs viewers read the installation's documentation and belong to no tenant.
-SELECT id, created_at, email, password_hash, last_login_at FROM platform_docs_viewers ORDER BY id;
+SELECT id, created_at, email, password_hash, last_login_at, enabled FROM platform_docs_viewers ORDER BY id;
 
 -- name: delete-docs-viewer
 -- tenant: all, docs viewers read the installation's documentation and belong to no tenant.
@@ -181,9 +181,9 @@ INSERT INTO platform_docs_sessions (viewer_id, token_hash, expires_at, ip) VALUE
 
 -- name: get-docs-session-viewer
 -- tenant: all, docs sessions belong to docs viewers.
-SELECT v.id, v.created_at, v.email, v.password_hash, v.last_login_at
+SELECT v.id, v.created_at, v.email, v.password_hash, v.last_login_at, v.enabled
 FROM platform_docs_sessions s JOIN platform_docs_viewers v ON v.id = s.viewer_id
-WHERE s.token_hash = $1 AND s.expires_at > NOW();
+WHERE s.token_hash = $1 AND s.expires_at > NOW() AND v.enabled;
 
 -- name: delete-docs-session
 -- tenant: all, docs sessions belong to docs viewers.
@@ -192,3 +192,11 @@ DELETE FROM platform_docs_sessions WHERE token_hash = $1;
 -- name: delete-expired-docs-sessions
 -- tenant: all, docs sessions belong to docs viewers.
 DELETE FROM platform_docs_sessions WHERE expires_at < NOW();
+
+-- name: set-docs-viewer-enabled
+-- tenant: all, docs viewers read the installation's documentation and belong to no tenant.
+UPDATE platform_docs_viewers SET enabled = $2, updated_at = NOW() WHERE email = $1 RETURNING id;
+
+-- name: delete-docs-viewer-sessions
+-- tenant: all, docs sessions belong to docs viewers.
+DELETE FROM platform_docs_sessions WHERE viewer_id = $1;

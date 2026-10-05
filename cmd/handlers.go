@@ -44,6 +44,11 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/platform/docs-viewers", platformAuth(handlePlatformDocsViewers))
 	g.POST("/api/platform/docs-viewers", platformAuth(handlePlatformSetDocsViewer))
 	g.POST("/api/platform/docs-viewers/remove", platformAuth(handlePlatformRemoveDocsViewer))
+	g.PUT("/api/platform/docs-viewers/status", platformAuth(handlePlatformSetDocsViewerStatus))
+	g.POST("/api/platform/workspaces/{id}/agents", platformAuth(handlePlatformCreateAgent))
+	g.POST("/api/platform/workspaces/{id}/agents/{uid}/password", rateLimit(platformAuth(handlePlatformResetAgentPassword), "auth"))
+	g.PUT("/api/platform/workspaces/{id}/agents/{uid}/status", platformAuth(handlePlatformSetAgentStatus))
+	g.POST("/api/platform/workspaces/{id}/agents/{uid}/delete", platformAuth(handlePlatformDeleteAgent))
 
 	// Internal documentation, on its own host to docs viewers only.
 	g.GET("/docs", handleDocsPage)

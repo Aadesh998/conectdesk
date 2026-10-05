@@ -73,6 +73,9 @@ func (m *Manager) DocsLogin(email, password, ip string) (models.DocsViewer, stri
 	if bcrypt.CompareHashAndPassword([]byte(v.PasswordHash), []byte(password)) != nil {
 		return v, "", ErrInvalidCredentials
 	}
+	if !v.Enabled {
+		return v, "", ErrSuspended
+	}
 	token, hash, err := newToken()
 	if err != nil {
 		return v, "", err
@@ -106,4 +109,28 @@ func (m *Manager) DocsSessionViewer(token string) (models.DocsViewer, error) {
 func (m *Manager) DocsLogout(token string) error {
 	_, err := m.q.DeleteDocsSession.Exec(hashToken(token))
 	return err
+}
+
+// SetDocsViewerEnabled suspends a docs viewer, ending their sessions, or lets
+// them back in.
+func (m *Manager) SetDocsViewerEnabled(email string, enabled bool) error {
+	email, err := normalizeEmail(email)
+	if err != nil {
+		return ErrNotFound
+	}
+	var id int
+	if err := m.q.SetDocsViewerEnabled.Get(&id, email, enabled); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		m.lo.Error("error setting docs viewer status", "error", err)
+		return err
+	}
+	if !enabled {
+		if _, err := m.q.DeleteDocsViewerSessions.Exec(id); err != nil {
+			m.lo.Error("error ending docs viewer sessions", "error", err)
+			return err
+		}
+	}
+	return nil
 }

@@ -39,7 +39,7 @@ func handleLogin(r *fastglue.Request) error {
 
 	// Check if user is enabled.
 	if !user.Enabled {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.For(tenantID(r)).T("user.accountDisabled"), nil))
+		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, app.i18n.For(tenantID(r)).T("user.accountDisabled"), nil))
 	}
 
 	// A workspace requiring single sign-on leaves password login to admins.

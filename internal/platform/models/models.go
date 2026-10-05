@@ -119,4 +119,6 @@ type DocsViewer struct {
 	Email        string    `db:"email" json:"email"`
 	PasswordHash string    `db:"password_hash" json:"-"`
 	LastLoginAt  null.Time `db:"last_login_at" json:"last_login_at"`
+	// Enabled is false while a platform admin has suspended the viewer.
+	Enabled bool `db:"enabled" json:"enabled"`
 }

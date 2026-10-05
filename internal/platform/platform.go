@@ -47,6 +47,10 @@ var (
 	ErrInvalidCode = errors.New("invalid two-factor code")
 	// ErrInvalidEmail is returned for an admin email that isn't an address.
 	ErrInvalidEmail = errors.New("invalid email")
+	// ErrSuspended is returned when a suspended docs viewer logs in.
+	ErrSuspended = errors.New("account suspended")
+	// ErrNotFound is returned for an unknown docs viewer.
+	ErrNotFound = errors.New("not found")
 
 	// dummyHash is compared against for unknown emails, so a login takes as
 	// long whether or not the email exists.
@@ -82,6 +86,16 @@ const (
 	// to the internal documentation.
 	ActionAddDocsViewer    = "add_docs_viewer"
 	ActionRemoveDocsViewer = "remove_docs_viewer"
+	// Docs viewers suspended or let back in, and given a new password.
+	ActionSuspendDocsViewer  = "suspend_docs_viewer"
+	ActionActivateDocsViewer = "activate_docs_viewer"
+	ActionResetDocsPassword  = "reset_docs_password"
+	// What platform admins do to a workspace's agents.
+	ActionCreateAgent        = "create_agent"
+	ActionResetAgentPassword = "reset_agent_password"
+	ActionSuspendAgent       = "suspend_agent"
+	ActionActivateAgent      = "activate_agent"
+	ActionDeleteAgent        = "delete_agent"
 )
 
 // Manager manages platform admins, their sessions and the audit log, and
@@ -137,6 +151,8 @@ type queries struct {
 	GetDocsSessionViewer        *sqlx.Stmt `query:"get-docs-session-viewer"`
 	DeleteDocsSession           *sqlx.Stmt `query:"delete-docs-session"`
 	DeleteExpiredDocsSessions   *sqlx.Stmt `query:"delete-expired-docs-sessions"`
+	SetDocsViewerEnabled        *sqlx.Stmt `query:"set-docs-viewer-enabled"`
+	DeleteDocsViewerSessions    *sqlx.Stmt `query:"delete-docs-viewer-sessions"`
 }
 
 // New creates and returns a new instance of the Manager.

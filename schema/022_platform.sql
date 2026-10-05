@@ -85,6 +85,8 @@ CREATE TABLE platform_docs_viewers (
 	email TEXT NOT NULL,
 	password_hash TEXT NOT NULL,
 	last_login_at TIMESTAMPTZ NULL,
+	-- A suspended viewer can't log in and their sessions end.
+	enabled BOOLEAN NOT NULL DEFAULT TRUE,
 	CONSTRAINT constraint_platform_docs_viewers_on_email CHECK (email = LOWER(email) AND length(email) <= 254)
 );
 CREATE UNIQUE INDEX index_platform_docs_viewers_on_email ON platform_docs_viewers (email);
