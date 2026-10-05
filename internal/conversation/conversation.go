@@ -385,6 +385,7 @@ type queries struct {
 	GetConversationUUIDFromMessageUUID *sqlx.Stmt `query:"get-conversation-uuid-from-message-uuid"`
 	MessageExistsBySourceID            *sqlx.Stmt `query:"message-exists-by-source-id"`
 	GetLatestUnresolvedConversation    *sqlx.Stmt `query:"get-latest-unresolved-conversation"`
+	GetUnresolvedContactConversations  *sqlx.Stmt `query:"get-unresolved-contact-conversations"`
 	GetLastIncomingAt                  *sqlx.Stmt `query:"get-last-incoming-at"`
 	InsertMessageDelivery              *sqlx.Stmt `query:"insert-message-delivery"`
 	ApplyMessageDelivery               *sqlx.Stmt `query:"apply-message-delivery"`
@@ -2321,4 +2322,28 @@ func renderTagFilter(operator, value string, paramIndex int) (string, []any, err
 	default:
 		return "", nil, fmt.Errorf("invalid operator for tags: %s", operator)
 	}
+}
+
+// ResetChatSession starts a contact's chat afresh: every conversation they
+// have open in the inbox is resolved, with a note saying who reset it, so
+// their next message opens a new conversation that the inbox's AI assistant
+// takes up with no memory of the old one. It returns how many conversations
+// it resolved.
+func (c *Manager) ResetChatSession(tenantID, contactID, inboxID int, actor umodels.User) (int, error) {
+	var uuids []string
+	if err := c.q.GetUnresolvedContactConversations.Select(&uuids, tenantID, contactID, inboxID); err != nil {
+		c.lo.Error("error fetching open conversations to reset chat", "contact_id", contactID, "inbox_id", inboxID, "error", err)
+		return 0, envelope.NewError(envelope.GeneralError, c.i18n.For(tenantID).T("globals.messages.somethingWentWrong"), nil)
+	}
+	note := c.i18n.For(tenantID).Ts("conversation.sessionReset.note", "name", actor.FullName())
+	for _, uuid := range uuids {
+		if _, err := c.SendPrivateNote(tenantID, nil, actor.ID, uuid, note, nil); err != nil {
+			c.lo.Error("error adding chat reset note", "conversation_uuid", uuid, "error", err)
+		}
+		if err := c.UpdateConversationStatus(tenantID, uuid, 0, models.StatusResolved, "", actor); err != nil {
+			return 0, err
+		}
+	}
+	c.lo.Info("chat session reset", "contact_id", contactID, "inbox_id", inboxID, "resolved", len(uuids), "actor_id", actor.ID)
+	return len(uuids), nil
 }

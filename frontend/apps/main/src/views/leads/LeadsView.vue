@@ -48,13 +48,26 @@
               <router-link :to="{ name: 'contact-detail', params: { id: card.id } }" class="font-medium hover:underline" @click.stop>
                 {{ [card.first_name, card.last_name].filter(Boolean).join(' ') || card.phone_number }}
               </router-link>
-              <span
-                v-if="card.pending_call_back"
-                class="shrink-0 rounded bg-destructive/15 px-1.5 py-0.5 text-[11px] text-destructive"
-                :title="$t('lead.callBackWaiting')"
-              >
-                <PhoneMissed :size="12" class="inline" />
-              </span>
+              <div class="flex shrink-0 items-center gap-1">
+                <span
+                  v-if="card.pending_call_back"
+                  class="rounded bg-destructive/15 px-1.5 py-0.5 text-[11px] text-destructive"
+                  :title="$t('lead.callBackWaiting')"
+                >
+                  <PhoneMissed :size="12" class="inline" />
+                </span>
+                <button
+                  v-if="userStore.hasAdminRole"
+                  type="button"
+                  class="rounded p-0.5 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
+                  :title="$t('lead.delete')"
+                  :aria-label="$t('lead.delete')"
+                  @click.stop="toDelete = card"
+                  @keydown.enter.stop
+                >
+                  <Trash2 :size="14" />
+                </button>
+              </div>
             </div>
             <p v-if="card.phone_number && card.phone_number !== card.first_name" class="text-xs text-muted-foreground tabular-nums">
               {{ card.phone_number }}
@@ -92,14 +105,40 @@
         </div>
       </div>
     </div>
+
+    <AlertDialog :open="!!toDelete" @update:open="(v) => !v && (toDelete = null)">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ $t('lead.delete') }}</AlertDialogTitle>
+          <AlertDialogDescription>{{ $t('contact.deleteConfirm') }}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{{ $t('globals.messages.cancel') }}</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" @click="confirmDelete">
+            {{ $t('globals.messages.delete') }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>
 
 <script setup>
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { PhoneMissed } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import { PhoneMissed, Trash2 } from 'lucide-vue-next'
 import { Button } from '@shared-ui/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@shared-ui/components/ui/alert-dialog'
 import { Input } from '@shared-ui/components/ui/input'
 import { getRelativeTime } from '@shared-ui/utils/datetime.js'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
@@ -114,6 +153,7 @@ import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
 const CARD_ATTRIBUTES = ['course', 'class', 'grade', 'city', 'batch']
 
 const emitter = useEmitter()
+const { t } = useI18n()
 const router = useRouter()
 const leadStore = useLeadStore()
 const userStore = useUserStore()
@@ -122,6 +162,8 @@ const loading = ref(false)
 const search = ref('')
 const dragging = ref(null)
 const dropTarget = ref(null)
+// The lead an admin asked to delete, awaiting confirmation.
+const toDelete = ref(null)
 
 const toast = (description) => emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { variant: 'destructive', description })
 
@@ -165,6 +207,28 @@ const move = async (id, from, to) => {
     toast(handleHTTPError(error).message)
     load()
   }
+}
+
+// Deletes the lead's contact, with their conversations, and takes the card
+// off the board.
+const confirmDelete = async () => {
+  const card = toDelete.value
+  toDelete.value = null
+  if (!card) return
+  try {
+    await api.deleteContact(card.id)
+  } catch (error) {
+    toast(handleHTTPError(error).message)
+    return
+  }
+  for (const col of columns.value) {
+    const i = col.cards.findIndex((c) => c.id === card.id)
+    if (i >= 0) {
+      col.cards.splice(i, 1)
+      col.total--
+    }
+  }
+  emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: t('globals.messages.deletedSuccessfully') })
 }
 
 const conversationRoute = (card) => ({

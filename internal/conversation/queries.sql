@@ -1048,6 +1048,18 @@ WHERE tenant_id = $1 AND contact_id = $2
 ORDER BY last_message_at DESC NULLS LAST
 LIMIT 200;
 
+-- name: get-unresolved-contact-conversations
+-- Every conversation a contact has in an inbox that isn't resolved yet, for
+-- starting their chat afresh.
+SELECT c.uuid
+FROM conversations c
+JOIN conversation_statuses cs ON cs.id = c.status_id
+WHERE c.tenant_id = $1
+  AND c.contact_id = $2
+  AND c.inbox_id = $3
+  AND cs.category != 'resolved'
+ORDER BY c.id;
+
 -- name: get-latest-unresolved-conversation
 -- Latest conversation for a contact in an inbox that isn't resolved yet. Used to
 -- thread channels without reply headers, e.g. WhatsApp, where a chat is one thread.

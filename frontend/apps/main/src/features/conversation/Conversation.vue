@@ -74,8 +74,29 @@
             >
               {{ t('conversation.summarize') }}
             </DropdownMenuItem>
+            <DropdownMenuItem
+              v-if="canResetSession"
+              class="text-destructive focus:text-destructive"
+              @click="showResetConfirm = true"
+            >
+              {{ t('conversation.sessionReset') }}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <AlertDialog :open="showResetConfirm" @update:open="(v) => (showResetConfirm = v)">
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{{ t('conversation.sessionReset') }}</AlertDialogTitle>
+              <AlertDialogDescription>{{ t('conversation.sessionReset.confirm') }}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{{ t('globals.messages.cancel') }}</AlertDialogCancel>
+              <AlertDialogAction variant="destructive" @click="resetSession">
+                {{ t('conversation.sessionReset') }}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
 
@@ -102,6 +123,16 @@ import {
   DropdownMenuTrigger
 } from '@shared-ui/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared-ui/components/ui/tooltip'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@shared-ui/components/ui/alert-dialog'
 import { formatMessageTimestamp } from '@shared-ui/utils/datetime.js'
 import { Button } from '@shared-ui/components/ui/button'
 import MessageList from '@/features/conversation/message/MessageList.vue'
@@ -177,6 +208,28 @@ const summarize = async () => {
     })
   } finally {
     isSummarizing.value = false
+  }
+}
+
+// Admins can start a WhatsApp contact's chat afresh, so the AI assistant
+// picks up their next message as a new conversation.
+const canResetSession = computed(
+  () => userStore.hasAdminRole && conversationStore.current?.inbox_channel === 'whatsapp'
+)
+const showResetConfirm = ref(false)
+
+const resetSession = async () => {
+  showResetConfirm.value = false
+  const conversation = conversationStore.current
+  if (!conversation) return
+  try {
+    await api.resetChatSession(conversation.uuid)
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: t('conversation.sessionReset.done') })
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   }
 }
 

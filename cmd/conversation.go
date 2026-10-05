@@ -572,6 +572,36 @@ func handleUpdateConversationPriority(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+// handleResetChatSession lets an admin start a WhatsApp contact's chat
+// afresh: their open conversations in the inbox are resolved, so the next
+// message opens a new one that the inbox's AI assistant picks up.
+func handleResetChatSession(r *fastglue.Request) error {
+	var (
+		app   = r.Context.(*App)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+	)
+	user, err := app.user.GetAgentCachedOrLoad(tenantID(r), auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if !user.HasAdminRole() {
+		return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.For(tenantID(r)).T("conversation.sessionReset.adminOnly"), nil, envelope.PermissionError)
+	}
+	conversation, err := enforceConversationAccess(app, tenantID(r), uuid, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if conversation.InboxChannel != inbox.ChannelWhatsApp {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.For(tenantID(r)).T("conversation.sessionReset.whatsAppOnly"), nil, envelope.InputError)
+	}
+	resolved, err := app.conversation.ResetChatSession(tenantID(r), conversation.ContactID, conversation.InboxID, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(map[string]int{"resolved": resolved})
+}
+
 // handleUpdateConversationStatus updates the status of a conversation.
 func handleUpdateConversationStatus(r *fastglue.Request) error {
 	var (
