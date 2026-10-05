@@ -51,6 +51,23 @@ const (
 // Endpoints (baseURL+model) that rejected max_tokens and require max_completion_tokens.
 var wantsMaxCompletionTokens sync.Map
 
+// isReasoningModel reports whether model is one of OpenAI's reasoning models
+// (gpt-5, o1, o3, o4 and their variants), which take max_completion_tokens
+// and reject max_tokens. Knowing this up front saves a rejected request after
+// every restart; other models are still adapted when they reject max_tokens.
+func isReasoningModel(model string) bool {
+	m := strings.ToLower(model)
+	if i := strings.LastIndex(m, "/"); i >= 0 {
+		m = m[i+1:]
+	}
+	for _, p := range []string{"gpt-5", "o1", "o3", "o4"} {
+		if m == p || strings.HasPrefix(m, p+"-") || strings.HasPrefix(m, p+".") {
+			return true
+		}
+	}
+	return false
+}
+
 // OpenAIClient talks to any OpenAI-compatible API (base URL selects the host).
 type OpenAIClient struct {
 	cfg    models.ProviderConfig
@@ -132,7 +149,7 @@ func (o *OpenAIClient) SendChatCompletion(ctx context.Context, payload models.Ch
 	o.lo.Debug("chat completion request", "model", model, "messages", len(messages), "images", sentImages, "vision", o.cfg.Vision, "tools", len(payload.Tools))
 
 	tokensParam := "max_tokens"
-	if _, ok := wantsMaxCompletionTokens.Load(o.cfg.BaseURL + "|" + model); ok {
+	if _, ok := wantsMaxCompletionTokens.Load(o.cfg.BaseURL + "|" + model); ok || isReasoningModel(model) {
 		tokensParam = "max_completion_tokens"
 	}
 	body := map[string]any{

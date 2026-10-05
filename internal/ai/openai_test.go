@@ -100,3 +100,14 @@ func TestEmbeddingTokenLimit(t *testing.T) {
 		t.Fatalf("explicit value should be honored, got %d", got)
 	}
 }
+
+func TestIsReasoningModel(t *testing.T) {
+	for model, want := range map[string]bool{
+		"gpt-5": true, "gpt-5-mini": true, "gpt-5.1": true, "o3": true, "o4-mini": true, "openai/o1-preview": true,
+		"gpt-4o": false, "gpt-4o-mini": false, "gpt-4.1": false, "omni": false, "llama-3": false,
+	} {
+		if got := isReasoningModel(model); got != want {
+			t.Errorf("isReasoningModel(%q) = %v, want %v", model, got, want)
+		}
+	}
+}
