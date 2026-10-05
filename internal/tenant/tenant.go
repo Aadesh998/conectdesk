@@ -89,6 +89,7 @@ type queries struct {
 	UpdateTenantStatus *sqlx.Stmt `query:"update-tenant-status"`
 	UpdateTenantPlan   *sqlx.Stmt `query:"update-tenant-plan"`
 	UpdateChannels     *sqlx.Stmt `query:"update-tenant-channels"`
+	UpdateIntegrations *sqlx.Stmt `query:"update-tenant-integrations"`
 
 	ScheduleTenantDeletion   *sqlx.Stmt `query:"schedule-tenant-deletion"`
 	CancelTenantDeletion     *sqlx.Stmt `query:"cancel-tenant-deletion"`
@@ -327,25 +328,36 @@ func (m *Manager) SetPlan(id int, plan string) (models.Tenant, error) {
 // SetChannels sets the inbox channels a tenant may use. all lifts the
 // restriction, leaving every channel open.
 func (m *Manager) SetChannels(id int, channels []string, all bool) (models.Tenant, error) {
+	return m.setAllowed(m.q.UpdateChannels, "channels", id, channels, all)
+}
+
+// SetIntegrations sets the integrations a tenant may use. all lifts the
+// restriction, leaving every integration open.
+func (m *Manager) SetIntegrations(id int, integrations []string, all bool) (models.Tenant, error) {
+	return m.setAllowed(m.q.UpdateIntegrations, "integrations", id, integrations, all)
+}
+
+// setAllowed stores the list of what a tenant may use with stmt; all removes it.
+func (m *Manager) setAllowed(stmt *sqlx.Stmt, what string, id int, list []string, all bool) (models.Tenant, error) {
 	var (
 		t   models.Tenant
 		arg any
 	)
 	if !all {
-		if channels == nil {
-			channels = []string{}
+		if list == nil {
+			list = []string{}
 		}
-		b, err := json.Marshal(channels)
+		b, err := json.Marshal(list)
 		if err != nil {
 			return t, err
 		}
 		arg = string(b)
 	}
-	if err := m.q.UpdateChannels.Get(&t, id, arg); err != nil {
+	if err := stmt.Get(&t, id, arg); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return t, ErrNotFound
 		}
-		m.lo.Error("error updating tenant channels", "error", err)
+		m.lo.Error("error updating tenant "+what, "error", err)
 		return t, err
 	}
 	m.Invalidate()

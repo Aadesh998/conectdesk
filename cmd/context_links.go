@@ -122,6 +122,10 @@ func handleToggleContextLink(r *fastglue.Request) error {
 // handleGetActiveContextLinks returns active context links for agents.
 func handleGetActiveContextLinks(r *fastglue.Request) error {
 	var app = r.Context.(*App)
+	// None show in conversations when the platform disabled context links.
+	if !integrationAllowed(app, tenantID(r), integrationContextLinks) {
+		return r.SendEnvelope([]models.ContextLink{})
+	}
 	links, err := app.contextLink.GetActive(tenantID(r))
 	if err != nil {
 		return sendErrorEnvelope(r, err)

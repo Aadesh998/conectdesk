@@ -260,6 +260,7 @@ export const adminNavItems = [
       {
         titleKey: 'globals.terms.webhook',
         href: '/admin/webhooks',
+        feature: 'integration:webhooks',
         permission: 'webhooks:manage',
         isTitleKeyPlural: true,
         icon: 'Webhook'
@@ -267,18 +268,21 @@ export const adminNavItems = [
       {
         titleKey: 'admin.chat.slack.title',
         href: '/admin/integrations/slack',
+        feature: 'integration:slack',
         permission: 'webhooks:manage',
         icon: 'Slack'
       },
       {
         titleKey: 'admin.chat.teams.title',
         href: '/admin/integrations/teams',
+        feature: 'integration:teams',
         permission: 'webhooks:manage',
         icon: 'UsersRound'
       },
       {
         titleKey: 'globals.terms.contextLink',
         href: '/admin/context-links',
+        feature: 'integration:context_links',
         permission: 'context_links:manage',
         isTitleKeyPlural: true,
         icon: 'Link'

@@ -17,6 +17,10 @@ func handleGetWebhooksCompact(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
+	// Nothing to pick, e.g. in automations, when the platform disabled webhooks.
+	if !integrationAllowed(app, tenantID(r), integrationWebhooks) {
+		return r.SendEnvelope([]models.WebhookCompact{})
+	}
 	webhooks, err := app.webhook.GetAllCompact(tenantID(r))
 	if err != nil {
 		return sendErrorEnvelope(r, err)

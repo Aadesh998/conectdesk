@@ -365,6 +365,54 @@ func checkChannelAllowed(app *App, tenantID int, channel string) error {
 	return nil
 }
 
+// Integrations a platform admin can enable or disable for each workspace.
+const (
+	integrationWebhooks     = "webhooks"
+	integrationSlack        = "slack"
+	integrationTeams        = "teams"
+	integrationContextLinks = "context_links"
+)
+
+// integrationNames are the integrations, in the order the admin settings list them.
+var integrationNames = []string{integrationWebhooks, integrationSlack, integrationTeams, integrationContextLinks}
+
+// integrationAllowed reports whether the platform admin enabled integration
+// for the tenant. Without multi-tenancy every integration is allowed; a
+// tenant that can't be read is treated as not allowed.
+func integrationAllowed(app *App, tenantID int, integration string) bool {
+	return tenantIntegrationAllowed(app.tenant, tenantID, integration)
+}
+
+// tenantIntegrationAllowed is integrationAllowed for code without the App.
+func tenantIntegrationAllowed(tenants *tenant.Manager, tenantID int, integration string) bool {
+	if !tenants.Enabled() {
+		return true
+	}
+	t, err := tenants.GetCached(tenantID)
+	return err == nil && t.IntegrationAllowed(integration)
+}
+
+// checkIntegrationAllowed returns an error when the platform admin hasn't
+// enabled integration for the tenant.
+func checkIntegrationAllowed(app *App, tenantID int, integration string) error {
+	if !integrationAllowed(app, tenantID, integration) {
+		return envelope.NewError(envelope.PermissionError, app.i18n.For(tenantID).T("tenant.integrationNotAllowed"), nil)
+	}
+	return nil
+}
+
+// withIntegration refuses the request when the platform admin hasn't enabled
+// integration for the tenant.
+func withIntegration(integration string, handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
+	return func(r *fastglue.Request) error {
+		app := r.Context.(*App)
+		if err := checkIntegrationAllowed(app, tenantID(r), integration); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		return handler(r)
+	}
+}
+
 // deletionGrace is how long a deleted workspace is kept, suspended and
 // restorable, before its data is deleted: app.tenancy.deletion_grace_days, 30
 // by default.

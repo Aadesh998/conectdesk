@@ -333,6 +333,8 @@ func main() {
 	go conversation.RunUnsnoozer(ctx, unsnoozeInterval)
 	go conversation.RunContinuity(ctx)
 	webhook.SetEventSink(chatIntegration)
+	webhook.SetEnabled(func(tid int) bool { return tenantIntegrationAllowed(tenants, tid, integrationWebhooks) })
+	chatIntegration.SetEnabled(func(tid int, provider string) bool { return tenantIntegrationAllowed(tenants, tid, provider) })
 	go webhook.Run(ctx)
 	go chatIntegration.Run(ctx)
 	go notifier.Run(ctx)

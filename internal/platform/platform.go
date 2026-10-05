@@ -71,12 +71,13 @@ const (
 	ActionImpersonate = "impersonate"
 	ActionEnable2FA   = "enable_2fa"
 	// ActionScheduleDelete suspends a workspace and deletes it after a grace period.
-	ActionScheduleDelete = "schedule_delete"
-	ActionRestore        = "restore"
-	ActionUpdateMail     = "update_mail"
-	ActionCreate         = "create"
-	ActionSetChannels    = "set_channels"
-	ActionTestMail       = "test_mail"
+	ActionScheduleDelete  = "schedule_delete"
+	ActionRestore         = "restore"
+	ActionUpdateMail      = "update_mail"
+	ActionCreate          = "create"
+	ActionSetChannels     = "set_channels"
+	ActionSetIntegrations = "set_integrations"
+	ActionTestMail        = "test_mail"
 )
 
 // Manager manages platform admins, their sessions and the audit log, and

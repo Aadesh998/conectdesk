@@ -33,3 +33,31 @@ func TestAllowedChannels(t *testing.T) {
 		t.Error("unrestricted workspace: want every channel allowed")
 	}
 }
+
+func TestAllowedIntegrations(t *testing.T) {
+	for _, tc := range []struct {
+		meta         string
+		integrations []string
+		all          bool
+	}{
+		{"", nil, true},
+		{`{"channels": ["voice"]}`, nil, true},
+		{`{"integrations": null}`, nil, true},
+		{`{"integrations": []}`, []string{}, false},
+		{`{"channels": ["voice"], "integrations": ["slack"]}`, []string{"slack"}, false},
+	} {
+		tn := Tenant{Meta: json.RawMessage(tc.meta)}
+		integrations, all := tn.AllowedIntegrations()
+		if all != tc.all || !slices.Equal(integrations, tc.integrations) {
+			t.Errorf("meta %q: got %v, %v; want %v, %v", tc.meta, integrations, all, tc.integrations, tc.all)
+		}
+	}
+
+	tn := Tenant{Meta: json.RawMessage(`{"integrations": ["slack"]}`)}
+	if !tn.IntegrationAllowed("slack") || tn.IntegrationAllowed("webhooks") {
+		t.Error("want slack allowed and webhooks not")
+	}
+	if !(Tenant{}).IntegrationAllowed("webhooks") {
+		t.Error("unrestricted workspace: want every integration allowed")
+	}
+}

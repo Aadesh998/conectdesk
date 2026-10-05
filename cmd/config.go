@@ -48,6 +48,10 @@ func handleGetConfig(r *fastglue.Request) error {
 	if channels, all := tenantFromReq(r).AllowedChannels(); !all && app.tenant.Enabled() {
 		publicSettings["app.allowed_channels"] = channels
 	}
+	// Likewise the integrations; absent when every integration is open.
+	if integrations, all := tenantFromReq(r).AllowedIntegrations(); !all && app.tenant.Enabled() {
+		publicSettings["app.allowed_integrations"] = integrations
+	}
 
 	// Get all OIDC providers
 	oidcProviders, err := app.oidc.GetAll(tenantID(r))

@@ -10,3 +10,4 @@ dist/
 .vscode/
 static/widget.min.js
 markdown
+deck

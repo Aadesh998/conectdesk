@@ -116,9 +116,11 @@ type CreateOpts struct {
 	Plan string
 	// Channels are the inbox channels the workspace may use; nil allows all.
 	Channels []string
+	// Integrations are the integrations the workspace may use; nil allows all.
+	Integrations []string
 }
 
-// CreateWith is Create with a plan and allowed channels, for workspaces a
+// CreateWith is Create with a plan and allowed channels and integrations, for workspaces a
 // platform admin creates.
 func (m *Manager) CreateWith(ctx context.Context, r Request, opts CreateOpts) (tmodels.Tenant, error) {
 	r.Normalize()
@@ -156,6 +158,9 @@ func (m *Manager) createTenant(tx *sqlx.Tx, r Request, adminHash string, opts Cr
 	meta := map[string]any{}
 	if opts.Channels != nil {
 		meta["channels"] = opts.Channels
+	}
+	if opts.Integrations != nil {
+		meta["integrations"] = opts.Integrations
 	}
 	metaJSON, err := json.Marshal(meta)
 	if err != nil {

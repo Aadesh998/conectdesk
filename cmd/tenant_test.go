@@ -102,3 +102,16 @@ func TestPlatformChannels(t *testing.T) {
 		t.Error("unknown channel sms: want ok false")
 	}
 }
+
+func TestPlatformIntegrations(t *testing.T) {
+	got, ok := platformIntegrations([]string{"context_links", "slack", "slack"})
+	if !ok || !slices.Equal(got, []string{"slack", "context_links"}) {
+		t.Errorf("got %v, %v; want [slack context_links], true", got, ok)
+	}
+	if got, ok := platformIntegrations(nil); !ok || got == nil || len(got) != 0 {
+		t.Errorf("no integrations: got %#v, %v; want an empty list", got, ok)
+	}
+	if _, ok := platformIntegrations([]string{"slack", "zapier"}); ok {
+		t.Error("unknown integration zapier: want ok false")
+	}
+}

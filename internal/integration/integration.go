@@ -139,6 +139,15 @@ type Manager struct {
 	// the channel and aren't posted there again.
 	notesMu sync.Mutex
 	notes   map[string]time.Time
+
+	// enabled reports whether a tenant may use a provider; nil allows all.
+	enabled func(tenantID int, provider string) bool
+}
+
+// SetEnabled sets which providers each tenant may use; channels of the others
+// aren't posted to. Call it before Run.
+func (m *Manager) SetEnabled(enabled func(tenantID int, provider string) bool) {
+	m.enabled = enabled
 }
 
 // New returns a Manager.
@@ -425,6 +434,9 @@ func (m *Manager) process(ctx context.Context, t task) {
 	}
 
 	for _, in := range ins {
+		if m.enabled != nil && !m.enabled(in.TenantID, in.Provider) {
+			continue
+		}
 		if msg.Private && m.takeNote(in.ID, post.ConversationUUID, msg.SenderID) {
 			continue
 		}

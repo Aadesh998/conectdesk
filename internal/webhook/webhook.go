@@ -55,6 +55,8 @@ type Manager struct {
 	rootURL func(tenantID int) string
 	// sink also receives every event, for the Slack and Teams apps; nil for none.
 	sink EventSink
+	// enabled reports whether a tenant may use webhooks; nil allows every tenant.
+	enabled func(tenantID int) bool
 }
 
 // EventSink receives conversation events besides the webhooks. HandleEvent
@@ -296,11 +298,25 @@ func (m *Manager) SetEventSink(sink EventSink) {
 	m.sink = sink
 }
 
+// SetEnabled sets which tenants may use webhooks; the others' events aren't
+// delivered. Call it before Run.
+func (m *Manager) SetEnabled(enabled func(tenantID int) bool) {
+	m.enabled = enabled
+}
+
+// tenantEnabled reports whether the tenant's webhooks receive events.
+func (m *Manager) tenantEnabled(tenantID int) bool {
+	return m.enabled == nil || m.enabled(tenantID)
+}
+
 // TriggerEvent triggers webhooks for a specific event with the provided data.
 // Only webhooks of the tenant receive it.
 func (m *Manager) TriggerEvent(tenantID int, event models.WebhookEvent, data any) {
 	if m.sink != nil {
 		m.sink.HandleEvent(tenantID, event, data)
+	}
+	if !m.tenantEnabled(tenantID) {
+		return
 	}
 
 	m.closedMu.RLock()
@@ -317,6 +333,9 @@ func (m *Manager) TriggerWebhook(tenantID, webhookID int, event models.WebhookEv
 	// A non-positive ID would be treated as a fan out to every subscriber of the event.
 	if webhookID <= 0 {
 		m.lo.Warn("dropping targeted webhook delivery, webhook ID is not positive", "webhook_id", webhookID, "event", event)
+		return
+	}
+	if !m.tenantEnabled(tenantID) {
 		return
 	}
 

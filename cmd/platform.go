@@ -225,6 +225,7 @@ func handlePlatformMe(r *fastglue.Request) error {
 		"plans":               platformPlans(),
 		"default_plan":        cmp.Or(ko.String("app.tenancy.default_plan"), "free"),
 		"channels":            inboxChannels,
+		"integrations":        integrationNames,
 		"totp_enabled":        a.TOTPEnabled,
 		"two_factor_required": platformRequires2FA(),
 	})
@@ -360,19 +361,22 @@ func handlePlatformWorkspace(r *fastglue.Request) error {
 	}
 
 	channels, allChannels := t.AllowedChannels()
+	integrations, allIntegrations := t.AllowedIntegrations()
 	return r.SendEnvelope(map[string]any{
-		"workspace":    t,
-		"channels":     channels,
-		"all_channels": allChannels,
-		"url":          app.tenant.URLFor(t),
-		"default":      t.ID == tenant.DefaultID,
-		"usage":        usage.Usage,
-		"limits":       usage.Limits,
-		"counts":       counts,
-		"fair_use":     usage.FairUse,
-		"agents":       agents,
-		"domains":      domains,
-		"audit":        audit,
+		"workspace":        t,
+		"channels":         channels,
+		"all_channels":     allChannels,
+		"integrations":     integrations,
+		"all_integrations": allIntegrations,
+		"url":              app.tenant.URLFor(t),
+		"default":          t.ID == tenant.DefaultID,
+		"usage":            usage.Usage,
+		"limits":           usage.Limits,
+		"counts":           counts,
+		"fair_use":         usage.FairUse,
+		"agents":           agents,
+		"domains":          domains,
+		"audit":            audit,
 	})
 }
 
@@ -434,7 +438,10 @@ func handlePlatformCreateWorkspace(r *fastglue.Request) error {
 			Plan     string   `json:"plan"`
 			Channels []string `json:"channels"`
 			// AllChannels leaves every channel open, now and as channels are added.
-			AllChannels bool `json:"all_channels"`
+			AllChannels  bool     `json:"all_channels"`
+			Integrations []string `json:"integrations"`
+			// AllIntegrations leaves every integration open, now and as they are added.
+			AllIntegrations bool `json:"all_integrations"`
 		}
 	)
 	if app.workspace == nil {
@@ -454,12 +461,19 @@ func handlePlatformCreateWorkspace(r *fastglue.Request) error {
 		}
 		opts.Channels = channels
 	}
+	if !req.AllIntegrations {
+		integrations, ok := platformIntegrations(req.Integrations)
+		if !ok {
+			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("platform.unknownIntegration"), nil, envelope.InputError)
+		}
+		opts.Integrations = integrations
+	}
 	t, err := app.workspace.CreateWith(r.RequestCtx, req.Request, opts)
 	if err != nil {
 		return sendWorkspaceError(r, err)
 	}
 	app.platform.Audit(platformAdmin(r), platform.ActionCreate, t.ID, t.Slug,
-		map[string]any{"name": t.Name, "plan": t.Plan, "admin_email": strings.ToLower(strings.TrimSpace(req.Email)), "channels": opts.Channels},
+		map[string]any{"name": t.Name, "plan": t.Plan, "admin_email": strings.ToLower(strings.TrimSpace(req.Email)), "channels": opts.Channels, "integrations": opts.Integrations},
 		realip.FromRequest(r.RequestCtx))
 	return r.SendEnvelope(map[string]any{"id": t.ID, "url": app.tenant.URLFor(t)})
 }
@@ -514,17 +528,65 @@ func handlePlatformSetChannels(r *fastglue.Request) error {
 	return handlePlatformWorkspace(r)
 }
 
+// handlePlatformSetIntegrations sets the integrations a workspace may use.
+// What it set up for one taken away is kept but stops working until the
+// integration is enabled again.
+func handlePlatformSetIntegrations(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+		req struct {
+			Integrations    []string `json:"integrations"`
+			AllIntegrations bool     `json:"all_integrations"`
+		}
+	)
+	t, ok := platformWorkspaceParam(r)
+	if !ok {
+		return nil
+	}
+	if err := r.Decode(&req, "json"); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.badRequest"), nil, envelope.InputError)
+	}
+	integrations, ok := platformIntegrations(req.Integrations)
+	if !ok && !req.AllIntegrations {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("platform.unknownIntegration"), nil, envelope.InputError)
+	}
+	if req.AllIntegrations {
+		integrations = nil
+	}
+	from, fromAll := t.AllowedIntegrations()
+	if _, err := app.tenant.SetIntegrations(t.ID, integrations, req.AllIntegrations); err != nil {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.somethingWentWrong"), nil))
+	}
+	app.platform.Audit(platformAdmin(r), platform.ActionSetIntegrations, t.ID, t.Slug, map[string]any{
+		"from": map[string]any{"integrations": from, "all": fromAll},
+		"to":   map[string]any{"integrations": integrations, "all": req.AllIntegrations},
+	}, realip.FromRequest(r.RequestCtx))
+	return handlePlatformWorkspace(r)
+}
+
 // platformChannels returns channels without repeats, in inboxChannels order;
 // ok is false if one isn't an inbox channel.
 func platformChannels(channels []string) ([]string, bool) {
-	for _, c := range channels {
-		if !slices.Contains(inboxChannels, c) {
+	return knownSubset(inboxChannels, channels)
+}
+
+// platformIntegrations returns integrations without repeats, in
+// integrationNames order; ok is false if one isn't an integration.
+func platformIntegrations(integrations []string) ([]string, bool) {
+	return knownSubset(integrationNames, integrations)
+}
+
+// knownSubset returns picked without repeats, in known's order; ok is false if
+// one isn't in known.
+func knownSubset(known, picked []string) ([]string, bool) {
+	for _, c := range picked {
+		if !slices.Contains(known, c) {
 			return nil, false
 		}
 	}
 	out := []string{}
-	for _, c := range inboxChannels {
-		if slices.Contains(channels, c) {
+	for _, c := range known {
+		if slices.Contains(picked, c) {
 			out = append(out, c)
 		}
 	}

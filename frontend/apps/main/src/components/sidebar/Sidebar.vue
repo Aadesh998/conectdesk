@@ -251,10 +251,18 @@ const navigateToViewInbox = (viewID) => {
   }
 }
 
+// Integrations the platform admin enabled for the workspace; absent when all are.
+const integrationEnabled = (name) => {
+  const allowed = settingsStore.public_config['app.allowed_integrations']
+  return !Array.isArray(allowed) || allowed.includes(name)
+}
+
 const filteredAdminNavItems = computed(() =>
-  filterNavItems(adminNavItems, userStore.can, (feature) =>
-    feature === 'tenancy' ? settingsStore.public_config['app.tenancy_enabled'] === true : true
-  )
+  filterNavItems(adminNavItems, userStore.can, (feature) => {
+    if (feature === 'tenancy') return settingsStore.public_config['app.tenancy_enabled'] === true
+    if (feature.startsWith('integration:')) return integrationEnabled(feature.slice('integration:'.length))
+    return true
+  })
 )
 const filteredReportsNavItems = computed(() => filterNavItems(reportsNavItems, userStore.can))
 const filteredContactsNavItems = computed(() => filterNavItems(contactNavItems, userStore.can))

@@ -55,13 +55,24 @@ type meta struct {
 	// Channels are the inbox channels the platform lets the tenant use; nil
 	// (no key) leaves every channel open.
 	Channels *[]string `json:"channels"`
+	// Integrations are the integrations the platform lets the tenant use; nil
+	// (no key) leaves every integration open.
+	Integrations *[]string `json:"integrations"`
+}
+
+func (t Tenant) meta() (meta, bool) {
+	var m meta
+	if len(t.Meta) == 0 || json.Unmarshal(t.Meta, &m) != nil {
+		return m, false
+	}
+	return m, true
 }
 
 // AllowedChannels returns the inbox channels the platform admin enabled for
 // the tenant. all is true when they haven't restricted them.
 func (t Tenant) AllowedChannels() (channels []string, all bool) {
-	var m meta
-	if len(t.Meta) == 0 || json.Unmarshal(t.Meta, &m) != nil || m.Channels == nil {
+	m, ok := t.meta()
+	if !ok || m.Channels == nil {
 		return nil, true
 	}
 	return *m.Channels, false
@@ -71,6 +82,22 @@ func (t Tenant) AllowedChannels() (channels []string, all bool) {
 func (t Tenant) ChannelAllowed(channel string) bool {
 	channels, all := t.AllowedChannels()
 	return all || slices.Contains(channels, channel)
+}
+
+// AllowedIntegrations returns the integrations the platform admin enabled for
+// the tenant. all is true when they haven't restricted them.
+func (t Tenant) AllowedIntegrations() (integrations []string, all bool) {
+	m, ok := t.meta()
+	if !ok || m.Integrations == nil {
+		return nil, true
+	}
+	return *m.Integrations, false
+}
+
+// IntegrationAllowed reports whether the tenant may use integration.
+func (t Tenant) IntegrationAllowed(integration string) bool {
+	integrations, all := t.AllowedIntegrations()
+	return all || slices.Contains(integrations, integration)
 }
 
 // Domain is a hostname a tenant has added to serve on.

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -111,7 +112,31 @@ func handleGetChatIntegrations(r *fastglue.Request) error {
 		app.lo.Error("error fetching chat integrations", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.For(tenantID(r)).T("globals.messages.somethingWentWrong"), nil, envelope.GeneralError)
 	}
+	// Only the providers the platform enabled for the workspace.
+	out = slices.DeleteFunc(out, func(in integration.Integration) bool {
+		return !integrationAllowed(app, tenantID(r), in.Provider)
+	})
 	return r.SendEnvelope(out)
+}
+
+// withChatIntegration refuses a request on the {id} connection when the
+// platform hasn't enabled its provider, Slack or Teams, for the workspace.
+func withChatIntegration(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
+	return func(r *fastglue.Request) error {
+		var (
+			app   = r.Context.(*App)
+			tid   = tenantID(r)
+			id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+		)
+		in, err := app.integration.Get(tid, id)
+		if err != nil {
+			return r.SendErrorEnvelope(fasthttp.StatusNotFound, app.i18n.For(tid).T("globals.messages.notFound"), nil, envelope.NotFoundError)
+		}
+		if err := checkIntegrationAllowed(app, tid, in.Provider); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		return handler(r)
+	}
 }
 
 // handleUpdateChatIntegration changes what a channel posts and whether it is on.
@@ -606,6 +631,9 @@ func chatAgent(app *App, tenantID int, email string) (umodels.User, error) {
 func doChatAction(app *App, in integration.Integration, agent umodels.User, convID int, action, content string, fromThread bool) (string, error) {
 	tid := in.TenantID
 	t := app.i18n.For(tid)
+	if err := checkIntegrationAllowed(app, tid, in.Provider); err != nil {
+		return "", err
+	}
 	conv, err := app.conversation.GetConversation(tid, convID, "", "")
 	if err != nil {
 		return "", err

@@ -7,94 +7,250 @@
 <title>Platform admin</title>
 {{ template "app-theme" . }}
 <style>
-	/* Colours come from the app's theme (app-theme.html). */
+	/* Colours come from the app's theme (app-theme.html); warn is the one
+	   addition, for limits close to being reached. */
 	:root {
 		--panel: var(--card); --text: var(--fg); --subtle: var(--muted-fg);
 		--accent: var(--primary); --accent-text: var(--primary-fg);
 		--ok: var(--success); --ok-bg: var(--success-bg); --bad: var(--destructive); --bad-bg: var(--destructive-bg);
 		--hover: var(--muted);
+		--warn: hsl(32 90% 40%); --warn-bg: hsl(32 90% 40% / 0.12);
+		--track: hsl(0 0% 92%);
+		--shadow: 0 1px 2px hsl(0 0% 0% / 0.04);
+	}
+	@media (prefers-color-scheme: dark) {
+		:root { --warn: hsl(38 92% 62%); --warn-bg: hsl(38 92% 62% / 0.14); --track: hsl(150 3% 18%); --shadow: none; }
 	}
 	* { box-sizing: border-box; }
 	body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 "Instrument Sans", system-ui, sans-serif; }
 	a { color: inherit; }
-	header { display: flex; align-items: center; gap: 1.5rem; padding: 0.75rem 1.5rem; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-	header strong { font-size: 1rem; }
-	header nav { display: flex; gap: 1rem; flex: 1; }
-	header nav a { text-decoration: none; color: var(--subtle); padding: 0.25rem 0; }
-	header nav a.on { color: var(--text); border-bottom: 2px solid var(--accent); }
-	main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
-	h1 { font-size: 1.35rem; margin: 0 0 1rem; }
-	h2 { font-size: 1rem; margin: 1.75rem 0 0.75rem; }
-	.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.75rem; }
-	.card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; }
-	.card .n { font-size: 1.6rem; font-weight: 650; }
-	.card .l { color: var(--subtle); font-size: 0.8rem; }
-	.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; }
+	h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; margin: 0; }
+	h2 { font-size: 0.95rem; font-weight: 600; margin: 0; }
+	p { margin: 0; }
+	.muted { color: var(--subtle); }
+	.num { font-variant-numeric: tabular-nums; }
+	code { font-size: 0.85em; }
+	svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+	/* Shell: a sidebar with the sections, the page beside it. */
+	.shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100vh; }
+	.side { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 1.5rem;
+		padding: 1.25rem 0.85rem; background: var(--panel); border-right: 1px solid var(--border); }
+	.brand { display: flex; align-items: center; gap: 0.6rem; padding: 0 0.5rem; text-decoration: none; }
+	.brand .mark { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); color: var(--accent-text);
+		display: grid; place-items: center; font-weight: 700; font-size: 0.9rem; }
+	.brand .name { font-weight: 600; line-height: 1.15; }
+	.brand .name small { display: block; font-weight: 400; font-size: 0.78rem; color: var(--subtle); }
+	.side nav { display: grid; gap: 2px; }
+	.side nav a { display: flex; align-items: center; gap: 0.65rem; padding: 0.5rem 0.6rem; border-radius: var(--radius);
+		color: var(--subtle); text-decoration: none; font-weight: 500; }
+	.side nav a:hover { background: var(--hover); color: var(--text); }
+	.side nav a.on { background: var(--hover); color: var(--text); }
+	.side nav a.on svg { color: var(--accent); }
+	.side .who { margin-top: auto; padding: 0.75rem 0.5rem 0; border-top: 1px solid var(--border); display: grid; gap: 0.5rem; }
+	.side .who .email { font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	main { padding: 2rem 2.5rem 4rem; min-width: 0; }
+	.content { max-width: 1180px; margin: 0 auto; display: grid; gap: 1.5rem; }
+
+	/* Page header: title and what it is on the left, actions on the right. */
+	.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+	.page-head .t { display: grid; gap: 0.35rem; min-width: 0; }
+	.page-head .t .line { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+	.page-head .acts { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+	.back { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--subtle); text-decoration: none; font-size: 0.85rem; width: fit-content; }
+	.back:hover { color: var(--text); }
+
+	/* Panels, with an optional head holding a title, a line on what it does and actions. */
+	.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); min-width: 0; }
+	.panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+	.panel-head .d { font-size: 0.84rem; color: var(--subtle); margin-top: 0.2rem; max-width: 62ch; }
+	.panel-body { padding: 1rem 1.25rem; }
+	.panel-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 1.25rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
+	.panel.danger { border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
+	.scroll { overflow-x: auto; }
+
+	/* Stats: one strip of numbers, divided rather than boxed. */
+	.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+	.stat { padding: 1rem 1.25rem; border-left: 1px solid var(--border); }
+	.stat:first-child { border-left: 0; }
+	.stat .v { font-size: 1.55rem; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+	.stat .l { color: var(--subtle); font-size: 0.82rem; margin-top: 0.15rem; }
+
+	/* Meters: how much of a plan limit a workspace uses. */
+	.meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem 2rem; }
+	.meter .top { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+	.meter .top .u { font-variant-numeric: tabular-nums; font-weight: 600; }
+	.meter .top .u span { color: var(--subtle); font-weight: 400; }
+	.meter .bar { height: 6px; border-radius: 99px; background: var(--track); margin-top: 0.5rem; overflow: hidden; }
+	.meter .bar i { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width 0.4s ease; }
+	.meter.warn .bar i { background: var(--warn); }
+	.meter.full .bar i { background: var(--bad); }
+	.meter.full .top .u { color: var(--bad); }
+	.meter .bar.none { background: repeating-linear-gradient(90deg, var(--track) 0 4px, transparent 4px 8px); }
+	.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem 2rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed var(--border); }
+	.facts div { display: grid; gap: 0.1rem; }
+	.facts dt { color: var(--subtle); font-size: 0.8rem; }
+	.facts dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+	/* Key-value list for a workspace's details. */
+	dl.kv { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.65rem 1rem; font-size: 0.88rem; }
+	dl.kv dt { color: var(--subtle); }
+	dl.kv dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+	.inline { display: flex; gap: 0.5rem; align-items: center; }
+	.inline select { flex: 1; }
+
+	/* Tables. */
 	table { width: 100%; border-collapse: collapse; }
-	th, td { text-align: left; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
-	th { color: var(--subtle); font-weight: 500; font-size: 0.8rem; }
+	th, td { text-align: left; padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); white-space: nowrap; vertical-align: middle; }
+	th { color: var(--subtle); font-weight: 500; font-size: 0.78rem; background: var(--hover); }
+	th:first-child, td:first-child { padding-left: 1.25rem; }
+	th:last-child, td:last-child { padding-right: 1.25rem; }
+	th.r, td.r { text-align: right; font-variant-numeric: tabular-nums; }
 	tr:last-child td { border-bottom: 0; }
 	tbody tr.link { cursor: pointer; }
 	tbody tr.link:hover { background: var(--hover); }
-	.muted { color: var(--subtle); }
-	.badge { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 99px; font-size: 0.75rem; border: 1px solid var(--border); }
-	.badge.active { color: var(--ok); background: var(--ok-bg); border-color: transparent; }
-	.badge.suspended, .badge.deleting { color: var(--bad); background: var(--bad-bg); border-color: transparent; }
+	tbody tr.link:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+	td .sub { color: var(--subtle); font-size: 0.82rem; }
+	td.wrap { white-space: normal; min-width: 220px; }
+	.empty { padding: 2.5rem 1.25rem; text-align: center; color: var(--subtle); }
+
+	/* Status badges and plan chips. */
+	.badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.1rem 0.55rem; border-radius: 99px; font-size: 0.78rem; font-weight: 500; background: var(--hover); color: var(--subtle); }
+	.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+	.badge.active { color: var(--ok); background: var(--ok-bg); }
+	.badge.suspended, .badge.deleting { color: var(--bad); background: var(--bad-bg); }
+	.chip { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); font-size: 0.8rem; text-transform: capitalize; }
+
+	/* Controls. */
 	input, select, button { font: inherit; color: inherit; }
-	input, select { width: auto; background: var(--panel); border: 1px solid var(--input); border-radius: var(--radius); padding: 0.45rem 0.6rem; }
-	button { background: var(--accent); color: var(--accent-text); border: 0; border-radius: var(--radius); padding: 0.45rem 0.85rem; cursor: pointer; font-weight: 500; }
-	button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+	input, select { width: auto; background: var(--panel); border: 1px solid var(--input); border-radius: var(--radius); padding: 0.5rem 0.7rem; }
+	button { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: var(--accent); color: var(--accent-text);
+		border: 1px solid transparent; border-radius: var(--radius); padding: 0.5rem 0.9rem; cursor: pointer; font-weight: 500; white-space: nowrap; }
+	button.ghost { background: var(--panel); color: var(--text); border-color: var(--border); }
+	button.ghost:hover { background: var(--hover); filter: none; }
 	button.danger { background: var(--bad); color: var(--card); }
-	.form { max-width: 560px; display: grid; gap: 0.85rem; }
-	.form label { display: block; font-size: 0.85rem; color: var(--subtle); margin-bottom: 0.3rem; }
-	.form input, .form select { width: 100%; }
-	.form .pair { display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem; }
-	.form .check { display: flex; align-items: center; gap: 0.5rem; }
-	.form .check input { width: auto; }
-	.note { font-size: 0.85rem; color: var(--subtle); background: var(--hover); border-radius: var(--radius); padding: 0.75rem 0.9rem; }
-	button:disabled { opacity: 0.5; cursor: default; }
-	.toolbar { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; align-items: center; }
-	.toolbar input[type=search] { flex: 1; min-width: 220px; }
-	/* Phones: two number cards a row, a compact header, and tables that
-	   scroll sideways inside their panel instead of widening the page. */
-	@media (max-width: 600px) {
-		header { gap: 0.5rem 1rem; padding: 0.75rem 1rem; }
-		header nav { order: 3; flex-basis: 100%; overflow-x: auto; gap: 0.9rem; }
-		main { padding: 1rem; }
-		.cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
-		.card { padding: 0.75rem; }
-		.card .n { font-size: 1.25rem; }
-		th, td { padding: 0.5rem 0.6rem; }
-		.form .pair { grid-template-columns: 1fr; }
-		.toolbar input[type=search] { min-width: 0; }
-		.login { margin: 6vh 1rem; padding: 1.25rem; }
-	}
-	.login { max-width: 360px; margin: 12vh auto; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; }
-	.login label { display: block; margin: 0.9rem 0 0.3rem; font-weight: 600; }
+	button.danger-ghost { background: transparent; color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+	button.danger-ghost:hover { background: var(--bad-bg); filter: none; }
+	button.sm { padding: 0.3rem 0.65rem; font-size: 0.85rem; }
+	button:disabled { opacity: 0.5; cursor: default; filter: none; }
+	a.button { display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none; border: 1px solid var(--border); background: var(--panel);
+		border-radius: var(--radius); padding: 0.5rem 0.9rem; font-weight: 500; }
+	a.button:hover { background: var(--hover); }
+	button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+	input[type=checkbox] { accent-color: var(--accent); }
+
+	/* Switches, for what a workspace may use. */
+	input.switch { appearance: none; -webkit-appearance: none; flex: none; width: 34px; height: 20px; margin: 0; padding: 0; border: 0;
+		border-radius: 99px; background: var(--track); position: relative; cursor: pointer; transition: background 0.15s; }
+	input.switch::before { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+		background: #fff; box-shadow: 0 1px 2px hsl(0 0% 0% / 0.25); transition: transform 0.15s; }
+	input.switch:checked { background: var(--accent); }
+	input.switch:checked::before { transform: translateX(14px); }
+	input.switch:disabled { cursor: default; opacity: 0.45; }
+	.opts { display: grid; }
+	.opt { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+	.opt:last-child { border-bottom: 0; }
+	.opt.master { font-weight: 600; padding-top: 0; }
+	.opt.off { color: var(--subtle); cursor: default; }
+	.opts.cols { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); column-gap: 2rem; }
+	.opts.cols .master { grid-column: 1 / -1; }
+
+	/* Forms. */
+	.form { display: grid; gap: 1rem; }
+	.form label.f { display: block; font-size: 0.84rem; font-weight: 500; margin-bottom: 0.35rem; }
+	.form input:not([type=checkbox]), .form select { width: 100%; }
+	.form .hint { color: var(--subtle); font-size: 0.8rem; margin-top: 0.3rem; }
+	.form .pair { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; }
+	.form .even { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+	.addr { display: flex; align-items: stretch; }
+	.addr input { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+	.addr span { display: flex; align-items: center; padding: 0 0.7rem; border: 1px solid var(--input); border-left: 0; background: var(--hover);
+		color: var(--subtle); border-radius: 0 var(--radius) var(--radius) 0; white-space: nowrap; }
+	.note { font-size: 0.85rem; color: var(--subtle); background: var(--hover); border-radius: var(--radius); padding: 0.8rem 1rem; }
+	.error { color: var(--bad); font-size: 0.88rem; }
+	.error:empty { display: none; }
+
+	/* Toolbar of the workspace list. */
+	.toolbar { display: flex; gap: 0.75rem; padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+	.search { flex: 1; min-width: 240px; position: relative; }
+	.search svg { position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); color: var(--subtle); }
+	.search input { width: 100%; padding-left: 2.1rem; }
+	.seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--hover); border-radius: calc(var(--radius) + 2px); }
+	.seg button { background: transparent; color: var(--subtle); border: 0; padding: 0.35rem 0.75rem; font-size: 0.86rem; }
+	.seg button.on { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px hsl(0 0% 0% / 0.12); }
+
+	/* Plan distribution on the overview. */
+	.dist { display: grid; gap: 0.9rem; }
+	.dist .row { display: grid; grid-template-columns: 110px minmax(0, 1fr) 48px; align-items: center; gap: 1rem; }
+	.dist .row .n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+	.dist .bar { height: 8px; border-radius: 99px; background: var(--track); overflow: hidden; }
+	.dist .bar i { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+
+	/* Workspace page: the record on the left, what can be changed on the right. */
+	.ws-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 1.5rem; align-items: start; }
+	.ws-main, .ws-side { display: grid; gap: 1.5rem; min-width: 0; }
+	.banner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+		padding: 0.85rem 1.25rem; border-radius: 12px; background: var(--bad-bg); color: var(--bad); }
+	.banner .acts { display: flex; gap: 0.5rem; }
+	.danger-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+	.danger-row:first-child { padding-top: 0; }
+	.danger-row:last-child { border-bottom: 0; padding-bottom: 0; }
+	.danger-row .d { font-size: 0.82rem; color: var(--subtle); }
+
+	/* Login and two-factor screens. */
+	.login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 2rem 1rem; }
+	.login { width: 100%; max-width: 380px; display: grid; gap: 1rem; }
+	.login .brand { padding: 0; margin-bottom: 0.5rem; }
+	.login .panel { padding: 1.5rem; display: grid; gap: 0.9rem; }
+	.login h1 { font-size: 1.3rem; }
+	.login label { display: block; font-size: 0.84rem; font-weight: 500; margin-bottom: 0.35rem; }
 	.login input { width: 100%; }
-	.login button { width: 100%; margin-top: 1.25rem; }
-	.error { color: var(--bad); min-height: 1.3em; margin-top: 0.75rem; }
-	.actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0.25rem 0 0.5rem; }
-	.head { display: flex; align-items: baseline; gap: 0.75rem; flex-wrap: wrap; }
-	.pager { display: flex; gap: 0.5rem; align-items: center; justify-content: flex-end; margin-top: 0.75rem; }
-	#toast { position: fixed; bottom: 1.25rem; right: 1.25rem; background: var(--accent); color: var(--accent-text); padding: 0.6rem 1rem; border-radius: 8px; display: none; max-width: 420px; }
+	.login button { width: 100%; margin-top: 0.25rem; }
+	.login pre { margin: 0; padding: 0.8rem 1rem; background: var(--hover); border-radius: var(--radius); font-size: 0.9rem; line-height: 1.7; }
+	.loading { color: var(--subtle); padding: 3rem 0; text-align: center; }
+
+	#toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translate(-50%, 1rem); opacity: 0; pointer-events: none;
+		background: var(--text); color: var(--bg); padding: 0.65rem 1.1rem; border-radius: 10px; max-width: min(460px, calc(100vw - 2rem));
+		box-shadow: 0 8px 24px hsl(0 0% 0% / 0.18); transition: opacity 0.18s, transform 0.18s; font-weight: 500; z-index: 10; }
+	#toast.show { opacity: 1; transform: translate(-50%, 0); }
 	#toast.bad { background: var(--bad); color: #fff; }
-	code { font-size: 0.85em; }
-	.channels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
-	.channels label { display: flex; align-items: center; gap: 0.5rem; margin: 0; color: var(--text); font-size: 0.9rem;
-		background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem 0.65rem; cursor: pointer; }
-	.channels label.off { opacity: 0.5; cursor: default; }
-	.channels input { width: auto; }
+	@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+	@media (max-width: 1080px) {
+		.ws-grid { grid-template-columns: minmax(0, 1fr); }
+	}
+	/* Phones and narrow windows: the sidebar becomes a bar on top. */
+	@media (max-width: 760px) {
+		.shell { grid-template-columns: minmax(0, 1fr); }
+		.side { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem;
+			border-right: 0; border-bottom: 1px solid var(--border); }
+		.side nav { order: 3; flex-basis: 100%; display: flex; overflow-x: auto; gap: 0.25rem; }
+		.side nav a { padding: 0.4rem 0.6rem; white-space: nowrap; }
+		.side .who { margin: 0 0 0 auto; padding: 0; border: 0; display: flex; align-items: center; }
+		.side .who .email { display: none; }
+		main { padding: 1.25rem 1rem 3rem; }
+		h1 { font-size: 1.35rem; }
+		.stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		.stat { border-left: 0; border-top: 1px solid var(--border); padding: 0.85rem 1rem; }
+		.stat:nth-child(-n+2) { border-top: 0; }
+		.stat:nth-child(even) { border-left: 1px solid var(--border); }
+		.stat .v { font-size: 1.25rem; }
+		.panel-head, .panel-body, .panel-foot, .toolbar { padding-left: 1rem; padding-right: 1rem; }
+		.form .pair, .form .even { grid-template-columns: 1fr; }
+		.search { min-width: 0; flex-basis: 100%; }
+		.dist .row { grid-template-columns: 80px minmax(0, 1fr) 40px; }
+	}
 </style>
 </head>
 <body>
 <div id="app"></div>
-<div id="toast" role="status"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 <script>
 (function () {
 	'use strict';
 	var app = document.getElementById('app');
 	var me = null;
+	var baseDomain = '{{ .Data.BaseDomain }}';
 
 	// el builds an element; strings become text nodes, never HTML.
 	function el(tag, attrs) {
@@ -115,6 +271,27 @@
 			});
 		}
 		return e;
+	}
+
+	// icon draws a 16px stroke icon.
+	var icons = {
+		overview: 'M3 3h7v9H3z M14 3h7v5h-7z M14 12h7v9h-7z M3 16h7v5H3z',
+		workspaces: 'M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2 M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2 M10 6h4 M10 10h4 M10 14h4 M10 18h4',
+		audit: 'M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01',
+		settings: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M22 6l-10 7L2 6',
+		search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M21 21l-4.35-4.35',
+		external: 'M15 3h6v6 M10 14 21 3 M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6',
+		back: 'M19 12H5 M12 19l-7-7 7-7',
+		logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9',
+		plus: 'M12 5v14 M5 12h14'
+	};
+	function icon(name) {
+		var ns = 'http://www.w3.org/2000/svg';
+		var s = document.createElementNS(ns, 'svg');
+		s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('class', 'i'); s.setAttribute('aria-hidden', 'true');
+		var p = document.createElementNS(ns, 'path'); p.setAttribute('d', icons[name]);
+		s.appendChild(p);
+		return s;
 	}
 
 	function cookie(name) {
@@ -138,33 +315,90 @@
 	var toastTimer;
 	function toast(msg, bad) {
 		var t = document.getElementById('toast');
-		t.textContent = msg; t.className = bad ? 'bad' : ''; t.style.display = 'block';
-		clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.style.display = 'none'; }, 4000);
+		t.textContent = msg; t.className = (bad ? 'bad ' : '') + 'show';
+		clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.className = bad ? 'bad' : ''; }, 4000);
 	}
 	function fail(err) { toast(err.message, true); }
 
+	function fmt(n) { return n === null || n === undefined ? '—' : Number(n).toLocaleString(); }
+	function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
 	function date(s) { return s ? new Date(s).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'; }
 	function ago(s) {
-		if (!s) return 'never';
+		if (!s) return 'Never';
 		var d = (Date.now() - new Date(s).getTime()) / 1000;
-		if (d < 60) return 'just now';
+		if (d < 60) return 'Just now';
 		if (d < 3600) return Math.floor(d / 60) + 'm ago';
 		if (d < 86400) return Math.floor(d / 3600) + 'h ago';
-		return Math.floor(d / 86400) + 'd ago';
+		if (d < 86400 * 30) return Math.floor(d / 86400) + 'd ago';
+		return date(s);
 	}
-	function badge(status) { return el('span', { class: 'badge ' + status, text: status }); }
-	function card(n, label) { return el('div', { class: 'card' }, el('div', { class: 'n', text: n }), el('div', { class: 'l', text: label })); }
-	function table(cols, rows, onRow) {
-		return el('div', { class: 'panel' }, el('table', null,
-			el('thead', null, el('tr', null, cols.map(function (c) { return el('th', { text: c }); }))),
+	function size(bytes) {
+		var units = ['B', 'KB', 'MB', 'GB', 'TB'], i = 0;
+		while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+		return (i ? bytes.toFixed(1) : bytes) + ' ' + units[i];
+	}
+	function address(w) { return w.custom_domain || (w.slug + '.' + baseDomain); }
+	function badge(status) { return el('span', { class: 'badge ' + status, text: cap(status) }); }
+	function loading() { return el('div', { class: 'loading', text: 'Loading…' }); }
+
+	function panel(title, desc, body, opts) {
+		opts = opts || {};
+		return el('section', { class: 'panel' + (opts.cls ? ' ' + opts.cls : '') },
+			title ? el('div', { class: 'panel-head' }, el('div', null, el('h2', { text: title }), desc ? el('p', { class: 'd', text: desc }) : null), opts.actions || null) : null,
+			opts.flush ? body : el('div', { class: 'panel-body' }, body),
+			opts.foot ? el('div', { class: 'panel-foot' }, opts.foot) : null);
+	}
+
+	function pageHead(title, sub, actions, extra) {
+		return el('div', { class: 'page-head' },
+			el('div', { class: 't' }, extra || null, el('div', { class: 'line' }, el('h1', { text: title }), sub || null)),
+			actions ? el('div', { class: 'acts' }, actions) : null);
+	}
+
+	function backLink(href, label) { return el('a', { href: href, class: 'back' }, icon('back'), label); }
+
+	function stats(items) {
+		return el('div', { class: 'panel stats' }, items.map(function (s) {
+			return el('div', { class: 'stat' }, el('div', { class: 'v', text: s[0] }), el('div', { class: 'l', text: s[1] }));
+		}));
+	}
+
+	// meter shows used of max; max 0 is no limit. show formats a value.
+	function meter(label, used, max, show) {
+		show = show || fmt;
+		var pct = max ? Math.min(100, (used / max) * 100) : 0;
+		var cls = max && used >= max ? ' full' : max && pct >= 80 ? ' warn' : '';
+		return el('div', { class: 'meter' + cls },
+			el('div', { class: 'top' }, el('span', { text: label }),
+				el('span', { class: 'u' }, show(used), el('span', { text: max ? ' of ' + show(max) : ', no limit' }))),
+			el('div', { class: 'bar' + (max ? '' : ' none'), role: max ? 'meter' : null, 'aria-valuenow': max ? String(used) : null, 'aria-valuemax': max ? String(max) : null, 'aria-label': label },
+				max ? el('i', { style: 'width:' + pct + '%' }) : null));
+	}
+
+	// table renders rows of { item, cells }; cols are names, or [name, 'r'] to right-align.
+	function table(cols, rows, onRow, empty) {
+		function head(c) { return Array.isArray(c) ? c : [c, '']; }
+		return el('div', { class: 'scroll' }, el('table', null,
+			el('thead', null, el('tr', null, cols.map(function (c) { var h = head(c); return el('th', { class: h[1] || null, text: h[0] }); }))),
 			el('tbody', null, rows.length ? rows.map(function (r) {
-				return el('tr', { class: onRow ? 'link' : null, onclick: onRow ? function () { onRow(r.item); } : null },
-					r.cells.map(function (c) { return el('td', null, c); }));
-			}) : el('tr', null, el('td', { colspan: cols.length, class: 'muted', text: 'Nothing here.' })))));
+				var go = onRow ? function () { onRow(r.item); } : null;
+				return el('tr', { class: onRow ? 'link' : null, tabindex: onRow ? '0' : null, onclick: go,
+					onkeydown: onRow ? function (e) { if (e.key === 'Enter') go(); } : null },
+					r.cells.map(function (c, i) { return el('td', { class: head(cols[i])[1] || null }, c); }));
+			}) : el('tr', null, el('td', { colspan: cols.length, class: 'empty', text: empty || 'Nothing here yet.' })))));
+	}
+
+	function brand() {
+		return el('a', { href: '#/', class: 'brand' }, el('span', { class: 'mark', text: 'C' }),
+			el('span', { class: 'name' }, 'ConectDesk', el('small', { text: 'Platform admin' })));
+	}
+
+	function loginScreen(form) {
+		app.replaceChildren(el('div', { class: 'login-wrap' }, el('div', { class: 'login' }, brand(), form)));
 	}
 
 	function renderLogin() {
-		app.replaceChildren(el('form', { class: 'login', onsubmit: function (e) {
+		var form = el('form', { class: 'panel', onsubmit: function (e) {
 			e.preventDefault();
 			var btn = e.target.querySelector('button'), err = e.target.querySelector('.error');
 			btn.disabled = true; err.textContent = '';
@@ -175,17 +409,18 @@
 				})
 				.catch(function (x) { err.textContent = x.message; btn.disabled = false; });
 		} },
-			el('h1', { text: 'Platform admin' }),
-			el('p', { class: 'muted', text: 'Every workspace on {{ .Data.BaseDomain }}.' }),
-			el('label', { for: 'email', text: 'Email' }), el('input', { id: 'email', name: 'email', type: 'email', required: true, autocomplete: 'username' }),
-			el('label', { for: 'password', text: 'Password' }), el('input', { id: 'password', name: 'password', type: 'password', required: true, autocomplete: 'current-password' }),
+			el('div', null, el('h1', { text: 'Log in' }), el('p', { class: 'muted', text: 'Manage every workspace on ' + baseDomain + '.' })),
+			el('div', null, el('label', { for: 'email', text: 'Email' }), el('input', { id: 'email', name: 'email', type: 'email', required: true, autocomplete: 'username' })),
+			el('div', null, el('label', { for: 'password', text: 'Password' }), el('input', { id: 'password', name: 'password', type: 'password', required: true, autocomplete: 'current-password' })),
 			el('button', { type: 'submit', text: 'Log in' }),
-			el('div', { class: 'error', role: 'alert' })));
+			el('div', { class: 'error', role: 'alert' }));
+		loginScreen(form);
+		form.email.focus();
 	}
 
 	// The code step of a login with two-factor login.
 	function renderTwoFactorLogin(token) {
-		app.replaceChildren(el('form', { class: 'login', onsubmit: function (e) {
+		var form = el('form', { class: 'panel', onsubmit: function (e) {
 			e.preventDefault();
 			var btn = e.target.querySelector('button'), err = e.target.querySelector('.error');
 			btn.disabled = true; err.textContent = '';
@@ -196,242 +431,307 @@
 					err.textContent = x.message; btn.disabled = false; e.target.code.value = '';
 				});
 		} },
-			el('h1', { text: 'Two-factor code' }),
-			el('p', { class: 'muted', text: 'Enter the 6-digit code from your authenticator app, or a recovery code.' }),
-			el('label', { for: 'code', text: 'Code' }),
-			el('input', { id: 'code', name: 'code', required: true, autocomplete: 'one-time-code', autofocus: true, maxlength: '12' }),
+			el('div', null, el('h1', { text: 'Two-factor code' }),
+				el('p', { class: 'muted', text: 'Enter the 6-digit code from your authenticator app, or a recovery code.' })),
+			el('div', null, el('label', { for: 'code', text: 'Code' }),
+				el('input', { id: 'code', name: 'code', required: true, autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: '12' })),
 			el('button', { type: 'submit', text: 'Verify' }),
-			el('div', { class: 'error', role: 'alert' })));
-		app.querySelector('#code').focus();
+			el('div', { class: 'error', role: 'alert' }));
+		loginScreen(form);
+		form.code.focus();
 	}
 
 	// Platform admins set up two-factor login before using the dashboard.
 	function renderTwoFactorSetup() {
-		var box = el('div', { class: 'login' }, el('h1', { text: 'Set up two-factor login' }),
+		var box = el('div', { class: 'panel' }, el('h1', { text: 'Set up two-factor login' }),
 			el('p', { class: 'muted', text: 'The platform dashboard requires a code from an authenticator app, such as Google Authenticator, 1Password or Authy.' }),
-			el('p', { class: 'muted', text: 'Loading…' }));
-		app.replaceChildren(box);
+			loading());
+		loginScreen(box);
 		api('POST', '2fa/setup').then(function (d) {
 			var err = el('div', { class: 'error', role: 'alert' });
-			var form = el('form', { onsubmit: function (e) {
+			var form = el('form', { style: 'display:grid;gap:0.9rem', onsubmit: function (e) {
 				e.preventDefault();
 				api('POST', '2fa/enable', { code: e.target.code.value }).then(function (r) {
 					box.replaceChildren(el('h1', { text: 'Recovery codes' }),
-						el('p', { class: 'muted', text: 'Each code logs you in once if you lose your phone. Keep them somewhere safe: they won\u2019t be shown again.' }),
+						el('p', { class: 'muted', text: 'Each code logs you in once if you lose your phone. Keep them somewhere safe: they won’t be shown again.' }),
 						el('pre', { text: r.recovery_codes.join('\n') }),
-						el('button', { onclick: function () { boot(); }, text: 'I\u2019ve saved them' }));
+						el('button', { onclick: function () { boot(); }, text: 'I’ve saved them' }));
 				}).catch(function (x) { err.textContent = x.message; });
 			} },
-				el('label', { for: 'code', text: 'The 6-digit code the app shows' }),
-				el('input', { id: 'code', name: 'code', required: true, autocomplete: 'one-time-code', maxlength: '6' }),
+				el('div', null, el('label', { for: 'code', text: 'The 6-digit code the app shows' }),
+					el('input', { id: 'code', name: 'code', required: true, autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: '6' })),
 				el('button', { type: 'submit', text: 'Turn on' }), err);
 			box.replaceChildren(el('h1', { text: 'Set up two-factor login' }),
 				el('p', { class: 'muted', text: 'Scan this QR code with your authenticator app, or enter the key.' }),
-				el('img', { src: d.qr, alt: 'QR code', style: 'width:200px;height:200px;background:#fff;padding:8px;border-radius:8px' }),
-				el('p', null, 'Key: ', el('code', { text: d.secret })), form);
+				el('img', { src: d.qr, alt: 'QR code', style: 'width:200px;height:200px;background:#fff;padding:8px;border-radius:8px;justify-self:center' }),
+				el('p', { class: 'muted' }, 'Key: ', el('code', { text: d.secret })), form);
 		}).catch(fail);
 	}
 
 	function layout(active, content) {
-		function link(href, label, key) { return el('a', { href: href, class: key === active ? 'on' : null, text: label }); }
-		app.replaceChildren(
-			el('header', null, el('strong', { text: 'Platform admin' }),
-				el('nav', null, link('#/', 'Overview', 'overview'), link('#/workspaces', 'Workspaces', 'workspaces'), link('#/audit', 'Audit log', 'audit'), link('#/settings', 'Settings', 'settings')),
-				el('span', { class: 'muted', text: me.email }),
-				el('button', { class: 'ghost', onclick: function () { api('POST', 'logout').then(function () { me = null; renderLogin(); }).catch(fail); }, text: 'Log out' })),
-			el('main', null, content));
+		function link(href, label, key) {
+			return el('a', { href: href, class: key === active ? 'on' : null, 'aria-current': key === active ? 'page' : null }, icon(key), label);
+		}
+		app.replaceChildren(el('div', { class: 'shell' },
+			el('aside', { class: 'side' }, brand(),
+				el('nav', { 'aria-label': 'Sections' }, link('#/', 'Overview', 'overview'), link('#/workspaces', 'Workspaces', 'workspaces'),
+					link('#/audit', 'Audit log', 'audit'), link('#/settings', 'Settings', 'settings')),
+				el('div', { class: 'who' }, el('div', { class: 'email muted', title: me.email, text: me.email }),
+					el('button', { class: 'ghost sm', onclick: function () { api('POST', 'logout').then(function () { me = null; renderLogin(); }).catch(fail); } }, icon('logout'), 'Log out'))),
+			el('main', null, el('div', { class: 'content' }, content))));
+		window.scrollTo(0, 0);
+	}
+
+	function newWorkspaceButton() {
+		return el('button', { onclick: function () { location.hash = '#/workspaces/new'; } }, icon('plus'), 'New workspace');
 	}
 
 	function overview() {
-		layout('overview', el('p', { class: 'muted', text: 'Loading…' }));
+		layout('overview', loading());
 		api('GET', 'overview').then(function (o) {
+			var most = Math.max.apply(null, o.plans.map(function (p) { return p.count; }).concat([1]));
 			layout('overview', [
-				el('h1', { text: 'Overview' }),
-				el('div', { class: 'cards' },
-					card(o.workspaces, 'Workspaces'), card(o.active, 'Active'), card(o.suspended, 'Suspended'),
-					card(o.agents, 'Agents'), card(o.conversations_30d, 'Conversations, 30 days')),
-				el('h2', { text: 'Plans' }),
-				table(['Plan', 'Workspaces'], o.plans.map(function (p) {
-					return { cells: [p.plan, String(p.count)] };
-				}))
+				pageHead('Overview', null, newWorkspaceButton()),
+				stats([[fmt(o.workspaces), 'Workspaces'], [fmt(o.active), 'Active'], [fmt(o.suspended), 'Suspended'],
+					[fmt(o.agents), 'Agents'], [fmt(o.conversations_30d), 'Conversations, last 30 days']]),
+				panel('Workspaces by plan', null, o.plans.length ? el('div', { class: 'dist' }, o.plans.map(function (p) {
+					return el('div', { class: 'row' }, el('span', { class: 'chip', text: p.plan, style: 'justify-self:start' }),
+						el('div', { class: 'bar' }, el('i', { style: 'width:' + (p.count / most * 100) + '%' })),
+						el('span', { class: 'n', text: fmt(p.count) }));
+				})) : el('p', { class: 'muted', text: 'No workspaces yet.' }), {
+					actions: el('a', { href: '#/workspaces', class: 'button', style: 'padding:0.3rem 0.65rem;font-size:0.85rem', text: 'All workspaces' })
+				})
 			]);
 		}).catch(fail);
 	}
 
 	var listState = { q: '', status: '', page: 1 };
 	function workspaces() {
-		var search = el('input', { type: 'search', placeholder: 'Search name, address, domain or agent email', value: listState.q });
-		var status = el('select', null, [['', 'All statuses'], ['active', 'Active'], ['suspended', 'Suspended']].map(function (o) {
-			return el('option', { value: o[0], selected: o[0] === listState.status, text: o[1] });
+		var search = el('input', { type: 'search', placeholder: 'Search by name, address, domain or agent email', value: listState.q, 'aria-label': 'Search workspaces' });
+		var seg = el('div', { class: 'seg', role: 'group', 'aria-label': 'Status' }, [['', 'All'], ['active', 'Active'], ['suspended', 'Suspended']].map(function (o) {
+			return el('button', { type: 'button', class: o[0] === listState.status ? 'on' : null, 'aria-pressed': o[0] === listState.status ? 'true' : 'false',
+				onclick: function (e) {
+					listState.status = o[0]; listState.page = 1;
+					Array.prototype.forEach.call(seg.children, function (b) { b.className = b === e.currentTarget ? 'on' : ''; b.setAttribute('aria-pressed', b === e.currentTarget); });
+					load();
+				}, text: o[1] });
 		}));
-		var results = el('div', null, el('p', { class: 'muted', text: 'Loading…' }));
+		var body = el('div', null, loading());
+		var foot = el('div', { style: 'display:contents' });
 		var timer;
 		function load() {
 			var qs = 'q=' + encodeURIComponent(listState.q) + '&status=' + listState.status + '&page=' + listState.page;
 			api('GET', 'workspaces?' + qs).then(function (d) {
 				var pages = Math.max(1, Math.ceil(d.total / d.page_size));
-				results.replaceChildren(
-					table(['Workspace', 'Plan', 'Status', 'Agents', 'Inboxes', 'Conversations 30d', 'Last active', 'Created'],
-						d.results.map(function (w) {
-							return { item: w, cells: [
-								el('div', null, el('div', { text: w.name }), el('div', { class: 'muted', text: w.custom_domain || (w.slug + '.{{ .Data.BaseDomain }}') })),
-								w.plan, badge(w.status), String(w.agents), String(w.inboxes), String(w.conversations_30d), ago(w.last_active_at), date(w.created_at)] };
-						}), function (w) { location.hash = '#/workspaces/' + w.id; }),
-					el('div', { class: 'pager' },
-						el('span', { class: 'muted', text: d.total + ' workspaces · page ' + d.page + ' of ' + pages }),
-						el('button', { class: 'ghost', disabled: d.page <= 1, onclick: function () { listState.page--; load(); }, text: 'Previous' }),
-						el('button', { class: 'ghost', disabled: d.page >= pages, onclick: function () { listState.page++; load(); }, text: 'Next' })));
+				body.replaceChildren(table(
+					['Workspace', 'Plan', 'Status', ['Agents', 'r'], ['Inboxes', 'r'], ['Conversations, 30 days', 'r'], 'Last active', 'Created'],
+					d.results.map(function (w) {
+						return { item: w, cells: [
+							el('div', null, el('div', { text: w.name, style: 'font-weight:500' }), el('div', { class: 'sub', text: address(w) })),
+							el('span', { class: 'chip', text: w.plan }), badge(w.status), fmt(w.agents), fmt(w.inboxes), fmt(w.conversations_30d),
+							ago(w.last_active_at), date(w.created_at)] };
+					}), function (w) { location.hash = '#/workspaces/' + w.id; },
+					listState.q || listState.status ? 'No workspaces match. Try another search or status.' : 'No workspaces yet. Create the first one.'));
+				foot.replaceChildren(
+					el('span', { class: 'muted num', text: fmt(d.total) + (d.total === 1 ? ' workspace' : ' workspaces') + (pages > 1 ? ', page ' + d.page + ' of ' + pages : '') }),
+					el('div', { class: 'inline' },
+						el('button', { class: 'ghost sm', disabled: d.page <= 1, onclick: function () { listState.page--; load(); }, text: 'Previous' }),
+						el('button', { class: 'ghost sm', disabled: d.page >= pages, onclick: function () { listState.page++; load(); }, text: 'Next' })));
 			}).catch(fail);
 		}
 		search.addEventListener('input', function () {
 			clearTimeout(timer);
 			timer = setTimeout(function () { listState.q = search.value; listState.page = 1; load(); }, 250);
 		});
-		status.addEventListener('change', function () { listState.status = status.value; listState.page = 1; load(); });
 		layout('workspaces', [
-			el('div', { class: 'head', style: 'justify-content:space-between' }, el('h1', { text: 'Workspaces' }),
-				el('button', { onclick: function () { location.hash = '#/workspaces/new'; }, text: 'New workspace' })),
-			el('div', { class: 'toolbar' }, search, status), results]);
+			pageHead('Workspaces', null, newWorkspaceButton()),
+			el('section', { class: 'panel' },
+				el('div', { class: 'toolbar' }, el('div', { class: 'search' }, icon('search'), search), seg),
+				body, el('div', { class: 'panel-foot' }, foot))]);
 		load();
 		search.focus();
 	}
 
 	var channelNames = { email: 'Email', livechat: 'Live chat', whatsapp: 'WhatsApp', messenger: 'Messenger',
 		instagram: 'Instagram', telegram: 'Telegram', voice: 'Phone calls (Exotel)' };
+	var integrationNames = { webhooks: 'Webhooks', slack: 'Slack', teams: 'Microsoft Teams', context_links: 'Context links' };
 
-	// channelPicker is an "every channel" switch over a checkbox per channel.
-	// value() returns { all_channels, channels } for the API.
-	function channelPicker(selected, all) {
-		var allBox = el('input', { type: 'checkbox', checked: !!all });
-		var boxes = me.channels.map(function (c) {
-			return el('input', { type: 'checkbox', value: c, checked: !all && selected.indexOf(c) >= 0 });
+	// picker is an "every one" switch over a switch per option. value() returns
+	// { all, picked }; onchange runs on every change.
+	function picker(options, names, selected, all, allText, cols, onchange) {
+		var allBox = el('input', { type: 'checkbox', class: 'switch', checked: !!all });
+		var boxes = options.map(function (c) {
+			return el('input', { type: 'checkbox', class: 'switch', value: c, checked: !all && selected.indexOf(c) >= 0 });
 		});
-		var labels = boxes.map(function (b) { return el('label', null, b, channelNames[b.value] || b.value); });
+		var rows = boxes.map(function (b) { return el('label', { class: 'opt' }, el('span', { text: names[b.value] || b.value }), b); });
 		function sync() {
-			boxes.forEach(function (b, i) { b.disabled = allBox.checked; labels[i].className = allBox.checked ? 'off' : ''; });
+			boxes.forEach(function (b, i) { b.disabled = allBox.checked; rows[i].className = 'opt' + (allBox.checked ? ' off' : ''); });
 		}
-		allBox.addEventListener('change', sync);
+		[allBox].concat(boxes).forEach(function (b) { b.addEventListener('change', function () { sync(); if (onchange) onchange(); }); });
 		sync();
-		var node = el('div', null,
-			el('div', { class: 'check', style: 'margin-bottom:0.6rem' }, allBox,
-				el('span', { text: 'Every channel, including ones added later' })),
-			el('div', { class: 'channels' }, labels));
 		return {
-			node: node,
+			node: el('div', { class: 'opts' + (cols ? ' cols' : '') }, el('label', { class: 'opt master' }, el('span', { text: allText }), allBox), rows),
 			value: function () {
-				return {
-					all_channels: allBox.checked,
-					channels: boxes.filter(function (b) { return b.checked; }).map(function (b) { return b.value; })
-				};
+				return { all: allBox.checked, picked: boxes.filter(function (b) { return b.checked; }).map(function (b) { return b.value; }) };
 			}
 		};
 	}
 
+	// channelPicker picks inbox channels; value() returns { all_channels, channels } for the API.
+	function channelPicker(selected, all, cols, onchange) {
+		var p = picker(me.channels, channelNames, selected, all, 'Every channel, including new ones', cols, onchange);
+		return { node: p.node, value: function () { var v = p.value(); return { all_channels: v.all, channels: v.picked }; } };
+	}
+
+	// integrationPicker picks integrations; value() returns { all_integrations, integrations } for the API.
+	function integrationPicker(selected, all, cols, onchange) {
+		var p = picker(me.integrations, integrationNames, selected, all, 'Every integration, including new ones', cols, onchange);
+		return { node: p.node, value: function () { var v = p.value(); return { all_integrations: v.all, integrations: v.picked }; } };
+	}
+
+	function field(label, input, hint) {
+		return el('div', null, el('label', { class: 'f', for: input.id || null, text: label }), input, hint ? el('div', { class: 'hint', text: hint }) : null);
+	}
+
 	function newWorkspace() {
-		var plan = el('select', { name: 'plan' }, me.plans.map(function (p) {
-			return el('option', { value: p, selected: p === me.default_plan, text: p });
+		var plan = el('select', { name: 'plan', id: 'plan' }, me.plans.map(function (p) {
+			return el('option', { value: p, selected: p === me.default_plan, text: cap(p) });
 		}));
-		var picker = channelPicker([], false);
+		var channels = channelPicker([], false, true);
+		var integrations = integrationPicker([], true, true);
 		var err = el('div', { class: 'error', role: 'alert' });
-		function field(label, input, hint) {
-			return el('div', null, el('label', { text: label }), input, hint ? el('div', { class: 'muted', style: 'font-size:0.8rem;margin-top:0.25rem', text: hint }) : null);
-		}
-		var form = el('form', { class: 'form', onsubmit: function (e) {
+		var submit = el('button', { type: 'submit', text: 'Create workspace' });
+		var form = el('form', { class: 'content', style: 'max-width:820px;margin:0;width:100%', onsubmit: function (e) {
 			e.preventDefault();
-			var f = e.target, ch = picker.value(), btn = f.querySelector('button[type=submit]');
+			var f = e.target, ch = channels.value(), ig = integrations.value();
 			err.textContent = '';
-			if (!ch.all_channels && !ch.channels.length) { err.textContent = 'Pick at least one channel.'; return; }
-			btn.disabled = true;
+			if (!ch.all_channels && !ch.channels.length) { err.textContent = 'Turn on at least one channel.'; return; }
+			submit.disabled = true;
 			api('POST', 'workspaces', {
 				company: f.company.value, slug: f.slug.value,
 				first_name: f.first_name.value, last_name: f.last_name.value,
 				email: f.email.value, password: f.password.value,
-				plan: plan.value, channels: ch.channels, all_channels: ch.all_channels
+				plan: plan.value, channels: ch.channels, all_channels: ch.all_channels,
+				integrations: ig.integrations, all_integrations: ig.all_integrations
 			}).then(function (d) {
 				toast('Created ' + d.url);
 				location.hash = '#/workspaces/' + d.id;
-			}).catch(function (x) { err.textContent = x.message; btn.disabled = false; });
+			}).catch(function (x) { err.textContent = x.message; submit.disabled = false; });
 		} },
-			el('h2', { text: 'Organization', style: 'margin-top:0' }),
-			field('Name', el('input', { name: 'company', required: true, maxlength: '140', placeholder: 'Acme Tuition' })),
-			field('Address', el('input', { name: 'slug', required: true, pattern: '[a-z0-9][a-z0-9\\-]{1,61}[a-z0-9]', placeholder: 'acme' }),
-				'Lowercase letters, numbers and dashes. The workspace is served on <address>.{{ .Data.BaseDomain }}.'),
-			field('Plan', plan),
-			el('h2', { text: 'First admin' }),
-			el('div', { class: 'pair' },
-				field('First name', el('input', { name: 'first_name', required: true, maxlength: '140' })),
-				field('Last name', el('input', { name: 'last_name', maxlength: '140' }))),
-			field('Email', el('input', { name: 'email', type: 'email', required: true, autocomplete: 'off' })),
-			field('Password', el('input', { name: 'password', type: 'password', required: true, minlength: '10', autocomplete: 'new-password' }),
-				'10+ characters with upper and lowercase letters, a number and a symbol. Share it securely; they can change it after logging in.'),
-			el('h2', { text: 'Channels' }),
-			el('p', { class: 'muted', style: 'margin:0', text: 'The inbox channels this organization can set up. You can change this later.' }),
-			picker.node,
-			el('div', null, el('button', { type: 'submit', text: 'Create workspace' })), err);
-		layout('workspaces', [
-			el('p', null, el('a', { href: '#/workspaces', class: 'muted', text: '← Workspaces' })),
-			el('h1', { text: 'New workspace' }), form]);
-	}
-
-	function limit(used, max) { return used + ' / ' + (max ? max : '∞'); }
-	function size(bytes) {
-		var units = ['B', 'KB', 'MB', 'GB', 'TB'], i = 0;
-		while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
-		return (i ? bytes.toFixed(1) : bytes) + ' ' + units[i];
+			panel('Organization', null, el('div', { class: 'form' },
+				field('Name', el('input', { id: 'company', name: 'company', required: true, maxlength: '140', placeholder: 'Acme Tuition' })),
+				el('div', { class: 'pair' },
+					field('Address', el('div', { class: 'addr' },
+						el('input', { id: 'slug', name: 'slug', required: true, pattern: '[a-z0-9][a-z0-9\\-]{1,61}[a-z0-9]', placeholder: 'acme', autocomplete: 'off' }),
+						el('span', { text: '.' + baseDomain })), 'Lowercase letters, numbers and dashes.'),
+					field('Plan', plan)))),
+			panel('First admin', 'They log in with this email and password. Share the password securely; they can change it after logging in.', el('div', { class: 'form' },
+				el('div', { class: 'even' },
+					field('First name', el('input', { id: 'first_name', name: 'first_name', required: true, maxlength: '140' })),
+					field('Last name', el('input', { id: 'last_name', name: 'last_name', maxlength: '140' }))),
+				field('Email', el('input', { id: 'email', name: 'email', type: 'email', required: true, autocomplete: 'off' })),
+				field('Password', el('input', { id: 'password', name: 'password', type: 'password', required: true, minlength: '10', autocomplete: 'new-password' }),
+					'10 or more characters, with upper and lowercase letters, a number and a symbol.'))),
+			panel('Channels', 'The inbox channels this organization can set up. You can change this later.', channels.node),
+			panel('Integrations', 'What this organization can set up under Admin, Integrations. You can change this later.', integrations.node),
+			el('div', { class: 'inline', style: 'gap:1rem;flex-wrap:wrap' }, submit,
+				el('a', { href: '#/workspaces', class: 'button', text: 'Cancel' }), err));
+		layout('workspaces', [el('div', { class: 'page-head' }, el('div', { class: 't' }, backLink('#/workspaces', 'Workspaces'), el('h1', { text: 'New workspace' }))), form]);
+		form.company.focus();
 	}
 
 	function workspace(id) {
-		layout('workspaces', el('p', { class: 'muted', text: 'Loading…' }));
+		layout('workspaces', loading());
 		api('GET', 'workspaces/' + id).then(function (d) { renderWorkspace(d); }).catch(fail);
+	}
+
+	// saveablePicker is a picker panel whose save button only enables once
+	// something changed.
+	function saveablePicker(title, desc, make, save) {
+		var btn = el('button', { class: 'sm', disabled: true, text: 'Save' });
+		var initial;
+		var p = make(function () { btn.disabled = JSON.stringify(p.value()) === initial; });
+		initial = JSON.stringify(p.value());
+		btn.addEventListener('click', function () { btn.disabled = true; save(p.value()).catch(function (e) { btn.disabled = false; fail(e); }); });
+		return panel(title, desc, p.node, { actions: btn });
 	}
 
 	function renderWorkspace(d) {
 		var w = d.workspace;
-		var plan = el('select', null, me.plans.concat(me.plans.indexOf(w.plan) < 0 ? [w.plan] : []).map(function (p) {
-			return el('option', { value: p, selected: p === w.plan, text: p });
-		}));
-		function act(p) { return p.then(renderWorkspace).then(function () { toast('Saved'); }).catch(fail); }
 		var deleting = !!w.deletion_scheduled_at;
-		var actions = el('div', { class: 'actions' },
-			d['default'] ? el('span', { class: 'muted', text: 'The default workspace can’t be suspended or deleted.' }) : deleting ? [
-				el('span', { class: 'badge suspended', text: 'Deletes on ' + date(w.deletion_scheduled_at) }),
-				el('button', { onclick: function () { act(api('POST', 'workspaces/' + w.id + '/restore')); }, text: 'Restore' }),
-				el('button', { class: 'danger', onclick: function () {
+		function act(p, msg) { return p.then(renderWorkspace).then(function () { toast(msg || 'Saved'); }).catch(fail); }
+
+		var plan = el('select', { 'aria-label': 'Plan' }, me.plans.concat(me.plans.indexOf(w.plan) < 0 ? [w.plan] : []).map(function (p) {
+			return el('option', { value: p, selected: p === w.plan, text: cap(p) });
+		}));
+		var planBtn = el('button', { class: 'ghost sm', disabled: true, text: 'Change',
+			onclick: function () { act(api('PUT', 'workspaces/' + w.id + '/plan', { plan: plan.value }), 'Plan changed to ' + cap(plan.value)); } });
+		plan.addEventListener('change', function () { planBtn.disabled = plan.value === w.plan; });
+
+		var details = panel('Details', null, el('dl', { class: 'kv' },
+			el('dt', { text: 'Plan' }), el('dd', null, el('div', { class: 'inline' }, plan, planBtn)),
+			el('dt', { text: 'Status' }), el('dd', null, badge(deleting ? 'deleting' : w.status)),
+			el('dt', { text: 'Address' }), el('dd', null, el('a', { href: d.url, target: '_blank', rel: 'noopener', text: d.url.replace(/^https?:\/\//, '') })),
+			el('dt', { text: 'Created' }), el('dd', { text: date(w.created_at) }),
+			el('dt', { text: 'Workspace ID' }), el('dd', { class: 'num', text: String(w.id) })));
+
+		var channels = saveablePicker('Channels',
+			'Turning one off switches off its inboxes until you turn it back on.',
+			function (onchange) { return channelPicker(d.channels || [], d.all_channels, false, onchange); },
+			function (ch) {
+				if (!ch.all_channels && !ch.channels.length && !confirm('Leave ' + w.name + ' with no channels? All its inboxes will be switched off.')) return Promise.reject(new Error('Not saved'));
+				return api('PUT', 'workspaces/' + w.id + '/channels', ch).then(function (r) { renderWorkspace(r); toast('Channels saved'); });
+			});
+
+		var integrations = saveablePicker('Integrations',
+			'Turning one off hides it and stops it sending. Its setup is kept.',
+			function (onchange) { return integrationPicker(d.integrations || [], d.all_integrations, false, onchange); },
+			function (ig) {
+				return api('PUT', 'workspaces/' + w.id + '/integrations', ig).then(function (r) { renderWorkspace(r); toast('Integrations saved'); });
+			});
+
+		function dangerRow(title, desc, button) {
+			return el('div', { class: 'danger-row' }, el('div', null, el('div', { text: title, style: 'font-weight:500' }), el('div', { class: 'd', text: desc })), button);
+		}
+		var danger = d['default'] ? null : deleting ? null : panel('Danger zone', null, [
+			w.status === 'active'
+				? dangerRow('Suspend', 'Agents and customers see a suspended page until you activate it.', el('button', { class: 'danger-ghost sm', onclick: function () {
+					if (confirm('Suspend ' + w.name + '? Its agents and customers get a "suspended" page until you activate it.'))
+						act(api('PUT', 'workspaces/' + w.id + '/status', { status: 'suspended' }), 'Suspended');
+				}, text: 'Suspend' }))
+				: dangerRow('Activate', 'Agents and customers can use it again.', el('button', { class: 'ghost sm', onclick: function () {
+					act(api('PUT', 'workspaces/' + w.id + '/status', { status: 'active' }), 'Activated');
+				}, text: 'Activate' })),
+			dangerRow('Delete', 'Suspends it now and deletes all its data after the grace period. You can restore it until then.', el('button', { class: 'danger sm', onclick: function () {
+				var typed = prompt('Suspend ' + w.name + ' now and delete it with ALL its data after the grace period? Until then you can restore it.\nType its address, ' + w.slug + ', to confirm:');
+				if (typed === null) return;
+				act(api('POST', 'workspaces/' + w.id + '/delete', { confirm: typed }), 'Scheduled for deletion');
+			}, text: 'Delete' }))
+		], { cls: 'danger' });
+
+		var banner = deleting ? el('div', { class: 'banner', role: 'status' },
+			el('span', null, el('strong', { text: 'Scheduled for deletion. ' }), 'It and all its data are deleted on ' + date(w.deletion_scheduled_at) + '.'),
+			el('div', { class: 'acts' },
+				el('button', { class: 'ghost sm', onclick: function () { act(api('POST', 'workspaces/' + w.id + '/restore'), 'Restored'); }, text: 'Restore' }),
+				el('button', { class: 'danger sm', onclick: function () {
 					var typed = prompt('Delete ' + w.name + ' and ALL its data NOW, without waiting? This can’t be undone.\nType its address, ' + w.slug + ', to confirm:');
 					if (typed === null) return;
 					api('POST', 'workspaces/' + w.id + '/delete', { confirm: typed, now: true }).then(function () {
 						toast('Deleted ' + w.slug); location.hash = '#/workspaces';
 					}).catch(fail);
-				}, text: 'Delete now' })
-			] : [
-				w.status === 'active'
-					? el('button', { class: 'ghost', onclick: function () {
-						if (confirm('Suspend ' + w.name + '? Its agents and customers get a "suspended" page until you activate it.'))
-							act(api('PUT', 'workspaces/' + w.id + '/status', { status: 'suspended' }));
-					}, text: 'Suspend' })
-					: el('button', { onclick: function () { act(api('PUT', 'workspaces/' + w.id + '/status', { status: 'active' })); }, text: 'Activate' })
-			],
-			el('span', { class: 'muted', text: 'Plan' }), plan,
-			el('button', { class: 'ghost', onclick: function () {
-				if (plan.value !== w.plan) act(api('PUT', 'workspaces/' + w.id + '/plan', { plan: plan.value }));
-			}, text: 'Change plan' }),
-			d['default'] || deleting ? null : el('button', { class: 'danger', onclick: function () {
-				var typed = prompt('Suspend ' + w.name + ' now and delete it with ALL its data after the grace period? Until then you can restore it.\nType its address, ' + w.slug + ', to confirm:');
-				if (typed === null) return;
-				act(api('POST', 'workspaces/' + w.id + '/delete', { confirm: typed }));
-			}, text: 'Delete' }));
+				}, text: 'Delete now' }))) : null;
 
-		var picker = channelPicker(d.channels || [], d.all_channels);
-		var channels = el('div', { class: 'form' },
-			el('p', { class: 'muted', style: 'margin:0', text: 'The inbox channels this workspace can set up. Taking one away switches off its inboxes of that channel; they stay off until you enable it again.' }),
-			picker.node,
-			el('div', null, el('button', { onclick: function () {
-				var ch = picker.value();
-				if (!ch.all_channels && !ch.channels.length && !confirm('Leave ' + w.name + ' with no channels? All its inboxes will be switched off.')) return;
-				api('PUT', 'workspaces/' + w.id + '/channels', ch).then(function (r) {
-					renderWorkspace(r); toast('Channels saved');
-				}).catch(fail);
-			}, text: 'Save channels' })));
+		var usage = panel('Usage', 'Against the limits of the ' + cap(w.plan) + ' plan.', [
+			el('div', { class: 'meters' },
+				meter('Agents', d.usage.agents, d.limits.agents),
+				meter('Inboxes', d.usage.inboxes, d.limits.inboxes),
+				meter('File storage', d.fair_use.storage_bytes, d.limits.storage_mb ? d.limits.storage_mb * 1048576 : 0, size),
+				meter('AI requests this month', d.fair_use.ai_requests_month, d.limits.ai_requests_per_month)),
+			el('dl', { class: 'facts' },
+				el('div', null, el('dt', { text: 'API rate limit' }), el('dd', { text: d.limits.api_requests_per_minute ? fmt(d.limits.api_requests_per_minute) + ' a minute' : 'No limit' })),
+				el('div', null, el('dt', { text: 'Throttled today' }), el('dd', { text: fmt(d.fair_use.throttled_today) })),
+				el('div', null, el('dt', { text: 'Largest upload' }), el('dd', { text: d.limits.file_upload_mb ? d.limits.file_upload_mb + ' MB' : 'Workspace setting' })))
+		]);
 
 		function impersonate(agent) {
 			api('POST', 'workspaces/' + w.id + '/impersonate', { user_id: agent.id }).then(function (r) {
@@ -440,114 +740,151 @@
 			}).catch(fail);
 		}
 
+		var agents = panel('Agents', null, table(['Name', 'Roles', 'Last active', 'Last login', ''], d.agents.map(function (a) {
+			return { cells: [
+				el('div', null, el('div', { text: (a.first_name + ' ' + a.last_name).trim(), style: 'font-weight:500' }), el('div', { class: 'sub', text: a.email || '' })),
+				a.roles.join(', '), ago(a.last_active_at), ago(a.last_login_at),
+				a.enabled && w.status === 'active'
+					? el('button', { class: 'ghost sm', title: 'Opens the workspace logged in as this agent. Recorded in both audit logs.', onclick: function () { impersonate(a); } }, 'Log in as', icon('external'))
+					: el('span', { class: 'muted', text: a.enabled ? 'Workspace suspended' : 'Disabled' })] };
+		}), null, 'No agents yet.'), { flush: true });
+
+		var domains = panel('Domains', null, table(['Domain', 'Status', 'Used for'], d.domains.map(function (x) {
+			var uses = (x.primary ? ['Workspace address'] : []).concat(x.help_centers.map(function (h) { return 'Help center ' + h; }));
+			return { cells: [x.hostname,
+				x.verified_at ? el('span', { class: 'badge active', text: 'Verified ' + date(x.verified_at) }) : el('span', { class: 'badge', text: 'Not verified' }),
+				uses.join(', ') || '—'] };
+		}), null, 'No custom domains. It is served on ' + w.slug + '.' + baseDomain + '.'), { flush: true });
+
+		var history = panel('History', 'What platform admins did to this workspace.', auditTable(d.audit, true), { flush: true });
+
 		layout('workspaces', [
-			el('p', null, el('a', { href: '#/workspaces', class: 'muted', text: '← Workspaces' })),
-			el('div', { class: 'head' }, el('h1', { text: w.name }), badge(w.status),
-				el('a', { href: d.url, target: '_blank', rel: 'noopener', class: 'muted', text: d.url })),
-			el('p', { class: 'muted', text: 'Created ' + date(w.created_at) + ' · plan ' + w.plan + ' · id ' + w.id }),
-			actions,
-			el('div', { class: 'cards' },
-				card(limit(d.usage.agents, d.limits.agents), 'Agents (plan limit)'),
-				card(limit(d.usage.inboxes, d.limits.inboxes), 'Inboxes (plan limit)'),
-				card(d.counts.contacts, 'Contacts'), card(d.counts.conversations, 'Conversations'),
-				card(d.counts.conversations_30d, 'Conversations, 30 days'), card(d.counts.help_centers, 'Help centers')),
-			el('h2', { text: 'Channels' }),
-			channels,
-			el('h2', { text: 'Fair use' }),
-			el('div', { class: 'cards' },
-				card(size(d.fair_use.storage_bytes) + ' / ' + (d.limits.storage_mb ? size(d.limits.storage_mb * 1048576) : '∞'), 'File storage'),
-				card(limit(d.fair_use.ai_requests_month, d.limits.ai_requests_per_month), 'AI requests this month'),
-				card(d.limits.api_requests_per_minute ? d.limits.api_requests_per_minute + '/min' : '∞', 'API rate limit'),
-				card(d.fair_use.throttled_today, 'Requests throttled today'),
-				card(d.limits.file_upload_mb ? d.limits.file_upload_mb + ' MB' : 'workspace setting', 'Largest upload')),
-			el('h2', { text: 'Agents' }),
-			table(['Name', 'Email', 'Roles', 'Last active', 'Last login', ''], d.agents.map(function (a) {
-				return { cells: [
-					(a.first_name + ' ' + a.last_name).trim(), a.email || '', a.roles.join(', '), ago(a.last_active_at), ago(a.last_login_at),
-					a.enabled && w.status === 'active'
-						? el('button', { class: 'ghost', title: 'Opens the workspace logged in as this agent. Recorded in both audit logs.', onclick: function () { impersonate(a); }, text: 'Log in as' })
-						: el('span', { class: 'muted', text: a.enabled ? 'workspace suspended' : 'disabled' })] };
-			})),
-			el('h2', { text: 'Domains' }),
-			table(['Domain', 'Status', 'Used for'], d.domains.map(function (x) {
-				var uses = (x.primary ? ['workspace address'] : []).concat(x.help_centers.map(function (h) { return 'help center ' + h; }));
-				return { cells: [x.hostname, x.verified_at ? 'verified ' + date(x.verified_at) : 'not verified', uses.join(', ') || '—'] };
-			})),
-			el('h2', { text: 'Platform audit for this workspace' }),
-			auditTable(d.audit)
+			pageHead(w.name, badge(deleting ? 'deleting' : w.status),
+				el('a', { href: d.url, target: '_blank', rel: 'noopener', class: 'button' }, 'Open workspace', icon('external')),
+				backLink('#/workspaces', 'Workspaces')),
+			banner,
+			stats([[fmt(d.counts.contacts), 'Contacts'], [fmt(d.counts.conversations), 'Conversations'],
+				[fmt(d.counts.conversations_30d), 'Conversations, last 30 days'], [fmt(d.counts.help_centers), 'Help centers']]),
+			el('div', { class: 'ws-grid' },
+				el('div', { class: 'ws-main' }, usage, agents, domains, history),
+				el('div', { class: 'ws-side' }, details, channels, integrations, danger))
 		]);
 	}
 
-	function auditTable(entries) {
-		return table(['When', 'Admin', 'Action', 'Workspace', 'Details', 'IP'], entries.map(function (e) {
-			var details = e.details && Object.keys(e.details).length ? JSON.stringify(e.details) : '';
-			return { item: e, cells: [new Date(e.created_at).toLocaleString(), e.admin_email, e.action.replace('_', ' '),
-				e.workspace_id ? el('a', { href: '#/workspaces/' + e.workspace_id, text: e.workspace_slug }) : (e.workspace_slug || '—'),
-				el('code', { text: details }), e.ip] };
-		}));
+	var actionNames = {
+		login: 'Logged in', logout: 'Logged out', suspend: 'Suspended', activate: 'Activated', change_plan: 'Changed plan',
+		'delete': 'Deleted', impersonate: 'Logged in as an agent', enable_2fa: 'Turned on two-factor login',
+		schedule_delete: 'Scheduled deletion', restore: 'Restored', update_mail: 'Updated the mail server',
+		create: 'Created', set_channels: 'Changed channels', set_integrations: 'Changed integrations', test_mail: 'Sent a test email'
+	};
+
+	function listOf(names, list, all, everything) {
+		if (all) return everything;
+		return list && list.length ? list.map(function (x) { return names[x] || x; }).join(', ') : 'None';
+	}
+
+	// auditSummary says in words what an audit entry's details hold.
+	function auditSummary(e) {
+		var d = e.details || {}, to = d.to || {};
+		switch (e.action) {
+		case 'change_plan': return cap(d.from) + ' to ' + cap(d.to);
+		case 'set_channels':
+			return listOf(channelNames, to.channels, to.all, 'Every channel') +
+				(d.disabled_inboxes && d.disabled_inboxes.length ? '; switched off ' + d.disabled_inboxes.length + ' inbox' + (d.disabled_inboxes.length === 1 ? '' : 'es') : '');
+		case 'set_integrations': return listOf(integrationNames, to.integrations, to.all, 'Every integration');
+		case 'create': return (d.name || '') + (d.plan ? ', ' + cap(d.plan) + ' plan' : '') + (d.admin_email ? ', admin ' + d.admin_email : '');
+		case 'schedule_delete': return d.deletes_at ? 'Deletes on ' + date(d.deletes_at) : '';
+		case 'delete': return d.name || '';
+		case 'impersonate': return d.user_id ? 'Agent #' + d.user_id : '';
+		case 'update_mail': return (d.host || '') + (d.enabled === false ? ', turned off' : '');
+		case 'test_mail': return (d.to || '') + (d.ok === false ? ', failed' : '');
+		case 'suspend': case 'activate': case 'restore': case 'login': case 'logout': case 'enable_2fa': return '';
+		}
+		return Object.keys(d).length ? JSON.stringify(d) : '';
+	}
+
+	function auditTable(entries, inWorkspace) {
+		var cols = inWorkspace ? ['When', 'Admin', 'Action', 'Details'] : ['When', 'Admin', 'Action', 'Workspace', 'Details', 'IP'];
+		return table(cols, entries.map(function (e) {
+			var when = el('span', { title: new Date(e.created_at).toLocaleString(), text: ago(e.created_at) });
+			var details = el('span', { class: 'muted', title: e.details && Object.keys(e.details).length ? JSON.stringify(e.details) : null, text: auditSummary(e) || '—' });
+			var cells = [when, e.admin_email, actionNames[e.action] || e.action.replace(/_/g, ' ')];
+			if (!inWorkspace) cells.push(e.workspace_id ? el('a', { href: '#/workspaces/' + e.workspace_id, text: e.workspace_slug }) : (e.workspace_slug || '—'));
+			cells.push(details);
+			if (!inWorkspace) cells.push(el('span', { class: 'muted num', text: e.ip || '—' }));
+			return { item: e, cells: cells };
+		}), null, 'Nothing recorded yet.');
 	}
 
 	function audit() {
-		layout('audit', el('p', { class: 'muted', text: 'Loading…' }));
+		layout('audit', loading());
 		api('GET', 'audit').then(function (entries) {
-			layout('audit', [el('h1', { text: 'Audit log' }), el('p', { class: 'muted', text: 'Everything platform admins did, newest first.' }), auditTable(entries)]);
+			layout('audit', [
+				pageHead('Audit log', null, null),
+				el('p', { class: 'muted', style: 'margin-top:-0.9rem', text: 'Everything platform admins did, newest first. Hover a time or a detail for the full record.' }),
+				el('section', { class: 'panel' }, auditTable(entries, false))]);
 		}).catch(fail);
 	}
 
 	// The platform's own mailer: the email of every workspace without mail
 	// settings of its own.
 	function settingsPage() {
-		layout('settings', el('p', { class: 'muted', text: 'Loading…' }));
+		layout('settings', loading());
 		api('GET', 'mail').then(function (d) {
 			var m = d.settings || {};
-			function field(label, input) { return el('div', null, el('label', { text: label }), input); }
 			function inp(name, value, attrs) {
-				var a = attrs || {}; a.name = name; a.value = value == null ? '' : value;
+				var a = attrs || {}; a.name = name; a.id = 'm_' + name; a.value = value == null ? '' : value;
 				return el('input', a);
 			}
 			function sel(name, value, options) {
-				return el('select', { name: name }, options.map(function (o) {
+				return el('select', { name: name, id: 'm_' + name }, options.map(function (o) {
 					return el('option', { value: o[0], selected: o[0] === value, text: o[1] });
 				}));
 			}
+			var save = el('button', { type: 'submit', text: 'Save' });
 			var form = el('form', { class: 'form', onsubmit: function (e) {
 				e.preventDefault();
 				var f = e.target;
+				save.disabled = true;
 				api('PUT', 'mail', {
 					enabled: f.enabled.checked,
 					host: f.host.value, port: parseInt(f.port.value, 10) || 0,
 					tls_type: f.tls_type.value, auth_protocol: f.auth_protocol.value,
 					username: f.username.value, password: f.password.value,
 					email_address: f.email_address.value, tls_skip_verify: f.tls_skip_verify.checked
-				}).then(function () { toast('Saved'); settingsPage(); }).catch(fail);
+				}).then(function () { toast('Saved'); settingsPage(); }).catch(function (x) { save.disabled = false; fail(x); });
 			} },
-				el('div', { class: 'check' }, el('input', { type: 'checkbox', id: 'enabled', name: 'enabled', checked: !!m.enabled }),
-					el('label', { for: 'enabled', style: 'margin:0', text: 'Send email through this server' })),
+				el('label', { class: 'opt master', style: 'border-bottom:1px solid var(--border);padding-bottom:0.9rem' },
+					el('span', { text: 'Send email through this server' }), el('input', { type: 'checkbox', class: 'switch', name: 'enabled', checked: !!m.enabled })),
 				el('div', { class: 'pair' },
 					field('SMTP host', inp('host', m.host, { placeholder: 'smtp.mailgun.org' })),
 					field('Port', inp('port', m.port || 587, { type: 'number', min: '1', max: '65535' }))),
-				el('div', { class: 'pair' },
+				el('div', { class: 'even' },
 					field('Security', sel('tls_type', m.tls_type || 'starttls', [['starttls', 'STARTTLS (port 587)'], ['tls', 'TLS (port 465)'], ['none', 'None']])),
 					field('Authentication', sel('auth_protocol', m.auth_protocol || 'login', [['login', 'Login'], ['plain', 'Plain'], ['cram', 'CRAM-MD5'], ['none', 'None']]))),
-				field('Username', inp('username', m.username, { placeholder: 'postmaster@mg.yourapp.com', autocomplete: 'off' })),
-				field('Password', inp('password', '', { type: 'password', autocomplete: 'new-password',
-					placeholder: d.has_password ? 'Saved; type to replace' : '' })),
-				field('From', inp('email_address', m.email_address, { placeholder: 'YourApp <noreply@mg.yourapp.com>' })),
-				el('div', { class: 'check' }, el('input', { type: 'checkbox', id: 'tls_skip_verify', name: 'tls_skip_verify', checked: !!m.tls_skip_verify }),
-					el('label', { for: 'tls_skip_verify', style: 'margin:0', text: 'Skip TLS certificate check (only for testing)' })),
-				el('div', null, el('button', { type: 'submit', text: 'Save' })));
+				el('div', { class: 'even' },
+					field('Username', inp('username', m.username, { placeholder: 'postmaster@mg.yourapp.com', autocomplete: 'off' })),
+					field('Password', inp('password', '', { type: 'password', autocomplete: 'new-password', placeholder: d.has_password ? 'Saved; type to replace' : '' }))),
+				field('From', inp('email_address', m.email_address, { placeholder: 'YourApp <noreply@mg.yourapp.com>' }), 'An address on the domain the server sends for.'),
+				el('label', { class: 'inline', style: 'font-size:0.88rem' }, el('input', { type: 'checkbox', name: 'tls_skip_verify', checked: !!m.tls_skip_verify }),
+					'Skip the TLS certificate check (only for testing)'),
+				el('div', null, save));
 
-			var to = el('input', { type: 'email', placeholder: 'you@example.com', style: 'flex:1;min-width:220px' });
-			var test = el('div', { class: 'toolbar' }, to, el('button', { class: 'ghost', onclick: function () {
+			var to = el('input', { type: 'email', placeholder: 'you@example.com', 'aria-label': 'Send the test to', style: 'flex:1;min-width:200px' });
+			var test = el('div', { class: 'inline', style: 'flex-wrap:wrap' }, to, el('button', { class: 'ghost', onclick: function () {
+				if (!to.value) { to.focus(); return; }
 				api('POST', 'mail/test', { to: to.value }).then(function () { toast('Test email sent to ' + to.value); }).catch(fail);
 			}, text: 'Send test email' }));
 
 			layout('settings', [
-				el('h1', { text: 'Email' }),
-				el('p', { class: 'muted', text: 'The platform\u2019s mail server. It sends the email of every workspace that hasn\u2019t set up its own under Admin \u2192 Notifications \u2192 Email; those go out with the workspace\u2019s name on your From address.' }),
-				el('div', { class: 'note' }, 'Mailgun: host ', el('code', { text: 'smtp.mailgun.org' }), ', port 587, STARTTLS, login; the username and password are the domain\u2019s SMTP credentials (Mailgun \u2192 Sending \u2192 Domain settings \u2192 SMTP credentials), and From is an address on that domain.'),
-				el('h2', { text: 'Mail server' }), form,
-				el('h2', { text: 'Test' }), el('p', { class: 'muted', text: 'Save first, then send a test to check the settings work.' }), test
+				pageHead('Email', null, null),
+				el('p', { class: 'muted', style: 'margin-top:-0.9rem;max-width:72ch', text: 'The platform’s mail server. It sends the email of every workspace that hasn’t set up its own under Admin, Notifications, Email; those go out with the workspace’s name on your From address.' }),
+				el('div', { class: 'ws-grid' },
+					el('div', { class: 'ws-main' }, panel('Mail server', null, form)),
+					el('div', { class: 'ws-side' },
+						panel('Send a test', 'Save first, then send a test to check the settings work.', test),
+						panel('Using Mailgun', null, el('div', { class: 'note', style: 'background:none;padding:0' },
+							'Host ', el('code', { text: 'smtp.mailgun.org' }), ', port 587, STARTTLS, Login. The username and password are the domain’s SMTP credentials, under Sending, Domain settings, SMTP credentials in Mailgun. From is an address on that domain.'))))
 			]);
 		}).catch(fail);
 	}
