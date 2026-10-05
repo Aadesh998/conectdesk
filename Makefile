@@ -103,7 +103,7 @@ test-frontend:
 test-db:
 	docker run -d --name conectdesk-test-db -p 127.0.0.1:5433:5432 \
 		-e POSTGRES_USER=conectdesk -e POSTGRES_PASSWORD=conectdesk -e POSTGRES_DB=conectdesk \
-		postgres:17-alpine
+		pgvector/pgvector:pg17
 
 .PHONY: test-db-down
 test-db-down:

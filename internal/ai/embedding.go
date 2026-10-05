@@ -3,12 +3,8 @@ package ai
 import (
 	"context"
 	"database/sql"
-	"encoding/binary"
-	"math"
-	"slices"
-	"sort"
+	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/conectdesk/conectdesk/internal/ai/models"
@@ -22,125 +18,15 @@ const reconcileInterval = 1 * time.Minute
 // maxConcurrentEmbeds caps background snippet embed jobs hitting the provider at once.
 const maxConcurrentEmbeds = 4
 
-// indexedChunk is one embedded chunk held in memory for brute-force search.
+// defaultSearchLimit bounds a search that asks for no particular number of results.
+const defaultSearchLimit = 10
+
+// indexedChunk is one embedded chunk, ready to be written to the embeddings table.
 type indexedChunk struct {
-	tenantID   int
 	sourceType string
 	sourceID   int
 	chunkText  string
 	vec        []float32
-	norm       float32
-}
-
-// embeddingIndex is an in-memory brute-force vector store. Each tenant's chunks
-// are kept apart, and every read and write names its tenant, so a search never
-// sees another tenant's knowledge.
-type embeddingIndex struct {
-	mu      sync.RWMutex
-	tenants map[int][]indexedChunk
-}
-
-func newEmbeddingIndex() *embeddingIndex {
-	return &embeddingIndex{tenants: make(map[int][]indexedChunk)}
-}
-
-// replaceAll replaces every tenant's chunks, grouping chunks by their tenant.
-func (ix *embeddingIndex) replaceAll(chunks []indexedChunk) {
-	byTenant := make(map[int][]indexedChunk)
-	for _, c := range chunks {
-		byTenant[c.tenantID] = append(byTenant[c.tenantID], c)
-	}
-	ix.mu.Lock()
-	defer ix.mu.Unlock()
-	ix.tenants = byTenant
-}
-
-// replaceWhere drops every chunk of the tenant matching drop, then appends chunks.
-func (ix *embeddingIndex) replaceWhere(tenantID int, drop func(indexedChunk) bool, chunks []indexedChunk) {
-	ix.mu.Lock()
-	defer ix.mu.Unlock()
-	cur := ix.tenants[tenantID]
-	kept := cur[:0:0]
-	for _, c := range cur {
-		if drop(c) {
-			continue
-		}
-		kept = append(kept, c)
-	}
-	for i := range chunks {
-		chunks[i].tenantID = tenantID
-	}
-	ix.tenants[tenantID] = append(kept, chunks...)
-}
-
-// replaceSourceIDs drops every chunk of the tenant's source type whose id is in ids, then appends chunks.
-func (ix *embeddingIndex) replaceSourceIDs(tenantID int, sourceType string, ids []int, chunks []indexedChunk) {
-	drop := make(map[int]bool, len(ids))
-	for _, id := range ids {
-		drop[id] = true
-	}
-	ix.replaceWhere(tenantID, func(c indexedChunk) bool { return c.sourceType == sourceType && drop[c.sourceID] }, chunks)
-}
-
-func (ix *embeddingIndex) removeSource(tenantID int, sourceType string, sourceID int) {
-	ix.replaceSourceIDs(tenantID, sourceType, []int{sourceID}, nil)
-}
-
-func (ix *embeddingIndex) removeSourceType(tenantID int, sourceType string) {
-	ix.replaceWhere(tenantID, func(c indexedChunk) bool { return c.sourceType == sourceType }, nil)
-}
-
-// chunksBySourceID returns a tenant's source type chunks keyed by source id; only valid for one-chunk-per-source types.
-func (ix *embeddingIndex) chunksBySourceID(tenantID int, sourceType string) map[int]indexedChunk {
-	ix.mu.RLock()
-	defer ix.mu.RUnlock()
-	out := make(map[int]indexedChunk)
-	for _, c := range ix.tenants[tenantID] {
-		if c.sourceType == sourceType {
-			out[c.sourceID] = c
-		}
-	}
-	return out
-}
-
-// search returns the tenant's top-k matches within the given source types and the count of chunks skipped for mismatched vector dimensions.
-func (ix *embeddingIndex) search(tenantID int, query []float32, k int, sourceTypes ...string) ([]models.SearchResult, int) {
-	ix.mu.RLock()
-	defer ix.mu.RUnlock()
-
-	qNorm := norm(query)
-	if qNorm == 0 {
-		return nil, 0
-	}
-
-	dimMismatch := 0
-	chunks := ix.tenants[tenantID]
-	results := make([]models.SearchResult, 0, len(chunks))
-	for _, c := range chunks {
-		if !slices.Contains(sourceTypes, c.sourceType) {
-			continue
-		}
-		if len(c.vec) != len(query) {
-			dimMismatch++
-			continue
-		}
-		if c.norm == 0 {
-			continue
-		}
-		score := dot(query, c.vec) / (qNorm * c.norm)
-		results = append(results, models.SearchResult{
-			SourceType: c.sourceType,
-			SourceID:   c.sourceID,
-			ChunkText:  c.chunkText,
-			Score:      float64(score),
-		})
-	}
-
-	sort.Slice(results, func(i, j int) bool { return results[i].Score > results[j].Score })
-	if k > 0 && len(results) > k {
-		results = results[:k]
-	}
-	return results, dimMismatch
 }
 
 // Search embeds the query and returns the tenant's top-k most similar knowledge chunks across snippets and help articles.
@@ -149,19 +35,13 @@ func (m *Manager) Search(tenantID int, ctx context.Context, query string, k int)
 }
 
 func (m *Manager) searchSources(tenantID int, ctx context.Context, query string, k int, sourceTypes ...string) ([]models.SearchResult, error) {
-	// A run arriving right after boot must not search the index before it has loaded.
-	select {
-	case <-m.indexReady:
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
 	qvec, err := m.GetEmbeddings(tenantID, ctx, query)
 	if err != nil {
 		return nil, err
 	}
-	results, dimMismatch := m.index.search(tenantID, qvec, k, sourceTypes...)
-	if dimMismatch > 0 {
-		m.lo.Warn("skipped stale embeddings with mismatched dimensions; reindex after changing the embedding model", "source_types", sourceTypes, "count", dimMismatch, "query_dimensions", len(qvec))
+	results, err := m.searchVectors(tenantID, ctx, qvec, k, sourceTypes...)
+	if err != nil {
+		return nil, err
 	}
 	m.lo.Debug("rag search", "source_types", sourceTypes, "query_len", len(query), "hits", len(results))
 	for i, r := range results {
@@ -170,7 +50,30 @@ func (m *Manager) searchSources(tenantID int, ctx context.Context, query string,
 	return results, nil
 }
 
-// Reindex re-chunks and re-embeds a source's content, replacing its stored and in-memory vectors.
+// searchVectors returns the tenant's top-k chunks of the given source types most similar to qvec.
+func (m *Manager) searchVectors(tenantID int, ctx context.Context, qvec []float32, k int, sourceTypes ...string) ([]models.SearchResult, error) {
+	if len(qvec) == 0 {
+		return nil, nil
+	}
+	if k <= 0 {
+		k = defaultSearchLimit
+	}
+	results := make([]models.SearchResult, 0, k)
+	if err := m.q.SearchEmbeddings.SelectContext(ctx, &results, tenantID, pq.Array(sourceTypes), vectorLiteral(qvec), len(qvec), k); err != nil {
+		m.lo.Error("error searching embeddings", "error", err, "source_types", sourceTypes)
+		return nil, err
+	}
+	if len(results) == 0 {
+		// Vectors from a previous embedding model can't be compared with the query; say so instead of failing silently.
+		var mismatched int
+		if err := m.q.CountMismatchedEmbeddings.GetContext(ctx, &mismatched, tenantID, pq.Array(sourceTypes), len(qvec)); err == nil && mismatched > 0 {
+			m.lo.Warn("skipped stale embeddings with mismatched dimensions; reindex after changing the embedding model", "source_types", sourceTypes, "count", mismatched, "query_dimensions", len(qvec))
+		}
+	}
+	return results, nil
+}
+
+// Reindex re-chunks and re-embeds a source's content, replacing its stored vectors.
 func (m *Manager) Reindex(tenantID int, sourceType string, sourceID int, title, htmlContent string) error {
 	indexed, err := m.embedSource(tenantID, m.ctx, sourceType, sourceID, title, htmlContent)
 	if err != nil {
@@ -208,13 +111,12 @@ func (m *Manager) embedSource(tenantID int, ctx context.Context, sourceType stri
 			sourceID:   sourceID,
 			chunkText:  chunk,
 			vec:        vecs[i],
-			norm:       norm(vecs[i]),
 		})
 	}
 	return indexed, nil
 }
 
-// commitEmbeddings replaces the stored and in-memory vectors of the given source ids. Caller must hold reindexMu.
+// commitEmbeddings replaces the stored vectors of the given source ids. Caller must hold reindexMu.
 func (m *Manager) commitEmbeddings(tenantID int, sourceType string, sourceIDs []int, indexed []indexedChunk) error {
 	tx, err := m.db.BeginTxx(context.Background(), &sql.TxOptions{})
 	if err != nil {
@@ -231,7 +133,7 @@ func (m *Manager) commitEmbeddings(tenantID int, sourceType string, sourceIDs []
 	}
 	insert := tx.Stmtx(m.q.InsertEmbedding)
 	for _, c := range indexed {
-		if _, err := insert.Exec(tenantID, sourceType, c.sourceID, c.chunkText, serializeEmbedding(c.vec), len(c.vec)); err != nil {
+		if _, err := insert.Exec(tenantID, sourceType, c.sourceID, c.chunkText, vectorLiteral(c.vec), len(c.vec)); err != nil {
 			m.lo.Error("error inserting embedding", "error", err, "source_id", c.sourceID)
 			return err
 		}
@@ -240,64 +142,22 @@ func (m *Manager) commitEmbeddings(tenantID int, sourceType string, sourceIDs []
 		m.lo.Error("error committing reindex transaction", "error", err)
 		return err
 	}
-
-	m.index.replaceSourceIDs(tenantID, sourceType, sourceIDs, indexed)
 	return nil
 }
 
-// RemoveEmbeddings drops all vectors for a source from the DB and memory.
+// RemoveEmbeddings drops all stored vectors for a source.
 func (m *Manager) RemoveEmbeddings(tenantID int, sourceType string, sourceID int) error {
 	m.reindexMu.Lock()
 	defer m.reindexMu.Unlock()
 	return m.removeEmbeddings(tenantID, sourceType, sourceID)
 }
 
-// removeEmbeddings drops all vectors for a source from the DB and memory. Caller must hold reindexMu.
+// removeEmbeddings drops all stored vectors for a source. Caller must hold reindexMu.
 func (m *Manager) removeEmbeddings(tenantID int, sourceType string, sourceID int) error {
 	if _, err := m.q.DeleteEmbeddingsBySource.Exec(tenantID, sourceType, sourceID); err != nil {
 		m.lo.Error("error deleting embeddings", "error", err)
 		return err
 	}
-	m.index.removeSource(tenantID, sourceType, sourceID)
-	return nil
-}
-
-// loadIndex loads all stored embeddings into memory at boot.
-// It loads every tenant; each chunk keeps its tenant.
-func (m *Manager) loadIndex() error {
-	m.reindexMu.Lock()
-	defer m.reindexMu.Unlock()
-
-	var rows []models.Embedding
-	if err := m.q.GetAllEmbeddings.Select(&rows); err != nil {
-		return err
-	}
-	chunks := make([]indexedChunk, 0, len(rows))
-	var vectorBytes, textBytes int
-	for _, r := range rows {
-		vec := deserializeEmbedding(r.Embedding)
-		if len(vec) == 0 {
-			continue
-		}
-		vectorBytes += len(vec) * 4
-		textBytes += len(r.ChunkText)
-		chunks = append(chunks, indexedChunk{
-			tenantID:   r.TenantID,
-			sourceType: r.SourceType,
-			sourceID:   int(r.SourceID),
-			chunkText:  r.ChunkText,
-			vec:        vec,
-			norm:       norm(vec),
-		})
-	}
-	m.index.replaceAll(chunks)
-	dimensions := 0
-	if len(chunks) > 0 {
-		dimensions = len(chunks[0].vec)
-	}
-	m.lo.Info("loaded embeddings into memory", "count", len(chunks), "dimensions", dimensions,
-		"vector_bytes", vectorBytes, "text_bytes", textBytes,
-		"approx_mb", math.Round(float64(vectorBytes+textBytes)/(1024*1024)*100)/100)
 	return nil
 }
 
@@ -367,35 +227,15 @@ func (m *Manager) reconcileTenant(ctx context.Context, tenantID int) {
 	m.reconcileTags(ctx, tenantID)
 }
 
-func serializeEmbedding(vec []float32) []byte {
-	buf := make([]byte, 4*len(vec))
+// vectorLiteral formats a vector in pgvector's text form, e.g. [0.1,-0.2], for a $n::vector parameter.
+func vectorLiteral(vec []float32) string {
+	buf := make([]byte, 0, len(vec)*12+2)
+	buf = append(buf, '[')
 	for i, f := range vec {
-		binary.LittleEndian.PutUint32(buf[i*4:], math.Float32bits(f))
+		if i > 0 {
+			buf = append(buf, ',')
+		}
+		buf = strconv.AppendFloat(buf, float64(f), 'g', -1, 32)
 	}
-	return buf
-}
-
-func deserializeEmbedding(b []byte) []float32 {
-	n := len(b) / 4
-	vec := make([]float32, n)
-	for i := range n {
-		vec[i] = math.Float32frombits(binary.LittleEndian.Uint32(b[i*4:]))
-	}
-	return vec
-}
-
-func dot(a, b []float32) float32 {
-	var sum float32
-	for i := range a {
-		sum += a[i] * b[i]
-	}
-	return sum
-}
-
-func norm(a []float32) float32 {
-	var sum float32
-	for _, v := range a {
-		sum += v * v
-	}
-	return float32(math.Sqrt(float64(sum)))
+	return string(append(buf, ']'))
 }

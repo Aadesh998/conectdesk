@@ -60,7 +60,7 @@ services:
 
   # PostgreSQL database
   db:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     container_name: conectdesk_db
     restart: unless-stopped
     networks:

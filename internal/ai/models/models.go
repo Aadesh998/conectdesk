@@ -130,29 +130,18 @@ type ToolAuthHeader struct {
 	Value string `json:"value"`
 }
 
-// Embedding is a stored chunk vector row.
-type Embedding struct {
-	ID         int64  `db:"id"`
-	TenantID   int    `db:"tenant_id"`
-	SourceType string `db:"source_type"`
-	SourceID   int64  `db:"source_id"`
-	ChunkText  string `db:"chunk_text"`
-	Embedding  []byte `db:"embedding"`
-	Dimensions int    `db:"dimensions"`
-}
-
 // TagRef is a tag id and name.
 type TagRef struct {
 	ID   int    `db:"id"`
 	Name string `db:"name"`
 }
 
-// SearchResult is one hit from the in-memory embedding search.
+// SearchResult is one hit from the pgvector similarity search; Score is cosine similarity.
 type SearchResult struct {
-	SourceType string  `json:"source_type"`
-	SourceID   int     `json:"source_id"`
-	ChunkText  string  `json:"chunk_text"`
-	Score      float64 `json:"score"`
+	SourceType string  `db:"source_type" json:"source_type"`
+	SourceID   int     `db:"source_id" json:"source_id"`
+	ChunkText  string  `db:"chunk_text" json:"chunk_text"`
+	Score      float64 `db:"score" json:"score"`
 }
 
 // ChatMessage is one OpenAI-compatible chat message.

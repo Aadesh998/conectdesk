@@ -62,9 +62,13 @@ CREATE TABLE embeddings (
 	source_type TEXT NOT NULL,
 	source_id BIGINT NOT NULL,
 	chunk_text TEXT NOT NULL,
-	embedding BYTEA,
+	-- Untyped so each tenant can pick its own embedding model; dimensions records the length,
+	-- and search only compares vectors of the query's length.
+	embedding vector NOT NULL,
 	dimensions INTEGER NOT NULL DEFAULT 0,
 	meta JSONB NOT NULL DEFAULT '{}'
 );
 CREATE INDEX index_embeddings_on_source_type_source_id ON embeddings(source_type, source_id);
 CREATE INDEX index_embeddings_on_tenant_id ON embeddings (tenant_id);
+-- Search scans one tenant's vectors of one length; this narrows it to exactly those rows.
+CREATE INDEX index_embeddings_on_tenant_source_type_dimensions ON embeddings (tenant_id, source_type, dimensions);

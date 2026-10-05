@@ -1,6 +1,8 @@
 -- Extensions and enum types.
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+-- pgvector stores knowledge base embeddings and runs similarity search in the database.
+CREATE EXTENSION IF NOT EXISTS vector;
 
 DROP TYPE IF EXISTS "channels" CASCADE; CREATE TYPE "channels" AS ENUM ('email', 'livechat', 'whatsapp', 'messenger', 'instagram', 'telegram', 'voice');
 DROP TYPE IF EXISTS "message_type" CASCADE; CREATE TYPE "message_type" AS ENUM ('incoming','outgoing','activity');

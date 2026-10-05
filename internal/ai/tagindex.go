@@ -15,15 +15,12 @@ func (m *Manager) reconcileTags(ctx context.Context, tenantID int) {
 		return
 	}
 
-	// Before the boot load finishes every tag reads as unindexed, which would re-embed the whole list.
-	select {
-	case <-m.indexReady:
-	case <-ctx.Done():
+	gen := m.tagGen.Load()
+	indexed, err := m.getTagEmbeddingTexts(tenantID)
+	if err != nil {
 		return
 	}
-
-	gen := m.tagGen.Load()
-	stale, removed := diffTagIndex(tags, m.index.chunksBySourceID(tenantID, models.SourceTag))
+	stale, removed := diffTagIndex(tags, indexed)
 	if len(stale) == 0 && len(removed) == 0 {
 		return
 	}
@@ -45,7 +42,6 @@ func (m *Manager) reconcileTags(ctx context.Context, tenantID int) {
 				sourceID:   t.ID,
 				chunkText:  t.Name,
 				vec:        vecs[i],
-				norm:       norm(vecs[i]),
 			})
 		}
 	}
@@ -67,8 +63,6 @@ func (m *Manager) purgeTagEmbeddings(tenantID int) {
 	m.reindexMu.Lock()
 	defer m.reindexMu.Unlock()
 	m.tagGen.Add(1)
-	// Clearing the index even on a failed delete keeps this self-healing: the next reconcile re-embeds every tag and overwrites the rows left behind.
-	m.index.removeSourceType(tenantID, models.SourceTag)
 	m.lo.Debug("reindex tags purged")
 	if _, err := m.q.DeleteEmbeddingsBySourceType.Exec(tenantID, models.SourceTag); err != nil {
 		m.lo.Error("error deleting tag embeddings", "error", err)
@@ -103,6 +97,23 @@ func (m *Manager) getTags(tenantID int) ([]models.TagRef, error) {
 	return tags, nil
 }
 
+// getTagEmbeddingTexts returns the text each embedded tag was embedded from, keyed by tag id.
+func (m *Manager) getTagEmbeddingTexts(tenantID int) (map[int]string, error) {
+	var rows []struct {
+		SourceID  int    `db:"source_id"`
+		ChunkText string `db:"chunk_text"`
+	}
+	if err := m.q.GetTagEmbeddingTexts.Select(&rows, tenantID); err != nil {
+		m.lo.Error("error fetching tag embeddings", "error", err)
+		return nil, err
+	}
+	out := make(map[int]string, len(rows))
+	for _, r := range rows {
+		out[r.SourceID] = r.ChunkText
+	}
+	return out, nil
+}
+
 func tagNames(tags []models.TagRef) []string {
 	names := make([]string, 0, len(tags))
 	for _, t := range tags {
@@ -112,14 +123,14 @@ func tagNames(tags []models.TagRef) []string {
 }
 
 // diffTagIndex reports which tags need embedding and which indexed source ids no longer belong; a blank name is dropped, not embedded.
-func diffTagIndex(tags []models.TagRef, indexed map[int]indexedChunk) (stale []models.TagRef, removed []int) {
+func diffTagIndex(tags []models.TagRef, indexed map[int]string) (stale []models.TagRef, removed []int) {
 	live := make(map[int]bool, len(tags))
 	for _, t := range tags {
 		if strings.TrimSpace(t.Name) == "" {
 			continue
 		}
 		live[t.ID] = true
-		if c, ok := indexed[t.ID]; ok && c.chunkText == t.Name {
+		if text, ok := indexed[t.ID]; ok && text == t.Name {
 			continue
 		}
 		stale = append(stale, t)

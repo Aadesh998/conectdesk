@@ -1,5 +1,5 @@
 // Package ai integrates with OpenAI-compatible LLM providers: agent-facing
-// prompts, an agentic tool-calling loop, embeddings, and in-memory retrieval.
+// prompts, an agentic tool-calling loop, embeddings, and pgvector retrieval.
 package ai
 
 import (
@@ -59,10 +59,7 @@ type Manager struct {
 	i18n          *i18ncat.Catalog
 	encryptionKey string
 	chunkCfg      stringutil.ChunkConfig
-	index         *embeddingIndex
-	// indexReady is closed once the boot-time index load finishes; Search blocks on it.
-	indexReady  chan struct{}
-	reindexMu   sync.Mutex
+	reindexMu     sync.Mutex
 	reconcileMu sync.Mutex
 	genMu       sync.Mutex
 	gen         map[genKey]uint64
@@ -125,7 +122,9 @@ type queries struct {
 	DeleteEmbeddingsBySource     *sqlx.Stmt `query:"delete-embeddings-by-source"`
 	DeleteEmbeddingsBySourceIDs  *sqlx.Stmt `query:"delete-embeddings-by-source-ids"`
 	DeleteEmbeddingsBySourceType *sqlx.Stmt `query:"delete-embeddings-by-source-type"`
-	GetAllEmbeddings             *sqlx.Stmt `query:"get-all-embeddings"`
+	SearchEmbeddings             *sqlx.Stmt `query:"search-embeddings"`
+	CountMismatchedEmbeddings    *sqlx.Stmt `query:"count-mismatched-embeddings"`
+	GetTagEmbeddingTexts         *sqlx.Stmt `query:"get-tag-embedding-texts"`
 	GetTags                      *sqlx.Stmt `query:"get-tags"`
 	GetTools                     *sqlx.Stmt `query:"get-tools"`
 	GetTool                      *sqlx.Stmt `query:"get-tool"`
@@ -163,8 +162,6 @@ func New(opts Opts) (*Manager, error) {
 		i18n:          opts.I18n,
 		encryptionKey: opts.EncryptionKey,
 		chunkCfg:      stringutil.DefaultChunkConfig(),
-		index:         newEmbeddingIndex(),
-		indexReady:    make(chan struct{}),
 		gen:           make(map[genKey]uint64),
 		embedSem:      make(chan struct{}, maxConcurrentEmbeds),
 		httpClient: &http.Client{
@@ -188,12 +185,6 @@ func New(opts Opts) (*Manager, error) {
 		m.tenantIDs = defaultTenantOnly
 	}
 	m.chunkCfg.TokenizerFunc = newTokenCounter(opts.Lo)
-	go func() {
-		defer close(m.indexReady)
-		if err := m.loadIndex(); err != nil {
-			m.lo.Error("error loading embeddings index at boot", "error", err)
-		}
-	}()
 	return m, nil
 }
 

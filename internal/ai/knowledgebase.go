@@ -148,7 +148,6 @@ func (m *Manager) DeleteKnowledgeBaseItem(tenantID, id int) error {
 		m.lo.Error("error committing knowledge base delete transaction", "error", err)
 		return envelope.NewError(envelope.GeneralError, m.i18n.For(tenantID).T("globals.messages.somethingWentWrong"), nil)
 	}
-	m.index.removeSource(tenantID, models.SourceSnippet, id)
 	return nil
 }
 

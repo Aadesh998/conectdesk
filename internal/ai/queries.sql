@@ -71,7 +71,21 @@ WHERE e.tenant_id = $1 AND e.source_type = 'help_article' AND NOT EXISTS (SELECT
 RETURNING e.source_id;
 
 -- name: insert-embedding
-INSERT INTO embeddings (tenant_id, source_type, source_id, chunk_text, embedding, dimensions) VALUES ($1, $2, $3, $4, $5, $6);
+INSERT INTO embeddings (tenant_id, source_type, source_id, chunk_text, embedding, dimensions) VALUES ($1, $2, $3, $4, $5::vector, $6);
+
+-- name: search-embeddings
+-- Exact cosine search over one tenant's vectors of the query's length; vectors from an older model are skipped, never compared.
+SELECT source_type, source_id, chunk_text, 1 - (embedding <=> $3::vector) AS score
+FROM embeddings
+WHERE tenant_id = $1 AND source_type = ANY($2) AND dimensions = $4
+ORDER BY embedding <=> $3::vector
+LIMIT $5;
+
+-- name: count-mismatched-embeddings
+SELECT COUNT(*) FROM embeddings WHERE tenant_id = $1 AND source_type = ANY($2) AND dimensions <> $3;
+
+-- name: get-tag-embedding-texts
+SELECT source_id, chunk_text FROM embeddings WHERE tenant_id = $1 AND source_type = 'tag';
 
 -- name: delete-embeddings-by-source
 DELETE FROM embeddings WHERE tenant_id = $1 AND source_type = $2 AND source_id = $3;
@@ -84,10 +98,6 @@ DELETE FROM embeddings WHERE tenant_id = $1 AND source_type = $2;
 
 -- name: get-tags
 SELECT id, name FROM tags WHERE tenant_id = $1 ORDER BY id;
-
--- name: get-all-embeddings
--- tenant: all, the in-memory index is loaded for every tenant at boot and kept apart by tenant_id.
-SELECT id, tenant_id, source_type, source_id, chunk_text, embedding, dimensions FROM embeddings;
 
 -- name: get-tools
 SELECT id, created_at, updated_at, name, description, url, method, auth, parameters, enabled, requires_verification FROM ai_tools WHERE tenant_id = $1 ORDER BY updated_at DESC;

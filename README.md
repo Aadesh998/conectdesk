@@ -42,9 +42,11 @@ Run it for one team, or as a multi-tenant service where every organisation signs
 
 ## Installation
 
+Postgres needs the [pgvector](https://github.com/pgvector/pgvector) extension, which stores and searches the AI knowledge base. The `pgvector/pgvector:pg17` image ships with it; on a managed Postgres, enable `vector` before installing or upgrading.
+
 ### Railway
 
-`railway.toml` builds the `Dockerfile`. Add Postgres and Redis to the project, set the `CONECTDESK_*` variables, then run `railway up`.
+`railway.toml` builds the `Dockerfile`. Add Postgres (with pgvector) and Redis to the project, set the `CONECTDESK_*` variables, then run `railway up`.
 
 __________________
 
