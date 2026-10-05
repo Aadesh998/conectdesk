@@ -24,7 +24,7 @@
       <ResizablePanel
         ref="sidebarPanelRef"
         :default-size="panelSizes[1]"
-        :min-size="15"
+        :min-size="SIDEBAR_MIN_SIZE"
         :max-size="40"
         :collapsible="true"
         :collapsed-size="0"
@@ -92,7 +92,16 @@ const emitter = useEmitter()
 const isMobile = useIsMobile()
 const sidebarPanelRef = ref(null)
 const sidebarOpen = useStorage('conversationSidebarOpen', true)
-const panelSizes = useStorage('conversationDetailPanelSizes', [70, 30])
+// Sidebar width, as a percentage of the conversation area: it opens at
+// SIDEBAR_DEFAULT_SIZE, and can't be dragged below SIDEBAR_MIN_SIZE, where its
+// fields and dropdowns get cut off.
+const SIDEBAR_DEFAULT_SIZE = 30
+const SIDEBAR_MIN_SIZE = 25
+const panelSizes = useStorage('conversationDetailPanelSizes', [100 - SIDEBAR_DEFAULT_SIZE, SIDEBAR_DEFAULT_SIZE])
+// A width saved before the minimum was raised would open cramped.
+if (!(panelSizes.value?.[1] >= SIDEBAR_MIN_SIZE)) {
+  panelSizes.value = [100 - SIDEBAR_DEFAULT_SIZE, SIDEBAR_DEFAULT_SIZE]
+}
 const sheetSidebarOpen = ref(false)
 
 const showContent = computed(
@@ -121,8 +130,15 @@ const onSidebarCollapse = () => {
   sidebarOpen.value = false
 }
 
+// Reopening a sidebar that started closed restores it at its minimum width;
+// open it at the last comfortable width instead.
 const onSidebarExpand = () => {
   sidebarOpen.value = true
+  nextTick(() => {
+    const panel = sidebarPanelRef.value
+    const want = panelSizes.value?.[1] >= SIDEBAR_MIN_SIZE ? panelSizes.value[1] : SIDEBAR_DEFAULT_SIZE
+    if (panel && panel.getSize?.() < want) panel.resize?.(want)
+  })
 }
 
 const onLayoutChange = (sizes) => {
