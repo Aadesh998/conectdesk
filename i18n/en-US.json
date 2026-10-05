@@ -1030,6 +1030,8 @@
   "conversation.ai.takeOver": "Take over",
   "conversation.ai.tookOver": "You took this conversation over from {name}. If the customer waits on you, {name} takes it back.",
   "conversation.ai.handBack": "Hand back to AI",
+  "conversation.closeChat": "Close chat",
+  "conversation.closeSidebar": "Close sidebar",
   "conversation.sessionReset": "Reset WhatsApp session",
   "conversation.sessionReset.confirm": "This resolves the customer's open conversations on this WhatsApp number. Their next message starts a new conversation, which the inbox's AI assistant picks up afresh.",
   "conversation.sessionReset.done": "Session reset. The customer's next message starts a new conversation.",

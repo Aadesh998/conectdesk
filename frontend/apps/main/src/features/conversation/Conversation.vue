@@ -74,6 +74,9 @@
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem @click="goBackToList">
+              {{ t('conversation.closeChat') }}
+            </DropdownMenuItem>
             <DropdownMenuItem @click="downloadTranscript">
               {{ t('conversation.downloadTranscript') }}
             </DropdownMenuItem>
