@@ -62,7 +62,7 @@
                   class="rounded p-0.5 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
                   :title="$t('lead.delete')"
                   :aria-label="$t('lead.delete')"
-                  @click.stop="toDelete = card"
+                  @click.stop="askDelete(card)"
                   @keydown.enter.stop
                 >
                   <Trash2 :size="14" />
@@ -106,7 +106,7 @@
       </div>
     </div>
 
-    <AlertDialog :open="!!toDelete" @update:open="(v) => !v && (toDelete = null)">
+    <AlertDialog :open="showDelete" @update:open="(v) => (showDelete = v)">
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{{ $t('lead.delete') }}</AlertDialogTitle>
@@ -162,8 +162,15 @@ const loading = ref(false)
 const search = ref('')
 const dragging = ref(null)
 const dropTarget = ref(null)
-// The lead an admin asked to delete, awaiting confirmation.
+// The lead an admin asked to delete, awaiting confirmation. It is kept apart
+// from the dialog's open state: confirming closes the dialog before the
+// confirm handler runs, which would otherwise clear it first.
 const toDelete = ref(null)
+const showDelete = ref(false)
+const askDelete = (card) => {
+  toDelete.value = card
+  showDelete.value = true
+}
 
 const toast = (description) => emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { variant: 'destructive', description })
 
@@ -214,6 +221,7 @@ const move = async (id, from, to) => {
 const confirmDelete = async () => {
   const card = toDelete.value
   toDelete.value = null
+  showDelete.value = false
   if (!card) return
   try {
     await api.deleteContact(card.id)
