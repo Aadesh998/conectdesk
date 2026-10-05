@@ -25,6 +25,7 @@ export const createFormSchema = (t) => z.object({
     show_powered_by: z.boolean(),
     language: z.string().min(1, { message: t('globals.messages.required') }),
     fallback_language: z.string().optional(),
+    ai_assistant_id: z.coerce.number().int().min(0).optional(),
     logo_url: optionalUrl(t),
     launcher: z.object({
       position: z.enum(['left', 'right']),

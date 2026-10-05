@@ -42,6 +42,12 @@ func IsMetaChannel(channel string) bool {
 	return channel == ChannelWhatsApp || channel == ChannelMessenger || channel == ChannelInstagram
 }
 
+// HasAIAssistant reports whether an inbox of the channel can have an AI
+// assistant that new conversations go to: the chat channels.
+func HasAIAssistant(channel string) bool {
+	return IsMetaChannel(channel) || channel == ChannelTelegram || channel == ChannelLiveChat
+}
+
 // metaEditableKeys are the only config keys an admin may change on a Meta
 // inbox. The rest (account IDs, the access token) come from Meta when the
 // account is connected and are kept as stored.

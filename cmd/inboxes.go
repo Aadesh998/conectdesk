@@ -379,6 +379,19 @@ func validateInbox(app *App, tenantID int, inbox imodels.Inbox) error {
 		}
 	}
 
+	// A live chat inbox can send new conversations to an AI assistant.
+	if inbox.Channel == livechat.ChannelLiveChat {
+		var cfg struct {
+			AIAssistantID int `json:"ai_assistant_id"`
+		}
+		if err := json.Unmarshal(inbox.Config, &cfg); err != nil {
+			return envelope.NewError(envelope.InputError, app.i18n.For(tenantID).T("globals.messages.somethingWentWrong"), nil)
+		}
+		if err := validateInboxAssistant(app, tenantID, cfg.AIAssistantID); err != nil {
+			return err
+		}
+	}
+
 	// Validate email channel config.
 	if inbox.Channel == "email" {
 		if err := validateEmailConfig(app, tenantID, inbox.Config); err != nil {
@@ -483,12 +496,17 @@ func validateMetaConfig(app *App, tenantID int, configJSON json.RawMessage) erro
 		return envelope.NewError(envelope.InputError,
 			app.i18n.For(tenantID).Ts("validation.minmaxNumber", "min", "1", "max", strconv.Itoa(maxUpload)), nil)
 	}
-	// The assistant new conversations go to must be one of this workspace's.
-	if cfg.AIAssistantID < 0 {
+	return validateInboxAssistant(app, tenantID, cfg.AIAssistantID)
+}
+
+// validateInboxAssistant checks that the assistant an inbox's new
+// conversations go to, if any, is one of this workspace's.
+func validateInboxAssistant(app *App, tenantID, assistantID int) error {
+	if assistantID < 0 {
 		return envelope.NewError(envelope.InputError, app.i18n.For(tenantID).T("ai.jev.invalidAssistant"), nil)
 	}
-	if cfg.AIAssistantID > 0 {
-		if _, err := app.aiAgent.GetAssistant(tenantID, cfg.AIAssistantID); err != nil {
+	if assistantID > 0 {
+		if _, err := app.aiAgent.GetAssistant(tenantID, assistantID); err != nil {
 			return envelope.NewError(envelope.InputError, app.i18n.For(tenantID).T("ai.jev.invalidAssistant"), nil)
 		}
 	}

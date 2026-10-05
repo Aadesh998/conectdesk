@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"time"
 
@@ -141,32 +142,65 @@ func aiAgentHooks(app *App) aiagent.Hooks {
 // alone, and so is one the assistant recently handed to people.
 func assignToInboxAssistant(app *App, tid int, conv cmodels.Conversation) {
 	if conv.AssignedUserID.Valid {
+		app.lo.Debug("not assigning to ai assistant: conversation already assigned", "conversation_uuid", conv.UUID, "assigned_user_id", conv.AssignedUserID.Int)
 		return
 	}
 	record, err := app.inbox.GetDBRecord(tid, conv.InboxID)
-	if err != nil || !inbox.IsMetaChannel(record.Channel) && record.Channel != inbox.ChannelTelegram {
+	if err != nil {
+		app.lo.Error("error fetching inbox to assign to ai assistant", "conversation_uuid", conv.UUID, "inbox_id", conv.InboxID, "error", err)
 		return
 	}
-	var cfg struct {
-		AIAssistantID int `json:"ai_assistant_id"`
-	}
-	if json.Unmarshal(record.Config, &cfg) != nil || cfg.AIAssistantID == 0 {
+	if !inbox.HasAIAssistant(record.Channel) {
 		return
 	}
-	a, err := app.aiAgent.GetAssistant(tid, cfg.AIAssistantID)
-	if err != nil || !a.Enabled {
+	assistantID := inboxAssistantID(record.Config)
+	if assistantID == 0 {
+		app.lo.Info("not assigning to ai assistant: inbox has no ai assistant set", "conversation_uuid", conv.UUID, "inbox_id", conv.InboxID)
+		return
+	}
+	a, err := app.aiAgent.GetAssistant(tid, assistantID)
+	if err != nil {
+		app.lo.Warn("not assigning to ai assistant: inbox's assistant not found", "conversation_uuid", conv.UUID, "inbox_id", conv.InboxID, "assistant_id", assistantID, "error", err)
+		return
+	}
+	if !a.Enabled {
+		app.lo.Info("not assigning to ai assistant: assistant is disabled", "conversation_uuid", conv.UUID, "assistant_id", a.ID)
 		return
 	}
 	if app.aiAgent.RecentlyHandedOff(tid, conv.ID) {
+		app.lo.Info("not assigning to ai assistant: it handed this conversation off recently", "conversation_uuid", conv.UUID, "assistant_id", a.ID)
 		return
 	}
 	sys, err := app.user.GetSystemUser(tid)
 	if err != nil {
+		app.lo.Error("error fetching system user to assign to ai assistant", "conversation_uuid", conv.UUID, "error", err)
 		return
 	}
 	if err := app.conversation.UpdateConversationUserAssignee(tid, conv.UUID, a.UserID, sys); err != nil {
 		app.lo.Error("error assigning new conversation to the inbox's ai assistant", "conversation_uuid", conv.UUID, "assistant_id", a.ID, "error", err)
+		return
 	}
+	app.lo.Info("assigned conversation to the inbox's ai assistant", "conversation_uuid", conv.UUID, "assistant_id", a.ID)
+}
+
+// inboxAssistantID is the AI assistant an inbox's config sends new
+// conversations to, 0 for none. It is read whether stored as a number or as
+// a string of one.
+func inboxAssistantID(config json.RawMessage) int {
+	var cfg struct {
+		AIAssistantID any `json:"ai_assistant_id"`
+	}
+	if json.Unmarshal(config, &cfg) != nil {
+		return 0
+	}
+	switch v := cfg.AIAssistantID.(type) {
+	case float64:
+		return int(v)
+	case string:
+		id, _ := strconv.Atoi(strings.TrimSpace(v))
+		return id
+	}
+	return 0
 }
 
 // jevSettings are the workspace's TypeSafe System One (Jev) settings. The API

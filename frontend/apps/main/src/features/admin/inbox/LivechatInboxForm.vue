@@ -55,6 +55,25 @@
             </FormItem>
           </FormField>
 
+          <!-- New conversations on this inbox go straight to an AI assistant. -->
+          <FormField v-slot="{ componentField }" name="config.ai_assistant_id">
+            <FormItem>
+              <FormLabel>{{ $t('admin.inbox.aiAssistant') }}</FormLabel>
+              <FormControl>
+                <select
+                  :value="componentField.modelValue ?? 0"
+                  class="w-full max-w-sm rounded-md border bg-background px-2 py-2 text-sm"
+                  @change="componentField['onUpdate:modelValue'](Number($event.target.value))"
+                >
+                  <option :value="0">{{ $t('admin.inbox.aiAssistant.none') }}</option>
+                  <option v-for="a in assistants" :key="a.id" :value="a.id">{{ a.name }}</option>
+                </select>
+              </FormControl>
+              <FormDescription>{{ $t('admin.inbox.aiAssistant.description') }}</FormDescription>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
           <FormField v-slot="{ componentField }" name="name">
             <FormItem>
               <FormLabel>{{ $t('globals.terms.name') }}</FormLabel>
@@ -1012,6 +1031,7 @@ import { useAppSettingsStore } from '@/stores/appSettings'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
 import CopyButton from '@/components/button/CopyButton.vue'
+import api from '@/api'
 import CodeEditor from '@/components/editor/CodeEditor.vue'
 import { contrastRatio } from '@shared-ui/utils/color'
 
@@ -1047,6 +1067,7 @@ const FIELD_TAB = [
   ['secret', 'security'],
   ['config.continuity', 'general'],
   ['config.brand_name', 'general'],
+  ['config.ai_assistant_id', 'general'],
   ['config.website_url', 'general'],
   ['config.language', 'general'],
   ['name', 'general'],
@@ -1081,6 +1102,16 @@ const props = defineProps({
 
 const { t } = useI18n()
 const activeTab = ref('general')
+
+// Enabled assistants new conversations can go to.
+const assistants = ref([])
+onMounted(async () => {
+  try {
+    assistants.value = (await api.getAIAssistantsCompact()).data.data || []
+  } catch {
+    assistants.value = []
+  }
+})
 const selectedUserTab = ref('visitors')
 const homeApps = ref([])
 const prechatConfig = ref({
@@ -1169,6 +1200,7 @@ const form = useForm({
       show_powered_by: true,
       language: 'en-US',
       fallback_language: 'en-US',
+      ai_assistant_id: 0,
       logo_url: '',
       launcher: {
         position: 'right',
