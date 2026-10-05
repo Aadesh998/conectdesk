@@ -72,7 +72,7 @@ export const adminNavItems = [
   },
   {
     titleKey: 'globals.terms.helpCenter',
-    badge: 'BETA',
+    // badge: 'BETA',
     children: [
       {
         titleKey: 'globals.terms.helpCenter',
@@ -84,7 +84,7 @@ export const adminNavItems = [
   },
   {
     titleKey: 'admin.ai.title',
-    badge: 'BETA',
+    // badge: 'BETA',
     children: [
       {
         titleKey: 'globals.terms.provider',
