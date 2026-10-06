@@ -3,8 +3,11 @@ package main
 import (
 	"cmp"
 	"errors"
+	"io/fs"
 	"log"
+	"mime"
 	"net"
+	"path"
 	"strings"
 
 	"github.com/conectdesk/conectdesk/internal/docs"
@@ -19,12 +22,19 @@ import (
 
 // The internal documentation is served on its own host, docs.<base_domain> by
 // default, to docs viewers: accounts platform admins add that can log in to
-// the documentation and open nothing else. Its paths answer on no other host.
+// the documentation and open nothing else. The client guide, written for the
+// people who run a workspace, is served on the same host to anyone. Their
+// paths answer on no other host.
 const docsSessionCookie = "docs_session"
 
 // isDocsPath reports whether path belongs to the documentation.
 func isDocsPath(path string) bool {
-	return path == "/docs" || strings.HasPrefix(path, "/docs/") || strings.HasPrefix(path, "/api/docs/")
+	for _, base := range []string{"/docs", "/guide"} {
+		if path == base || strings.HasPrefix(path, base+"/") || strings.HasPrefix(path, "/api"+base+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // isDocsHost reports whether host is the documentation's host.
@@ -38,17 +48,21 @@ func isDocsHost(app *App, host string) bool {
 	return strings.EqualFold(strings.TrimSuffix(host, "."), app.docsHost)
 }
 
-// initDocs loads the documentation and returns its host, with the platform
-// dashboard, which manages who may read it.
-func initDocs(tenants *tenant.Manager, p *platform.Manager) (*docs.Docs, string) {
+// initDocs loads the documentation and the client guide and returns their
+// host, with the platform dashboard, which manages who may read the former.
+func initDocs(tenants *tenant.Manager, p *platform.Manager) (*docs.Docs, *docs.Docs, string) {
 	if p == nil {
-		return nil, ""
+		return nil, nil, ""
 	}
 	d, err := docs.Load()
 	if err != nil {
 		log.Fatalf("error loading documentation: %v", err)
 	}
-	return d, strings.ToLower(cmp.Or(ko.String("app.tenancy.docs_host"), "docs."+tenants.BaseDomain()))
+	g, err := docs.LoadGuide()
+	if err != nil {
+		log.Fatalf("error loading the client guide: %v", err)
+	}
+	return d, g, strings.ToLower(cmp.Or(ko.String("app.tenancy.docs_host"), "docs."+tenants.BaseDomain()))
 }
 
 // docsViewer returns the docs viewer logged in on the request.
@@ -79,26 +93,76 @@ func handleDocsPage(r *fastglue.Request) error {
 	}
 
 	slug, _ := r.RequestCtx.UserValue("page").(string)
-	page, idx, ok := app.docs.Page(slug)
+	_, idx, ok := app.docs.Page(slug)
 	if !ok {
 		r.RequestCtx.Redirect("/docs", fasthttp.StatusFound)
 		return nil
 	}
+	data := docsPageData(app.docs, idx, "/docs", "Docs")
+	data["Product"], data["Email"] = product, viewer.Email
+	return app.tmpl.RenderWebPage(tenant.DefaultID, r.RequestCtx, "docs", map[string]any{"Data": data})
+}
+
+// docsPageData is what the docs template shows of page idx of d, served
+// under base.
+func docsPageData(d *docs.Docs, idx int, base, label string) map[string]any {
 	data := map[string]any{
-		"Product":    product,
-		"BaseDomain": app.tenant.BaseDomain(),
-		"Email":      viewer.Email,
-		"Pages":      app.docs.Pages,
-		"Page":       page,
-		"Index":      idx,
+		"Base":  base,
+		"Label": label,
+		"Pages": d.Pages,
+		"Page":  d.Pages[idx],
+		"Index": idx,
 	}
 	if idx > 0 {
-		data["Prev"] = app.docs.Pages[idx-1]
+		data["Prev"] = d.Pages[idx-1]
 	}
-	if idx < len(app.docs.Pages)-1 {
-		data["Next"] = app.docs.Pages[idx+1]
+	if idx < len(d.Pages)-1 {
+		data["Next"] = d.Pages[idx+1]
 	}
+	return data
+}
+
+// handleGuidePage serves a page of the client guide, to anyone.
+func handleGuidePage(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	if !isDocsHost(app, string(r.RequestCtx.Host())) {
+		return r.SendErrorEnvelope(fasthttp.StatusNotFound, app.i18n.T("globals.messages.pageNotFound"), nil, envelope.NotFoundError)
+	}
+	slug, _ := r.RequestCtx.UserValue("page").(string)
+	_, idx, ok := app.guide.Page(slug)
+	if !ok {
+		r.RequestCtx.Redirect("/guide", fasthttp.StatusFound)
+		return nil
+	}
+	data := docsPageData(app.guide, idx, "/guide", "Guide")
+	data["Product"], data["Public"] = cmp.Or(ko.String("app.tenancy.product_name"), "ConectDesk"), true
+	r.RequestCtx.Response.Header.Set("X-Frame-Options", "DENY")
 	return app.tmpl.RenderWebPage(tenant.DefaultID, r.RequestCtx, "docs", map[string]any{"Data": data})
+}
+
+// handleGuideImage serves one of the client guide's screenshots.
+func handleGuideImage(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	name, _ := r.RequestCtx.UserValue("file").(string)
+	b, err := fs.ReadFile(docs.GuideImages(), name)
+	if !isDocsHost(app, string(r.RequestCtx.Host())) || err != nil || strings.Contains(name, "/") {
+		return r.SendErrorEnvelope(fasthttp.StatusNotFound, app.i18n.T("globals.messages.pageNotFound"), nil, envelope.NotFoundError)
+	}
+	r.RequestCtx.Response.Header.Set("Cache-Control", "public, max-age=86400")
+	r.RequestCtx.SetContentType(cmp.Or(mime.TypeByExtension(path.Ext(name)), "application/octet-stream"))
+	r.RequestCtx.SetBody(b)
+	return nil
+}
+
+// handleGuideSearchIndex returns every client guide page's sections, for
+// searching the guide in the browser.
+func handleGuideSearchIndex(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	if !isDocsHost(app, string(r.RequestCtx.Host())) {
+		return r.SendErrorEnvelope(fasthttp.StatusNotFound, app.i18n.T("globals.messages.pageNotFound"), nil, envelope.NotFoundError)
+	}
+	r.RequestCtx.Response.Header.Set("Cache-Control", "no-store")
+	return r.SendEnvelope(searchIndex(app.guide))
 }
 
 // handleDocsSearchIndex returns every page's sections, for searching the
@@ -111,20 +175,27 @@ func handleDocsSearchIndex(r *fastglue.Request) error {
 	if _, err := docsViewer(r); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusUnauthorized, app.i18n.T("platform.docsNotLoggedIn"), nil, envelope.PermissionError)
 	}
-	type entry struct {
-		Page      string `json:"page"`
-		PageTitle string `json:"page_title"`
-		docs.Heading
-	}
-	out := []entry{}
-	for _, p := range app.docs.Pages {
-		out = append(out, entry{Page: p.Slug, PageTitle: p.Title, Heading: docs.Heading{Title: p.Title, Level: 1}})
+	r.RequestCtx.Response.Header.Set("Cache-Control", "no-store")
+	return r.SendEnvelope(searchIndex(app.docs))
+}
+
+// searchIndexEntry is one section of a page, for searching in the browser.
+type searchIndexEntry struct {
+	Page      string `json:"page"`
+	PageTitle string `json:"page_title"`
+	docs.Heading
+}
+
+// searchIndex is every page's title and sections.
+func searchIndex(d *docs.Docs) []searchIndexEntry {
+	out := []searchIndexEntry{}
+	for _, p := range d.Pages {
+		out = append(out, searchIndexEntry{Page: p.Slug, PageTitle: p.Title, Heading: docs.Heading{Title: p.Title, Level: 1}})
 		for _, h := range p.Headings {
-			out = append(out, entry{Page: p.Slug, PageTitle: p.Title, Heading: h})
+			out = append(out, searchIndexEntry{Page: p.Slug, PageTitle: p.Title, Heading: h})
 		}
 	}
-	r.RequestCtx.Response.Header.Set("Cache-Control", "no-store")
-	return r.SendEnvelope(out)
+	return out
 }
 
 // handleDocsLogin logs a docs viewer in.

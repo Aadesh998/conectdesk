@@ -68,7 +68,7 @@ func tenantHandler(app *App, next fasthttp.RequestHandler) fasthttp.RequestHandl
 		if isDocsHost(app, string(ctx.Host())) {
 			switch path := string(ctx.Path()); {
 			case path == "/":
-				ctx.Redirect("/docs", fasthttp.StatusFound)
+				ctx.Redirect("/guide", fasthttp.StatusFound)
 			case isDocsPath(path):
 				next(ctx)
 			default:

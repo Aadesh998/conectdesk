@@ -56,6 +56,11 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/docs/search-index", handleDocsSearchIndex)
 	g.POST("/api/docs/login", rateLimit(handleDocsLogin, "auth"))
 	g.POST("/api/docs/logout", handleDocsLogout)
+	// The client guide, on the same host, open to anyone.
+	g.GET("/guide", handleGuidePage)
+	g.GET("/guide/img/{file}", handleGuideImage)
+	g.GET("/guide/{page}", handleGuidePage)
+	g.GET("/api/guide/search-index", handleGuideSearchIndex)
 	// Opened on a workspace host with a one-time link from the dashboard.
 	g.GET(impersonatePath, rateLimit(handleImpersonate, "auth"))
 

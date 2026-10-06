@@ -1,6 +1,7 @@
 package docs
 
 import (
+	"io/fs"
 	"regexp"
 	"strings"
 	"testing"
@@ -72,6 +73,46 @@ func TestLinks(t *testing.T) {
 			if m[2] != "" && !strings.Contains(string(target.HTML), `id="`+m[2]+`"`) {
 				t.Errorf("page %q links to unknown section %q of %q", p.Slug, m[2], m[1])
 			}
+		}
+	}
+}
+
+// TestGuide checks the client guide renders, its links land on a page and
+// section of it, every screenshot it shows exists, and every screenshot in
+// guide/img is shown somewhere.
+func TestGuide(t *testing.T) {
+	d, err := LoadGuide()
+	if err != nil {
+		t.Fatalf("LoadGuide: %v", err)
+	}
+	link := regexp.MustCompile(`href="/guide/([^"#]*)(?:#([^"]*))?"`)
+	img := regexp.MustCompile(`src="/guide/img/([^"]+)"`)
+	used := map[string]bool{}
+	for _, p := range d.Pages {
+		if p.Title == "" || strings.Contains(string(p.HTML), "<h1") {
+			t.Errorf("guide page %q has no title, or renders it twice", p.Slug)
+		}
+		for _, m := range link.FindAllStringSubmatch(string(p.HTML), -1) {
+			target, _, ok := d.Page(m[1])
+			if !ok {
+				t.Errorf("guide page %q links to unknown page %q", p.Slug, m[1])
+				continue
+			}
+			if m[2] != "" && !strings.Contains(string(target.HTML), `id="`+m[2]+`"`) {
+				t.Errorf("guide page %q links to unknown section %q of %q", p.Slug, m[2], m[1])
+			}
+		}
+		for _, m := range img.FindAllStringSubmatch(string(p.HTML), -1) {
+			used[m[1]] = true
+			if _, err := fs.Stat(GuideImages(), m[1]); err != nil {
+				t.Errorf("guide page %q shows missing screenshot %q", p.Slug, m[1])
+			}
+		}
+	}
+	files, _ := fs.ReadDir(GuideImages(), ".")
+	for _, f := range files {
+		if !used[f.Name()] {
+			t.Errorf("screenshot %q isn't used by any guide page", f.Name())
 		}
 	}
 }

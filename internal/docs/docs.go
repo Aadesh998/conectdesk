@@ -1,5 +1,6 @@
-// Package docs holds the internal documentation served on docs.<base_domain>:
-// Markdown pages embedded in the binary, rendered to HTML once at startup.
+// Package docs holds the documentation served on docs.<base_domain>: the
+// internal manual for docs viewers and the public client guide, Markdown pages
+// embedded in the binary and rendered to HTML once at startup.
 package docs
 
 import (
@@ -22,6 +23,11 @@ import (
 
 //go:embed content/*.md
 var content embed.FS
+
+// The client guide's pages, and the screenshots they show from guide/img.
+//
+//go:embed guide/*.md guide/img
+var guide embed.FS
 
 // Heading is a section of a page, linked from the sidebar and found by search.
 type Heading struct {
@@ -47,9 +53,25 @@ type Docs struct {
 	bySlug map[string]int
 }
 
-// Load renders every embedded page.
+// Load renders the internal manual.
 func Load() (*Docs, error) {
-	names, err := fs.Glob(content, "content/*.md")
+	return load(content, "content")
+}
+
+// LoadGuide renders the client guide.
+func LoadGuide() (*Docs, error) {
+	return load(guide, "guide")
+}
+
+// GuideImages holds the client guide's screenshots, by file name.
+func GuideImages() fs.FS {
+	sub, _ := fs.Sub(guide, "guide/img")
+	return sub
+}
+
+// load renders every Markdown page in dir.
+func load(fsys fs.FS, dir string) (*Docs, error) {
+	names, err := fs.Glob(fsys, dir+"/*.md")
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +85,7 @@ func Load() (*Docs, error) {
 	)
 	d := &Docs{bySlug: map[string]int{}}
 	for _, name := range names {
-		src, err := content.ReadFile(name)
+		src, err := fs.ReadFile(fsys, name)
 		if err != nil {
 			return nil, err
 		}

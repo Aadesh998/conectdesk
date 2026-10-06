@@ -131,8 +131,10 @@ type App struct {
 	// nil without multi-tenancy.
 	platform     *platform.Manager
 	platformHost string
-	// docs is the internal documentation, served on docsHost to docs viewers.
+	// docs is the internal documentation, served on docsHost to docs viewers,
+	// and guide the client guide, served there to anyone.
 	docs     *docs.Docs
+	guide    *docs.Docs
 	docsHost string
 	// mfa manages agents' two-factor login.
 	mfa *mfa.Manager
@@ -407,7 +409,7 @@ func main() {
 	app.mailer = mailer
 	app.workspace = initWorkspace(db, tenants)
 	app.platform, app.platformHost = initPlatform(db, tenants)
-	app.docs, app.docsHost = initDocs(tenants, app.platform)
+	app.docs, app.guide, app.docsHost = initDocs(tenants, app.platform)
 	if app.platform != nil {
 		mailer.SetPlatformSettings(func() (emailnotifier.Settings, error) {
 			ms, err := app.platform.MailSettings()

@@ -3,8 +3,8 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<title>{{ .Data.Page.Title }} · {{ .Data.Product }} Docs</title>
-	<meta name="robots" content="noindex, nofollow" />
+	<title>{{ .Data.Page.Title }} · {{ .Data.Product }} {{ .Data.Label }}</title>
+	{{ if not .Data.Public }}<meta name="robots" content="noindex, nofollow" />{{ end }}
 	{{ template "app-theme" . }}
 	<style>
 		:root { --side: 290px; --top: 56px; }
@@ -65,6 +65,17 @@
 		article th { background: var(--muted); font-weight: 600; white-space: nowrap; }
 		article tr:last-child td { border-bottom: 0; }
 		article hr { border: 0; border-top: 1px solid var(--border); margin: 2rem 0; }
+		/* Screenshots: framed, clickable to open full size. */
+		article img { display: block; max-width: 100%; height: auto; margin: 0.6rem 0 0.4rem; border: 1px solid var(--border);
+			border-radius: var(--radius); box-shadow: 0 6px 24px rgb(0 0 0 / 0.08); cursor: zoom-in; }
+		article img + em, article p > em:only-child { display: block; font-size: 0.82rem; color: var(--muted-fg); margin-bottom: 1.2rem; }
+		article .steps { counter-reset: step; list-style: none; padding-left: 0; }
+		article .steps > li { counter-increment: step; position: relative; padding-left: 2.4rem; margin-bottom: 0.9rem; }
+		article .steps > li::before { content: counter(step); position: absolute; left: 0; top: 0.05rem; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+			background: var(--primary); color: var(--primary-fg, #fff); font-weight: 700; font-size: 0.85rem; display: grid; place-items: center; }
+		.zoom { position: fixed; inset: 0; z-index: 50; background: rgb(0 0 0 / 0.78); display: none; align-items: center; justify-content: center; padding: 2rem; cursor: zoom-out; }
+		.zoom.open { display: flex; }
+		.zoom img { max-width: 100%; max-height: 100%; border-radius: var(--radius); box-shadow: 0 20px 60px rgb(0 0 0 / 0.4); }
 		.pager { display: flex; justify-content: space-between; gap: 1rem; margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--border); }
 		.pager a { display: grid; gap: 0.15rem; padding: 0.7rem 1rem; border: 1px solid var(--border); border-radius: var(--radius); text-decoration: none; color: var(--fg); max-width: 48%; }
 		.pager a:hover { border-color: var(--ring); }
@@ -89,19 +100,19 @@
 <body>
 	<header class="top">
 		<button class="menu" id="menu" aria-label="Contents" aria-expanded="false">☰</button>
-		<a class="brand" href="/docs"><span class="dot"></span>{{ .Data.Product }} <small>Docs</small></a>
+		<a class="brand" href="{{ .Data.Base }}"><span class="dot"></span>{{ .Data.Product }} <small>{{ .Data.Label }}</small></a>
 		<div class="search">
-			<input id="q" type="search" placeholder="Search the docs  ( / )" aria-label="Search the docs" autocomplete="off" />
+			<input id="q" type="search" placeholder="Search the {{ if .Data.Public }}guide{{ else }}docs{{ end }}  ( / )" aria-label="Search" autocomplete="off" />
 			<div class="results" id="results" role="listbox"></div>
 		</div>
-		<div class="who"><span class="email">{{ .Data.Email }}</span><button id="logout">Log out</button></div>
+		{{ if not .Data.Public }}<div class="who"><span class="email">{{ .Data.Email }}</span><button id="logout">Log out</button></div>{{ end }}
 	</header>
 	<div class="shell">
 		<nav class="side" id="side" aria-label="Contents">
 			<ol>
 			{{ range $i, $p := .Data.Pages }}
 				<li>
-					<a href="/docs/{{ $p.Slug }}"{{ if eq $i $.Data.Index }} class="on" aria-current="page"{{ end }}><span class="n">{{ $i }}.</span>{{ $p.Title }}</a>
+					<a href="{{ $.Data.Base }}/{{ $p.Slug }}"{{ if eq $i $.Data.Index }} class="on" aria-current="page"{{ end }}><span class="n">{{ $i }}.</span>{{ $p.Title }}</a>
 					{{ if eq $i $.Data.Index }}{{ if $p.Headings }}
 					<ol>
 						{{ range $p.Headings }}<li><a href="#{{ .ID }}"{{ if eq .Level 3 }} class="l3"{{ end }}>{{ .Title }}</a></li>{{ end }}
@@ -117,15 +128,26 @@
 				{{ .Data.Page.HTML }}
 			</article>
 			<div class="pager">
-				{{ with .Data.Prev }}<a class="prev" href="/docs/{{ .Slug }}"><small>← Previous</small>{{ .Title }}</a>{{ end }}
-				{{ with .Data.Next }}<a class="next" href="/docs/{{ .Slug }}"><small>Next →</small>{{ .Title }}</a>{{ end }}
+				{{ with .Data.Prev }}<a class="prev" href="{{ $.Data.Base }}/{{ .Slug }}"><small>← Previous</small>{{ .Title }}</a>{{ end }}
+				{{ with .Data.Next }}<a class="next" href="{{ $.Data.Base }}/{{ .Slug }}"><small>Next →</small>{{ .Title }}</a>{{ end }}
 			</div>
 		</main>
 	</div>
+	<div class="zoom" id="zoom" role="dialog" aria-label="Screenshot"><img alt="" /></div>
 
 <script>
 (function () {
+	var base = {{ .Data.Base }};
 	var article = document.getElementById('article');
+
+	// Screenshots open full size on click.
+	var zoom = document.getElementById('zoom'), zimg = zoom.querySelector('img');
+	article.querySelectorAll('img').forEach(function (img) {
+		img.loading = 'lazy';
+		img.addEventListener('click', function () { zimg.src = img.src; zimg.alt = img.alt; zoom.classList.add('open'); });
+	});
+	zoom.addEventListener('click', function () { zoom.classList.remove('open'); });
+	document.addEventListener('keydown', function (e) { if (e.key === 'Escape') zoom.classList.remove('open'); });
 
 	// Wide tables scroll on their own, and headings link to themselves.
 	article.querySelectorAll('table').forEach(function (t) {
@@ -144,7 +166,8 @@
 	});
 	side.addEventListener('click', function (e) { if (e.target.closest('a')) side.classList.remove('open'); });
 
-	document.getElementById('logout').addEventListener('click', function () {
+	var logout = document.getElementById('logout');
+	if (logout) logout.addEventListener('click', function () {
 		fetch('/api/docs/logout', { method: 'POST', credentials: 'same-origin' }).finally(function () { location.href = '/docs'; });
 	});
 
@@ -153,7 +176,7 @@
 	var index = null, sel = -1;
 	function load() {
 		if (index) return Promise.resolve(index);
-		return fetch('/api/docs/search-index', { credentials: 'same-origin' }).then(function (r) { return r.json(); })
+		return fetch('/api' + base + '/search-index', { credentials: 'same-origin' }).then(function (r) { return r.json(); })
 			.then(function (j) { index = (j.data || []).map(function (e) { e.hay = (e.title + ' ' + e.text).toLowerCase(); e.tl = e.title.toLowerCase(); return e; }); return index; });
 	}
 	function snippet(text, term) {
@@ -185,7 +208,7 @@
 			}
 			hits.slice(0, 30).forEach(function (h) {
 				var a = document.createElement('a');
-				a.href = '/docs/' + h.e.page + (h.e.id ? '#' + h.e.id : '');
+				a.href = base + '/' + h.e.page + (h.e.id ? '#' + h.e.id : '');
 				var p = document.createElement('div'); p.className = 'p'; p.textContent = h.e.page_title;
 				var t = document.createElement('div'); t.className = 't'; t.textContent = h.e.title;
 				var s = document.createElement('div'); s.className = 's'; s.textContent = snippet(h.e.text || '', terms[0]);
