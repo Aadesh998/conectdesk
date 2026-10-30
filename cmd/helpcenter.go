@@ -851,6 +851,9 @@ func handleHelpCenterSitemap(r *fastglue.Request) error {
 // handleSitemapIndex lists the per-locale sitemaps of the help centers served on this host.
 func handleSitemapIndex(r *fastglue.Request) error {
 	app := r.Context.(*App)
+	if ok, err := serveWebsiteSitemap(r); ok {
+		return err
+	}
 	helpCenters, err := app.helpcenter.GetActiveHelpCenters(tenantID(r))
 	if err != nil {
 		return sendErrorEnvelope(r, err)
@@ -868,6 +871,9 @@ func handleSitemapIndex(r *fastglue.Request) error {
 // handleRobotsTxt keeps crawlers out of the agent app and points them at this host's sitemap index.
 func handleRobotsTxt(r *fastglue.Request) error {
 	app := r.Context.(*App)
+	if serveWebsiteRobots(r) {
+		return nil
+	}
 	r.RequestCtx.SetContentType("text/plain; charset=utf-8")
 	fmt.Fprint(r.RequestCtx, "User-agent: *\n")
 	for _, path := range crawlerDisallowedPaths {

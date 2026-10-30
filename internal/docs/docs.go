@@ -41,10 +41,13 @@ type Heading struct {
 // Page is one Markdown file. Files are ordered by name, so a numeric prefix
 // such as "10-" sets a page's place; the slug drops it.
 type Page struct {
-	Slug     string
-	Title    string
-	HTML     template.HTML
-	Headings []Heading
+	Slug  string
+	Title string
+	// Description is the page's opening paragraph, for search results and
+	// link previews.
+	Description string
+	HTML        template.HTML
+	Headings    []Heading
 }
 
 // Docs is the rendered documentation.
@@ -135,6 +138,7 @@ func render(md goldmark.Markdown, src []byte) (Page, error) {
 	var (
 		cur   *Heading
 		title ast.Node
+		intro = true
 	)
 	for n := doc.FirstChild(); n != nil; n = n.NextSibling() {
 		if h, ok := n.(*ast.Heading); ok {
@@ -144,6 +148,8 @@ func render(md goldmark.Markdown, src []byte) (Page, error) {
 				p.Title, title = text, h
 				continue
 			}
+			// Only the paragraph before the first section introduces the page.
+			intro = false
 			if h.Level <= 3 {
 				id, _ := h.AttributeString("id")
 				idStr, _ := id.([]byte)
@@ -151,6 +157,9 @@ func render(md goldmark.Markdown, src []byte) (Page, error) {
 				cur = &p.Headings[len(p.Headings)-1]
 				continue
 			}
+		}
+		if _, ok := n.(*ast.Paragraph); ok && intro && plainText(n, src) != "" {
+			p.Description, intro = summary(plainText(n, src), 160), false
 		}
 		if cur != nil && len(cur.Text) < 4000 {
 			cur.Text += " " + plainText(n, src)
@@ -169,6 +178,20 @@ func render(md goldmark.Markdown, src []byte) (Page, error) {
 }
 
 // plainText is the text of a node and its children.
+// summary is s with its whitespace collapsed, cut at a word to at most max
+// bytes.
+func summary(s string, max int) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if len(s) <= max {
+		return s
+	}
+	cut := strings.LastIndexByte(s[:max-1], ' ')
+	if cut <= 0 {
+		cut = max - 1
+	}
+	return strings.TrimRight(s[:cut], " ,;:") + "…"
+}
+
 func plainText(n ast.Node, src []byte) string {
 	var b strings.Builder
 	ast.Walk(n, func(c ast.Node, entering bool) (ast.WalkStatus, error) {

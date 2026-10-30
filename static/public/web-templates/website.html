@@ -1,0 +1,243 @@
+{{/* The website's shared head: icons, link previews, Search Console
+verification and Google Analytics. Expects the data of websiteData, with
+Title, Description and Canonical set by the page. */}}
+{{ define "website-meta" }}
+	<link rel="icon" type="image/svg+xml" href="/static/public/static/favicon.svg" />
+	<link rel="icon" type="image/png" sizes="48x48" href="/static/public/static/favicon-48.png" />
+	<link rel="apple-touch-icon" href="/static/public/static/apple-touch-icon.png" />
+	{{ with .Data.Canonical }}<link rel="canonical" href="{{ . }}" />
+	<meta property="og:url" content="{{ . }}" />{{ end }}
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="{{ .Data.Product }}" />
+	<meta property="og:locale" content="en_IN" />
+	<meta property="og:title" content="{{ .Data.Title }}" />
+	{{ with .Data.Description }}<meta property="og:description" content="{{ . }}" />{{ end }}
+	<meta property="og:image" content="{{ .Data.OGImage }}" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:image:alt" content="{{ .Data.Product }}: calls, WhatsApp and Instagram in one inbox for coaching institutes" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="{{ .Data.Title }}" />
+	{{ with .Data.Description }}<meta name="twitter:description" content="{{ . }}" />{{ end }}
+	<meta name="twitter:image" content="{{ .Data.OGImage }}" />
+	{{ with .Data.SiteVerification }}<meta name="google-site-verification" content="{{ . }}" />{{ end }}
+	{{ with .Data.GAID }}
+	<link rel="preconnect" href="https://www.googletagmanager.com" />
+	<script async src="https://www.googletagmanager.com/gtag/js?id={{ . }}"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag() { dataLayer.push(arguments); }
+		// Analytics only: no advertising cookies or ad personalisation.
+		gtag('consent', 'default', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
+		gtag('js', new Date());
+		gtag('config', {{ . }});
+		// A click on an element with data-ga="<event>" sends that event, with
+		// data-ga-label (or the element's text) as its label.
+		document.addEventListener('click', function (e) {
+			var el = e.target.closest && e.target.closest('[data-ga]');
+			if (el) gtag('event', el.getAttribute('data-ga'), { label: el.getAttribute('data-ga-label') || el.textContent.trim().slice(0, 80) });
+		}, true);
+	</script>
+	{{ end }}
+{{ end }}
+
+{{/* The privacy policy, the terms and the not found page, on the website's
+look. Page is "privacy", "terms" or "notfound". */}}
+{{ define "website" }}<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>{{ .Data.Title }} · {{ .Data.Product }}</title>
+	{{ with .Data.Description }}<meta name="description" content="{{ . }}" />{{ end }}
+	{{ if eq .Data.Page "notfound" }}<meta name="robots" content="noindex" />{{ end }}
+	<meta name="theme-color" content="#fbf8f1" />
+	{{ template "website-meta" . }}
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Geist:wght@400..700&display=swap" rel="stylesheet" />
+	<style>
+		:root {
+			--paper: #fbf8f1; --paper-2: #f4efe3; --ink: #15171a; --ink-2: #3a3f45; --muted: #646870; --faint: #9a9890;
+			--line: #e3dbc9; --peacock: #0f6b7d; --marigold: #f5a524;
+			--serif: "Fraunces", Georgia, "Times New Roman", serif;
+			--sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+		}
+		*, *::before, *::after { box-sizing: border-box; }
+		body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.65 var(--sans); -webkit-font-smoothing: antialiased; }
+		a { color: var(--peacock); }
+		.wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+		.hdr { border-bottom: 1px solid var(--line); }
+		.hdr .wrap { max-width: 1180px; display: flex; align-items: center; justify-content: space-between; padding-top: 16px; padding-bottom: 16px; }
+		.logo { display: inline-flex; align-items: center; gap: 9px; color: var(--ink); text-decoration: none; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+		.logo svg { width: 30px; height: 30px; }
+		.hdr nav a { margin-left: 20px; font-size: 14.5px; font-weight: 500; color: var(--ink-2); text-decoration: none; }
+		.hdr nav a:hover { color: var(--peacock); }
+		main { padding: 56px 0 80px; }
+		h1 { margin: 0; font: 600 44px/1.05 var(--serif); letter-spacing: -0.02em; }
+		.updated { margin: 12px 0 40px; font-size: 14px; color: var(--muted); }
+		h2 { margin: 40px 0 8px; font: 600 24px/1.2 var(--serif); }
+		p, li { color: var(--ink-2); }
+		ul { padding-left: 1.2em; }
+		li { margin: 6px 0; }
+		.nf { text-align: center; padding: 64px 0; }
+		.nf .code { font: 600 120px/1 var(--serif); color: var(--marigold); }
+		.nf p { margin: 16px auto 32px; max-width: 420px; color: var(--muted); }
+		.btn { display: inline-block; margin: 4px; border-radius: 999px; padding: 11px 22px; font-weight: 600; text-decoration: none; border: 1.5px solid var(--ink); color: var(--ink); }
+		.btn.ink { background: var(--ink); color: var(--paper); }
+		.ftr { border-top: 1px solid var(--line); padding: 24px 0 40px; font-size: 13.5px; color: var(--faint); }
+		.ftr .wrap { max-width: 1180px; display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+		.ftr a { color: var(--muted); text-decoration: none; margin-right: 16px; }
+		.ftr a:hover { color: var(--peacock); }
+	</style>
+</head>
+<body>
+<header class="hdr">
+	<div class="wrap">
+		<a href="{{ .Data.BaseURL }}/" class="logo"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="brand-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a4f5d"/><stop offset="1" stop-color="#14899e"/></linearGradient></defs><path d="M14 4h36c5.5 0 10 4.5 10 10v24c0 5.5-4.5 10-10 10H26L13 59c-1.3 1.1-3 .2-3-1.4V48C6.6 46.6 4 42.6 4 38V14C4 8.5 8.5 4 14 4z" fill="url(#brand-g)"/><path d="M40.6 17.6A12.5 12.5 0 1 0 40.6 34.4" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round"/><circle cx="44.5" cy="26" r="4.2" fill="#f5a524"/></svg>{{ .Data.Product }}</a>
+		<nav>{{ with .Data.GuideURL }}<a href="{{ . }}">Guide</a>{{ end }}<a href="{{ .Data.BaseURL }}/#signin" data-ga="sign_in_open">Sign in</a></nav>
+	</div>
+</header>
+<main>
+	<div class="wrap">
+	{{ if eq .Data.Page "notfound" }}
+		<div class="nf">
+			<div class="code" aria-hidden="true">404</div>
+			<h1>This page isn't here.</h1>
+			<p>The link may be old, or the address mistyped. Start again from the home page.</p>
+			<a class="btn ink" href="{{ .Data.Home }}">Go to the home page</a>
+			<a class="btn" href="{{ .Data.BaseURL }}/#signin">Sign in to your workspace</a>
+		</div>
+	{{ else }}
+		<article>
+			<h1>{{ .Data.Title }}</h1>
+			<p class="updated">Last updated {{ .Data.Updated }}</p>
+			{{ if eq .Data.Page "privacy" }}{{ template "website-privacy" . }}{{ else }}{{ template "website-terms" . }}{{ end }}
+		</article>
+	{{ end }}
+	</div>
+</main>
+<footer class="ftr">
+	<div class="wrap">
+		<span>© {{ Date "2006" }} {{ .Data.Company }}</span>
+		<span><a href="{{ .Data.BaseURL }}/">Home</a>{{ with .Data.GuideURL }}<a href="{{ . }}">Guide</a>{{ end }}<a href="{{ .Data.PrivacyURL }}">Privacy</a><a href="{{ .Data.TermsURL }}">Terms</a>{{ with .Data.ContactEmail }}<a href="mailto:{{ . }}">{{ . }}</a>{{ end }}</span>
+	</div>
+</footer>
+</body>
+</html>
+{{ end }}
+
+{{ define "website-contact" }}{{ with .Data.ContactEmail }}<a href="mailto:{{ . }}">{{ . }}</a>{{ else }}the contact details on our website{{ end }}{{ end }}
+
+{{ define "website-privacy" }}
+<p>This policy explains what personal data {{ .Data.Company }} ("we", "us") collects through the {{ .Data.Product }} website and service, why, and what you can do about it. It is written to meet India's Digital Personal Data Protection Act, 2023.</p>
+
+<h2>Who this covers</h2>
+<ul>
+	<li><b>Website visitors</b>: anyone browsing {{ .Data.BaseDomain }}{{ with .Data.GuideURL }} or the client guide{{ end }}.</li>
+	<li><b>Our customers</b>: the institutes and businesses that use {{ .Data.Product }}, and the people they add as users of their workspace.</li>
+	<li><b>Our customers' contacts</b>: the students, parents and others who call, message or email an institute that uses {{ .Data.Product }}. For their data, the institute decides what is collected and why, and we process it on the institute's behalf and on its instructions. Requests about that data are best sent to the institute; we will help it answer them.</li>
+</ul>
+
+<h2>What we collect</h2>
+<ul>
+	<li><b>When you visit the website</b>: the pages you view, the links you click, your browser and device, and an approximate location derived from your IP address. We collect this through Google Analytics using cookies, only to understand how the website is used.</li>
+	<li><b>When you look up a workspace</b>: the workspace name you type, to send you to its login page.</li>
+	<li><b>When you book a demo</b>: the details you give us, such as your name, institute, phone number and email.</li>
+	<li><b>When you use a workspace</b>: your name, email, password (stored only as a secure hash), role, sign-in activity and the actions you take, which are kept in the workspace's activity log.</li>
+	<li><b>What institutes put into {{ .Data.Product }}</b>: conversations from the channels they connect (calls, call recordings and transcripts, WhatsApp, Instagram, Messenger, Telegram, email and website chat), contact details, notes, lead stages and the documents they add to the knowledge base.</li>
+</ul>
+
+<h2>How we use it</h2>
+<ul>
+	<li>To provide, secure and support the service, including running the AI features an institute turns on.</li>
+	<li>To send service messages, such as password resets and daily reports.</li>
+	<li>To improve the website and the product, using aggregated analytics.</li>
+	<li>To answer your questions and demo requests.</li>
+	<li>To meet our legal obligations.</li>
+</ul>
+<p>We do not sell personal data, and we do not use our customers' conversations to advertise to anyone.</p>
+
+<h2>Who we share it with</h2>
+<p>We share data only with service providers who help us run {{ .Data.Product }}, under contracts that limit what they may do with it:</p>
+<ul>
+	<li>Cloud hosting, database and file storage providers.</li>
+	<li>The messaging and calling providers an institute connects, such as Meta (WhatsApp, Instagram, Messenger), Telegram, telephony providers and email providers.</li>
+	<li>The AI provider an institute chooses for its AI features.</li>
+	<li>Google Analytics, for website usage statistics.</li>
+</ul>
+<p>We may also disclose data when the law requires it.</p>
+
+<h2>Cookies</h2>
+<p>The website uses Google Analytics cookies to count visits and see which pages are useful. We do not use advertising cookies. Workspaces use cookies that are needed to keep you signed in and to protect against forged requests. You can block or delete cookies in your browser settings; the website will still work.</p>
+
+<h2>How long we keep it</h2>
+<p>Workspace data is kept for as long as the institute's account is active, and for the retention period the institute sets. When a workspace is deleted, its data is deleted after a short grace period that lets the institute restore it. Website analytics data is kept for up to 14 months.</p>
+
+<h2>Security</h2>
+<p>Data is encrypted in transit, access is limited by role, sign-ins can require two-factor authentication, and actions are recorded in an activity log. No system is perfectly secure, but we work to protect your data and will tell affected customers promptly about any breach that concerns them.</p>
+
+<h2>Your rights</h2>
+<p>You can ask us to see the personal data we hold about you, to correct or complete it, to erase it, or to withdraw a consent you gave. You can also nominate someone to exercise these rights for you. To make a request, or to raise a grievance, write to {{ template "website-contact" . }}. We will respond within the time the law requires. If you are not satisfied with our answer, you may complain to the Data Protection Board of India.</p>
+
+<h2>Children</h2>
+<p>{{ .Data.Product }} is a tool for institutes, not for children. Where an institute handles the data of students under 18, the institute is responsible for getting the consent of a parent or guardian.</p>
+
+<h2>Changes</h2>
+<p>We will update this page when our practices change, and show the date of the latest change at the top.</p>
+
+<h2>Contact</h2>
+<p>{{ .Data.Company }}, {{ template "website-contact" . }}.</p>
+{{ end }}
+
+{{ define "website-terms" }}
+<p>These terms govern the use of {{ .Data.Product }}, provided by {{ .Data.Company }} ("we", "us"). By using {{ .Data.Product }} you agree to them. If you use it on behalf of an institute or business ("customer"), you agree to them for that customer. A signed order form or agreement with us takes precedence over these terms where they differ.</p>
+
+<h2>The service</h2>
+<p>{{ .Data.Product }} gives each customer a workspace for handling enquiries from calls, messaging channels, email and website chat, with AI features, call-backs, lead tracking and reports. We may improve and change the service over time, and will give notice before removing a feature a customer relies on.</p>
+
+<h2>Accounts</h2>
+<ul>
+	<li>Workspaces are created by us for customers. A customer's admins add its users and decide what each may do.</li>
+	<li>Keep your password and two-factor codes secret, and tell us at once if you think your account has been misused.</li>
+	<li>The customer is responsible for what its users do in its workspace.</li>
+</ul>
+
+<h2>Customers' responsibilities</h2>
+<ul>
+	<li>Have the right to contact the people you message and call, and get any consent the law requires, including for recording calls.</li>
+	<li>Follow the policies of the channels you connect, such as Meta's WhatsApp Business and Commerce policies.</li>
+	<li>Check the AI's answers in your knowledge base: you decide what it is allowed to say, and you remain responsible for the information you give your contacts.</li>
+	<li>Do not use {{ .Data.Product }} to send spam, to harass anyone, to break the law, or to try to get into other workspaces or our systems.</li>
+</ul>
+
+<h2>Your data</h2>
+<p>Customers own the data they put into their workspace. We use it only to provide the service, as described in our <a href="{{ .Data.PrivacyURL }}">privacy policy</a>. A customer can export its data, and when its account ends we delete the data after the grace period.</p>
+
+<h2>Fees</h2>
+<p>Fees, plans and billing terms are as agreed with each customer. Usage beyond a plan's limits, such as AI requests or call minutes, may be paused or charged as agreed. Taxes are extra where applicable.</p>
+
+<h2>Third-party services</h2>
+<p>Channels, telephony, AI providers and other services you connect are provided by third parties under their own terms. We are not responsible for their availability or for changes they make.</p>
+
+<h2>Availability</h2>
+<p>We work to keep {{ .Data.Product }} available and to give notice of planned maintenance, but we do not promise it will be uninterrupted or error-free.</p>
+
+<h2>Our property</h2>
+<p>{{ .Data.Product }}, its software, design and brand belong to us or our licensors. These terms give you the right to use the service, not to copy or resell it.</p>
+
+<h2>Suspension and ending</h2>
+<p>A customer may stop using {{ .Data.Product }} at any time, as its agreement with us allows. We may suspend or end access for unpaid fees, for a serious breach of these terms, or where the law requires it, and will give notice where we can.</p>
+
+<h2>Liability</h2>
+<p>The service is provided "as is", to the extent the law allows. We are not liable for indirect or consequential losses, such as lost admissions or lost profits. Our total liability for any claim is limited to the fees the customer paid us in the twelve months before the claim.</p>
+
+<h2>Changes to these terms</h2>
+<p>We may update these terms, and will notify customers of material changes before they take effect. The date of the latest change is shown at the top of this page.</p>
+
+<h2>Law</h2>
+<p>These terms are governed by the laws of India.</p>
+
+<h2>Contact</h2>
+<p>Questions about these terms: {{ template "website-contact" . }}.</p>
+{{ end }}

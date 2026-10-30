@@ -69,10 +69,10 @@ func tenantHandler(app *App, next fasthttp.RequestHandler) fasthttp.RequestHandl
 			switch path := string(ctx.Path()); {
 			case path == "/":
 				ctx.Redirect("/guide", fasthttp.StatusFound)
-			case isDocsPath(path):
+			case isDocsPath(path), isWebsitePath(path):
 				next(ctx)
 			default:
-				writeTenantError(ctx, fasthttp.StatusNotFound, app.i18n.T("globals.messages.pageNotFound"), envelope.NotFoundError)
+				serveWebsiteNotFound(app, ctx, app.i18n.T("globals.messages.pageNotFound"))
 			}
 			return
 		}
@@ -85,7 +85,7 @@ func tenantHandler(app *App, next fasthttp.RequestHandler) fasthttp.RequestHandl
 		// platform admins, so it serves no signup.
 		if app.tenant.IsBaseDomain(string(ctx.Host())) {
 			// The landing page, and finding a workspace to log in to.
-			if p := string(ctx.Path()); p == "/" || p == "/api/v1/workspaces/lookup" || strings.HasPrefix(p, "/static/public/static/") {
+			if p := string(ctx.Path()); p == "/" || p == "/api/v1/workspaces/lookup" || isWebsitePath(p) || legalPages[p] != "" {
 				next(ctx)
 				return
 			}
@@ -100,7 +100,7 @@ func tenantHandler(app *App, next fasthttp.RequestHandler) fasthttp.RequestHandl
 				next(ctx)
 				return
 			}
-			writeTenantError(ctx, fasthttp.StatusNotFound, app.i18n.T("tenant.notFound"), envelope.NotFoundError)
+			serveWebsiteNotFound(app, ctx, app.i18n.T("tenant.notFound"))
 			return
 		}
 

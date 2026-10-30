@@ -3,6 +3,7 @@ package main
 import (
 	"cmp"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"mime"
@@ -135,8 +136,20 @@ func handleGuidePage(r *fastglue.Request) error {
 		return nil
 	}
 	data := docsPageData(app.guide, idx, "/guide", "Guide")
-	data["Product"], data["Public"] = cmp.Or(ko.String("app.tenancy.product_name"), "ConectDesk"), true
+	for k, v := range websiteData(app) {
+		data[k] = v
+	}
+	data["Public"] = true
+	data["Title"] = fmt.Sprintf("%s · %s Guide", app.guide.Pages[idx].Title, data["Product"])
+	// The first page is served at /guide itself.
+	data["Canonical"] = data["GuideURL"]
+	if idx > 0 {
+		data["Canonical"] = data["GuideURL"].(string) + "/" + app.guide.Pages[idx].Slug
+	}
+	data["Description"] = cmp.Or(app.guide.Pages[idx].Description,
+		fmt.Sprintf("%s in the %s client guide: how to set up and run your workspace.", app.guide.Pages[idx].Title, data["Product"]))
 	r.RequestCtx.Response.Header.Set("X-Frame-Options", "DENY")
+	setWebsiteHeaders(app, r.RequestCtx)
 	return app.tmpl.RenderWebPage(tenant.DefaultID, r.RequestCtx, "docs", map[string]any{"Data": data})
 }
 

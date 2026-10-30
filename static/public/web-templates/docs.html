@@ -1,10 +1,13 @@
 {{ define "docs" }}<!DOCTYPE html>
-<html lang="en">
+<html lang="en-IN">
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<title>{{ .Data.Page.Title }} · {{ .Data.Product }} {{ .Data.Label }}</title>
-	{{ if not .Data.Public }}<meta name="robots" content="noindex, nofollow" />{{ end }}
+	{{ if .Data.Public }}
+	<meta name="description" content="{{ .Data.Description }}" />
+	{{ template "website-meta" . }}
+	{{ else }}<meta name="robots" content="noindex, nofollow" />{{ end }}
 	{{ template "app-theme" . }}
 	<style>
 		:root { --side: 290px; --top: 56px; }
@@ -14,6 +17,9 @@
 		.brand { font-weight: 700; display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: var(--fg); white-space: nowrap; }
 		.brand .dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--primary); }
 		.brand small { font-weight: 500; color: var(--muted-fg); }
+		.site-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.85rem; }
+		.site-links a { color: var(--muted-fg); text-decoration: none; }
+		.site-links a:hover { color: var(--fg); }
 		.search { position: relative; flex: 1; max-width: 520px; margin-left: auto; }
 		.search input { padding: 0.45rem 0.75rem; }
 		.results { position: absolute; top: calc(100% + 6px); left: 0; right: 0; max-height: 70vh; overflow: auto; display: none;
@@ -131,6 +137,7 @@
 				{{ with .Data.Prev }}<a class="prev" href="{{ $.Data.Base }}/{{ .Slug }}"><small>← Previous</small>{{ .Title }}</a>{{ end }}
 				{{ with .Data.Next }}<a class="next" href="{{ $.Data.Base }}/{{ .Slug }}"><small>Next →</small>{{ .Title }}</a>{{ end }}
 			</div>
+			{{ if .Data.Public }}<footer class="site-links"><a href="{{ .Data.BaseURL }}/">{{ .Data.Product }} home</a><a href="{{ .Data.PrivacyURL }}">Privacy</a><a href="{{ .Data.TermsURL }}">Terms</a>{{ with .Data.ContactEmail }}<a href="mailto:{{ . }}">{{ . }}</a>{{ end }}</footer>{{ end }}
 		</main>
 	</div>
 	<div class="zoom" id="zoom" role="dialog" aria-label="Screenshot"><img alt="" /></div>

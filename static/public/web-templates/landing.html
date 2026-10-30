@@ -1,12 +1,13 @@
 {{ define "landing" }}<!DOCTYPE html>
-<html lang="en">
+<html lang="en-IN">
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<title>{{ .Data.Product }}: never lose an admission enquiry again</title>
-	<meta name="description" content="Calls, WhatsApp and Instagram on one screen for your counsellors. Missed calls get a WhatsApp reply and a call-back, the AI answers fee and batch questions in Hindi and English, and the owner gets the day's admissions numbers every evening." />
+	<title>{{ .Data.Title }}</title>
+	<meta name="description" content="{{ .Data.Description }}" />
 	<meta name="theme-color" content="#fbf8f1" />
-	<link rel="icon" type="image/svg+xml" href="/static/public/static/favicon.svg" />
+	{{ template "website-meta" . }}
+	<script type="application/ld+json">{{ .Data.JSONLD }}</script>
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 	<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..600&family=Geist:wght@400..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -326,7 +327,7 @@
 		/* Footer */
 		.ftr { position: relative; overflow: hidden; padding: 72px 0 32px; }
 		.ftr-g { display: grid; gap: 40px; }
-		@media (min-width: 768px) { .ftr-g { grid-template-columns: 1.6fr 1fr 1fr; } }
+		@media (min-width: 768px) { .ftr-g { grid-template-columns: 1.6fr 1fr 1fr 1fr; } }
 		.ftr p { margin: 14px 0 0; max-width: 320px; font-size: 15px; line-height: 1.6; color: var(--muted); }
 		.ftr h6 { margin: 0 0 14px; font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
 		.ftr ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
@@ -404,8 +405,8 @@
 			<a href="#faq">FAQ</a>
 		</nav>
 		<div class="hdr-cta">
-			<button type="button" class="signin" data-signin>Sign in</button>
-			{{ if .Data.DemoURL }}<a href="{{ .Data.DemoURL }}" class="btn btn-line" target="_blank" rel="noopener">Book a demo</a>{{ end }}
+			<button type="button" class="signin" data-signin data-ga="sign_in_open">Sign in</button>
+			{{ if .Data.DemoURL }}<a href="{{ .Data.DemoURL }}" data-ga="generate_lead" class="btn btn-line" target="_blank" rel="noopener">Book a demo</a>{{ end }}
 			<button type="button" class="menu-btn" id="menu-btn" aria-label="Menu" aria-expanded="false" aria-controls="mnav"><svg class="ic"><use href="#menu" /></svg></button>
 		</div>
 	</div>
@@ -415,7 +416,7 @@
 		{{ if .Data.DemoVideoURL }}<a href="#tour">Tour</a>{{ end }}
 		<a href="#compare">Compare</a>
 		<a href="#faq">FAQ</a>
-		{{ if .Data.DemoURL }}<a href="{{ .Data.DemoURL }}" target="_blank" rel="noopener">Book a demo</a>{{ end }}
+		{{ if .Data.DemoURL }}<a href="{{ .Data.DemoURL }}" data-ga="generate_lead" target="_blank" rel="noopener">Book a demo</a>{{ end }}
 	</nav>
 </header>
 
@@ -425,10 +426,10 @@
 			<div class="hero-g">
 				<div>
 					<span class="hero-tag rise"><b>FOR INSTITUTES</b>Coaching, test-prep &amp; training centres</span>
-					<h1 class="h1 rise" style="--d:.08s">Never lose an admission <span class="mark"><em>enquiry</em><svg viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M3 9.5C46 4 120 2.5 197 7" /></svg></span> again.</h1>
+					<h1 class="h1">Never lose an admission <span class="mark"><em>enquiry</em><svg viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M3 9.5C46 4 120 2.5 197 7" /></svg></span> again.</h1>
 					<p class="hero-sub rise" style="--d:.18s">Calls, WhatsApp and Instagram on one screen for your counsellors. Every missed call gets a reply and a call-back, and you see the day's admissions every evening.</p>
 					<div class="hero-cta rise" style="--d:.26s">
-						{{ if .Data.DemoURL }}<a href="{{ .Data.DemoURL }}" class="btn btn-ink" target="_blank" rel="noopener">Book a demo<span class="arr"><svg class="ic"><use href="#arrow-right" /></svg></span></a>{{ else }}<button type="button" class="btn btn-ink" data-signin>Sign in to your workspace<span class="arr"><svg class="ic"><use href="#arrow-right" /></svg></span></button>{{ end }}
+						{{ if .Data.DemoURL }}<a href="{{ .Data.DemoURL }}" data-ga="generate_lead" class="btn btn-ink" target="_blank" rel="noopener">Book a demo<span class="arr"><svg class="ic"><use href="#arrow-right" /></svg></span></a>{{ else }}<button type="button" class="btn btn-ink" data-signin data-ga="sign_in_open">Sign in to your workspace<span class="arr"><svg class="ic"><use href="#arrow-right" /></svg></span></button>{{ end }}
 						{{ if .Data.DemoVideoURL }}<a href="#tour" class="btn btn-line" data-play-demo><span class="play-dot"><svg class="ic"><use href="#play" /></svg></span>Watch the tour</a>{{ else }}<a href="#day" class="btn btn-line">See how it works</a>{{ end }}
 					</div>
 					<div class="works rise" style="--d:.34s">
@@ -660,13 +661,8 @@
 					<h2 class="h2">Questions institutes <em>ask us first.</em></h2>
 				</div>
 				<div class="rv" style="--d:.1s">
-					<details><summary>Who is {{ .Data.Product }} for?<span class="pm" aria-hidden="true"><svg class="ic"><use href="#plus" /></svg></span></summary><p>Coaching institutes and training centres with a small admissions team, usually 3 to 30 people: JEE and NEET coaching, IELTS and study-abroad consultants, skill and computer courses, and tuition centres that get enquiries by phone and WhatsApp.</p></details>
-					<details><summary>Which channels does it work with?<span class="pm" aria-hidden="true"><svg class="ic"><use href="#plus" /></svg></span></summary><p>Phone calls, WhatsApp Business, Instagram, Facebook Messenger, Telegram, a chat widget for your website, and email. All of them land in the same inbox.</p></details>
-					<details><summary>What happens when we miss a call?<span class="pm" aria-hidden="true"><svg class="ic"><use href="#plus" /></svg></span></summary><p>The caller gets a WhatsApp reply automatically, with a separate message outside business hours, and a call-back task is created for your team. When a counsellor completes a call with that number, the task closes itself. Call-backs left too long are escalated.</p></details>
-					<details><summary>We already have a WhatsApp bot. Why do we need this?<span class="pm" aria-hidden="true"><svg class="ic"><use href="#plus" /></svg></span></summary><p>{{ .Data.Product }} isn't another bot. It handles what happens around the bot: parents who call instead of messaging, people who want to talk to a real person, follow-ups, and giving the owner a clear view of every lead.</p></details>
-					<details><summary>Does the AI understand Hindi?<span class="pm" aria-hidden="true"><svg class="ic"><use href="#plus" /></svg></span></summary><p>Yes. The assistant replies in Hindi, English or Hinglish, answers from the fees, batch and course details you give it, and hands the conversation to a counsellor when it should.</p></details>
-					<details><summary>Are calls recorded?<span class="pm" aria-hidden="true"><svg class="ic"><use href="#plus" /></svg></span></summary><p>Yes. Recorded calls are transcribed, and a short summary with the next step is saved to the contact, so you can see what happened without listening to the whole call.</p></details>
-					<details><summary>How do I log in to my workspace?<span class="pm" aria-hidden="true"><svg class="ic"><use href="#plus" /></svg></span></summary><p>Each institute has its own address, such as yourinstitute.{{ .Data.BaseDomain }}. <a href="#signin" data-signin>Sign in here</a>, enter your workspace name, and you'll be taken to your login page.</p></details>
+					{{ range .Data.FAQs }}<details><summary>{{ .Q }}<span class="pm" aria-hidden="true"><svg class="ic"><use href="#plus" /></svg></span></summary><p>{{ .A }}{{ if .SignIn }} <a href="#signin" data-signin data-ga="sign_in_open">Sign in here</a>, enter your workspace name, and you'll be taken to your login page.{{ end }}</p></details>
+					{{ end }}
 				</div>
 			</div>
 		</div>
@@ -679,8 +675,8 @@
 				<h2>Be ready for every call <em>this season.</em></h2>
 				<p>A short demo built around your enquiries, your counsellors and your admission calendar.</p>
 				<div class="hero-cta">
-					{{ if .Data.DemoURL }}<a href="{{ .Data.DemoURL }}" class="btn btn-ink" target="_blank" rel="noopener">Book a demo<span class="arr"><svg class="ic"><use href="#arrow-right" /></svg></span></a>
-					<button type="button" class="btn btn-line" data-signin>Sign in to your workspace</button>{{ else }}<button type="button" class="btn btn-ink" data-signin>Sign in to your workspace<span class="arr"><svg class="ic"><use href="#arrow-right" /></svg></span></button>{{ end }}
+					{{ if .Data.DemoURL }}<a href="{{ .Data.DemoURL }}" data-ga="generate_lead" class="btn btn-ink" target="_blank" rel="noopener">Book a demo<span class="arr"><svg class="ic"><use href="#arrow-right" /></svg></span></a>
+					<button type="button" class="btn btn-line" data-signin data-ga="sign_in_open">Sign in to your workspace</button>{{ else }}<button type="button" class="btn btn-ink" data-signin data-ga="sign_in_open">Sign in to your workspace<span class="arr"><svg class="ic"><use href="#arrow-right" /></svg></span></button>{{ end }}
 				</div>
 			</div>
 		</div>
@@ -701,14 +697,23 @@
 			<div>
 				<h6>Get started</h6>
 				<ul>
-					<li><button type="button" data-signin>Sign in</button></li>
-					{{ if .Data.DemoURL }}<li><a href="{{ .Data.DemoURL }}" target="_blank" rel="noopener">Book a demo</a></li>{{ end }}
+					<li><button type="button" data-signin data-ga="sign_in_open">Sign in</button></li>
+					{{ if .Data.DemoURL }}<li><a href="{{ .Data.DemoURL }}" data-ga="generate_lead" target="_blank" rel="noopener">Book a demo</a></li>{{ end }}
 					<li><a href="#faq">FAQ</a></li>
+				</ul>
+			</div>
+			<div>
+				<h6>Resources</h6>
+				<ul>
+					{{ with .Data.GuideURL }}<li><a href="{{ . }}">Client guide</a></li>{{ end }}
+					<li><a href="{{ .Data.PrivacyURL }}">Privacy policy</a></li>
+					<li><a href="{{ .Data.TermsURL }}">Terms of service</a></li>
+					{{ with .Data.ContactEmail }}<li><a href="mailto:{{ . }}" data-ga="contact_email">{{ . }}</a></li>{{ end }}
 				</ul>
 			</div>
 		</div>
 		<div class="ftr-word" aria-hidden="true">{{ .Data.Product }}</div>
-		<div class="ftr-b"><span>© <span id="year">2026</span> {{ .Data.Product }}</span><span>Made for admission teams in India</span></div>
+		<div class="ftr-b"><span>© <span id="year">{{ Date "2006" }}</span> {{ .Data.Company }}</span><span>Made for admission teams in India</span></div>
 	</div>
 </footer>
 
@@ -768,6 +773,7 @@
 		fetch('/api/v1/workspaces/lookup?slug=' + encodeURIComponent(value))
 			.then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
 			.then(function (res) {
+				if (window.gtag) gtag('event', 'workspace_lookup', { result: res.ok ? 'found' : 'not_found' });
 				if (res.ok && res.body.data && res.body.data.url) {
 					window.location.href = res.body.data.url + '/';
 					return;
@@ -810,6 +816,7 @@
 			}
 			cover.replaceWith(node);
 			cover = null;
+			if (window.gtag) gtag('event', 'video_start', { video_title: 'Product tour' });
 			if (node.tagName === 'VIDEO') { var p = node.play(); if (p && p.catch) p.catch(function () {}); }
 		};
 		cover.addEventListener('click', startDemo);
@@ -817,6 +824,13 @@
 			a.addEventListener('click', function () { setTimeout(startDemo, 500); });
 		});
 	}
+
+	// Which questions people open says what the page leaves unanswered.
+	document.querySelectorAll('#faq details').forEach(function (d) {
+		d.addEventListener('toggle', function () {
+			if (d.open && window.gtag) gtag('event', 'faq_open', { question: d.querySelector('summary').textContent.trim() });
+		});
+	});
 
 	document.getElementById('year').textContent = new Date().getFullYear();
 })();

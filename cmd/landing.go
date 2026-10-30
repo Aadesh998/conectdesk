@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cmp"
 	"strings"
 
 	"github.com/conectdesk/conectdesk/internal/envelope"
@@ -19,20 +18,21 @@ func landingOr(next fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 			return next(r)
 		}
 		video := ko.String("app.tenancy.demo_video_url")
-		return app.tmpl.RenderWebPage(tenant.DefaultID, r.RequestCtx, "landing", map[string]any{
-			"Data": map[string]any{
-				"Product":    cmp.Or(ko.String("app.tenancy.product_name"), "ConectDesk"),
-				"BaseDomain": ko.String("app.tenancy.base_domain"),
-				// DemoURL is where "Book a demo" goes, e.g. a calendar or a
-				// wa.me link; the buttons are hidden without it.
-				"DemoURL": ko.String("app.tenancy.demo_url"),
-				// DemoVideoURL is the product walkthrough; a video file plays
-				// in a <video>, anything else (Cloudflare Stream, YouTube) is
-				// embedded. The section is hidden without it.
-				"DemoVideoURL":  video,
-				"DemoVideoFile": isVideoFile(video),
-			},
-		})
+		d := websiteData(app)
+		// DemoURL is where "Book a demo" goes, e.g. a calendar or a wa.me
+		// link; the buttons are hidden without it.
+		d["DemoURL"] = ko.String("app.tenancy.demo_url")
+		// DemoVideoURL is the product walkthrough; a video file plays in a
+		// <video>, anything else (Cloudflare Stream, YouTube) is embedded.
+		// The section is hidden without it.
+		d["DemoVideoURL"], d["DemoVideoFile"] = video, isVideoFile(video)
+		d["Title"] = d["Product"].(string) + ": Admission CRM for Coaching Institutes"
+		d["Canonical"] = d["BaseURL"].(string) + "/"
+		d["Description"] = "Calls, WhatsApp and Instagram in one inbox for coaching institutes. Missed-call replies, AI answers in Hindi and English, and a daily admissions report."
+		faqs := landingFAQs(d["Product"].(string), d["BaseDomain"].(string))
+		d["FAQs"], d["JSONLD"] = faqs, landingJSONLD(d, faqs)
+		setWebsiteHeaders(app, r.RequestCtx)
+		return app.tmpl.RenderWebPage(tenant.DefaultID, r.RequestCtx, "landing", map[string]any{"Data": d})
 	}
 }
 

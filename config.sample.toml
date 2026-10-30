@@ -17,7 +17,8 @@ encryption_key = "your-32-char-random-string-here!"
 
 # Your legal documents, linked from every workspace's Admin > Privacy page for
 # customers who need them, e.g. to sign a data processing agreement. Empty
-# ones aren't shown.
+# ones aren't shown. With privacy_policy_url set, the website's own /privacy
+# page redirects to it.
 [app.legal]
 privacy_policy_url = ""
 dpa_url = ""
@@ -44,6 +45,27 @@ demo_url = ""
 # https://customer-<code>.cloudflarestream.com/<id>/iframe link, is embedded.
 # Leave empty to hide the section.
 demo_video_url = "https://public.assets.vnytros.dev/ConectDesk_Demo_AI_Builder_Cup.mp4"
+# The website's search, analytics and legal details. They apply to the
+# landing page, its /privacy and /terms pages and the client guide on the docs
+# host, never to the workspaces.
+# Google Analytics 4 measurement ID, e.g. "G-XXXXXXXXXX". Empty adds no
+# analytics.
+ga_measurement_id = ""
+# Search Console's HTML tag token (the content of its google-site-verification
+# meta tag), to verify a URL-prefix property. Not needed when the domain is
+# verified by its DNS TXT record.
+google_site_verification = ""
+# Legal name of the business behind the product, on the privacy policy, the
+# terms and the copyright line; the product name when empty.
+company_name = ""
+# Email for privacy requests, grievances and questions, shown on the website.
+contact_email = ""
+# The product's profiles elsewhere (LinkedIn, Instagram, YouTube...), as
+# space-separated URLs, for search engines to tie them to the site.
+social_links = ""
+# Image shown when the website is shared on WhatsApp, LinkedIn and so on,
+# 1200x630; the built-in one when empty.
+og_image_url = ""
 # Plan new workspaces start on; its limits are under [app.tenancy.plans.<name>].
 default_plan = "free"
 # Where a workspace's Admin > Usage page sends admins to upgrade their plan: a
