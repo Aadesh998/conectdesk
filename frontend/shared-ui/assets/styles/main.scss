@@ -22,7 +22,7 @@
 @layer base {
   html,
   body {
-    font-family: 'Instrument Sans', sans-serif;
+    font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
     min-height: 100%;
     overflow: hidden;
     margin: 0;
@@ -125,24 +125,24 @@
     }
   }
   :root {
-    --sidebar-background: 0 0% 99.2%;
-    --sidebar-foreground: 0 0% 1%;
-    --sidebar-primary: 152 39% 30%;
+    --sidebar-background: 42 45% 97.5%;
+    --sidebar-foreground: 216 10% 9%;
+    --sidebar-primary: 190 79% 27%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 95%;
-    --sidebar-accent-foreground: 0 0% 1%;
-    --sidebar-border: 0 0% 91%;
-    --sidebar-ring: 151 41% 45%;
+    --sidebar-accent: 40 30% 92%;
+    --sidebar-accent-foreground: 216 10% 9%;
+    --sidebar-border: 40 26% 86%;
+    --sidebar-ring: 190 70% 40%;
   }
   .dark {
-    --sidebar-background: 120 2.6% 7.6%;
-    --sidebar-foreground: 150 6% 93%;
-    --sidebar-primary: 152 58% 54%;
-    --sidebar-primary-foreground: 120 2.6% 7.6%;
-    --sidebar-accent: 150 3% 15%;
-    --sidebar-accent-foreground: 150 6% 93%;
-    --sidebar-border: 150 2% 16%;
-    --sidebar-ring: 152 45% 33%;
+    --sidebar-background: 30 6% 7%;
+    --sidebar-foreground: 40 25% 92%;
+    --sidebar-primary: 187 55% 55%;
+    --sidebar-primary-foreground: 190 50% 8%;
+    --sidebar-accent: 30 5% 16%;
+    --sidebar-accent-foreground: 40 25% 92%;
+    --sidebar-border: 30 5% 17%;
+    --sidebar-ring: 187 45% 38%;
   }
 
   :root {
@@ -159,27 +159,27 @@
 
   :root,
   .light {
-    --background: 0 0% 99.2%;
-    --foreground: 0 0% 1%;
-    --foreground-lighter: 0 0% 41%;
+    --background: 42 45% 97.5%;
+    --foreground: 216 10% 9%;
+    --foreground-lighter: 220 4% 42%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 1%;
+    --card: 40 100% 99.2%;
+    --card-foreground: 216 10% 9%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 1%;
+    --popover: 40 100% 99.2%;
+    --popover-foreground: 216 10% 9%;
 
-    --primary: 152 39% 30%;
+    --primary: 190 79% 27%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 1%;
+    --secondary: 42 30% 94%;
+    --secondary-foreground: 216 10% 9%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 27%;
+    --muted: 42 30% 94%;
+    --muted-foreground: 220 5% 38%;
 
-    --accent: 0 0% 95%;
-    --accent-foreground: 0 0% 1%;
+    --accent: 40 30% 92%;
+    --accent-foreground: 216 10% 9%;
 
     --destructive: 2 47% 46%;
     --destructive-foreground: 9 100% 99%;
@@ -191,38 +191,38 @@
     --warning-foreground: 24 45% 2%;
     --warning-600: 35 92% 33%;
 
-    --link: 210 100% 40%;
+    --link: 210 80% 38%;
 
-    --border: 0 0% 91%;
-    --input: 0 0% 85%;
-    --ring: 151 41% 45%;
-    --radius: 0.5rem;
+    --border: 40 26% 86%;
+    --input: 40 18% 78%;
+    --ring: 190 70% 40%;
+    --radius: 0.625rem;
     --private: 35 90% 94%;
-    --canvas: 0 0% 82%;
+    --canvas: 40 22% 90%;
   }
 
   .dark {
-    --background: 120 2.6% 7.6%;
-    --foreground: 150 6% 93%;
-    --foreground-lighter: 150 1% 60%;
+    --background: 30 6% 7%;
+    --foreground: 40 25% 92%;
+    --foreground-lighter: 35 5% 60%;
 
-    --card: 120 2% 10%;
-    --card-foreground: 150 6% 93%;
+    --card: 30 5% 10%;
+    --card-foreground: 40 25% 92%;
 
-    --popover: 120 2% 12%;
-    --popover-foreground: 150 6% 93%;
+    --popover: 30 5% 12%;
+    --popover-foreground: 40 25% 92%;
 
-    --primary: 152 58% 54%;
-    --primary-foreground: 120 2.6% 7.6%;
+    --primary: 187 55% 55%;
+    --primary-foreground: 190 50% 8%;
 
-    --secondary: 150 3% 12%;
-    --secondary-foreground: 150 6% 93%;
+    --secondary: 30 5% 13%;
+    --secondary-foreground: 40 25% 92%;
 
-    --muted: 150 3% 13%;
-    --muted-foreground: 120 1% 74%;
+    --muted: 30 5% 13%;
+    --muted-foreground: 38 8% 70%;
 
-    --accent: 150 3% 15%;
-    --accent-foreground: 150 6% 93%;
+    --accent: 30 5% 16%;
+    --accent-foreground: 40 25% 92%;
 
     --destructive: 4 92% 74%;
     --destructive-foreground: 12 38% 3%;
@@ -234,13 +234,13 @@
     --warning-foreground: 24 45% 2%;
     --warning-600: 36 87% 62%;
 
-    --link: 210 90% 66%;
+    --link: 205 90% 68%;
 
-    --border: 150 2% 16%;
-    --input: 150 2% 19%;
-    --ring: 152 45% 33%;
+    --border: 30 5% 17%;
+    --input: 30 5% 21%;
+    --ring: 187 45% 38%;
     --private: 30 35% 18%;
-    --canvas: 120 3% 4%;
+    --canvas: 30 8% 4%;
   }
 }
 

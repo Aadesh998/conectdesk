@@ -11,4 +11,4 @@ dist/
 static/widget.min.js
 markdown
 deck
-leads/
+/leads/

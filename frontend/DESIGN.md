@@ -21,25 +21,25 @@ HSL channel triples in CSS variables, consumed via `hsl(var(--x))` (Tailwind cla
 
 | Token | Light | Dark | Use for |
 |---|---|---|---|
-| `background` | `0 0% 99.2%` | `120 2.6% 7.6%` | app/content surface |
-| `foreground` | `0 0% 1%` | `150 6% 93%` | primary text |
-| `foreground-lighter` | `0 0% 41%` | `150 1% 60%` | idle sidebar nav items |
-| `card` / `card-foreground` | `0 0% 100%` / `0 0% 1%` | `120 2% 10%` / `150 6% 93%` | raised card surface |
-| `popover` / `popover-foreground` | `0 0% 100%` / `0 0% 1%` | `120 2% 12%` / `150 6% 93%` | menus, popovers, dropdowns |
-| `primary` / `primary-foreground` | `152 39% 30%` / `0 0% 100%` | `152 58% 54%` / `120 2.6% 7.6%` | brand, active state, unread badges, primary buttons |
-| `secondary` / `secondary-foreground` | `0 0% 96%` / `0 0% 1%` | `150 3% 12%` / `150 6% 93%` | secondary buttons, outgoing message bubbles |
-| `muted` / `muted-foreground` | `0 0% 96%` / `0 0% 27%` | `150 3% 13%` / `120 1% 74%` | muted backgrounds, captions/meta text, secondary labels |
-| `accent` / `accent-foreground` | `0 0% 95%` / `0 0% 1%` | `150 3% 15%` / `150 6% 93%` | hover and selected states |
+| `background` | `42 45% 97.5%` | `30 6% 7%` | app/content surface (warm paper) |
+| `foreground` | `216 10% 9%` | `40 25% 92%` | primary text (ink) |
+| `foreground-lighter` | `220 4% 42%` | `35 5% 60%` | idle sidebar nav items |
+| `card` / `card-foreground` | `40 100% 99.2%` / `216 10% 9%` | `30 5% 10%` / `40 25% 92%` | raised card surface |
+| `popover` / `popover-foreground` | `40 100% 99.2%` / `216 10% 9%` | `30 5% 12%` / `40 25% 92%` | menus, popovers, dropdowns |
+| `primary` / `primary-foreground` | `190 79% 27%` / `0 0% 100%` | `187 55% 55%` / `190 50% 8%` | brand (peacock), active state, unread badges, primary buttons |
+| `secondary` / `secondary-foreground` | `42 30% 94%` / `216 10% 9%` | `30 5% 13%` / `40 25% 92%` | secondary buttons, outgoing message bubbles |
+| `muted` / `muted-foreground` | `42 30% 94%` / `220 5% 38%` | `30 5% 13%` / `38 8% 70%` | muted backgrounds, captions/meta text, secondary labels |
+| `accent` / `accent-foreground` | `40 30% 92%` / `216 10% 9%` | `30 5% 16%` / `40 25% 92%` | hover and selected states |
 | `destructive` / `destructive-foreground` | `2 47% 46%` / `9 100% 99%` | `4 92% 74%` / `12 38% 3%` | errors, delete, SLA breached, overdue, offline |
 | `success` / `success-foreground` | `142 72% 37%` / `0 0% 98%` | `142 55% 55%` / `142 40% 10%` | positive/met, verified, online, connected, delivered |
 | `warning` / `warning-foreground` | `39 85% 43%` / `24 45% 2%` | `36 87% 62%` / `24 45% 2%` | away, pending, SLA approaching, connecting (as background) |
 | `warning-600` | `35 92% 33%` | `36 87% 62%` | warning as TEXT/icon color. Plain `warning` fails 4.5:1 on light |
-| `link` | `210 100% 40%` | `210 90% 66%` | links inside rendered email/message content only. UI links use `.link-style` |
-| `border` | `0 0% 91%` | `150 2% 16%` | all borders/dividers |
-| `input` | `0 0% 85%` | `150 2% 19%` | form field borders |
-| `ring` | `151 41% 45%` | `152 45% 33%` | focus rings |
+| `link` | `210 80% 38%` | `205 90% 68%` | links inside rendered email/message content only. UI links use `.link-style` |
+| `border` | `40 26% 86%` | `30 5% 17%` | all borders/dividers |
+| `input` | `40 18% 78%` | `30 5% 21%` | form field borders |
+| `ring` | `190 70% 40%` | `187 45% 38%` | focus rings |
 | `private` | `35 90% 94%` | `30 35% 18%` | private-note background tint |
-| `canvas` | `0 0% 82%` | `120 3% 4%` | app gutter behind floating panels (deepest surface) |
+| `canvas` | `40 22% 90%` | `30 8% 4%` | app gutter behind floating panels (deepest surface) |
 
 **Sidebar tokens** (left nav chrome): `sidebar-background` matches `background` in both
 themes, plus `sidebar-foreground`, `sidebar-primary`, `sidebar-accent`,
@@ -55,7 +55,7 @@ Color carries meaning; use the semantic token, never a raw palette color.
 - **success (green):** SLA met, identity verified, agent online, widget connected, message delivered/read
 - **warning (amber):** agent away, SLA approaching/remaining, widget connecting, no-internet banner
 - **destructive (red):** error, delete, SLA breached, SLA overdue
-- **primary (green):** brand identity, active nav, unread count badges, primary actions
+- **primary (peacock):** brand identity, active nav, unread count badges, primary actions
 - **foreground / muted:** neutral data (counts, totals, timestamps). Do not color a number
   unless the color means something. On the reports dashboard numbers are neutral; only
   met=success and breached=destructive are colored.
@@ -92,7 +92,9 @@ In light mode `card` is pure white against a near-white background. In dark mode
 
 ## 3. Typography
 
-Font: Instrument Sans. Sizes: `text-xs` 12 · `text-sm` 14 · `text-base` 16 · `text-lg` 18 ·
+Font: Geist. The palette is warm paper neutrals and ink text with a peacock brand
+(`#0f6b7d`); the website at the base domain adds marigold (`#f5a524`) as its highlight and
+Fraunces for headlines. Sizes: `text-xs` 12 · `text-sm` 14 · `text-base` 16 · `text-lg` 18 ·
 `text-xl` 20 · `text-2xl` 24 · `text-3xl` 30. Weights: 400 body · 500 labels · 600 headings ·
 700 rare emphasis.
 
@@ -110,14 +112,14 @@ Use `tabular-nums` for any numeric column, timer, or metric to stop width jitter
 
 ## 4. Radius
 
-`--radius` = `0.5rem` (8px). The Tailwind scale derives from it:
+`--radius` = `0.625rem` (10px). The Tailwind scale derives from it:
 
 | Class | Value | Use for |
 |---|---|---|
-| `rounded-xl` | radius + 4 (12px) | large surfaces, widget window preview, dashboard message bubbles |
-| `rounded-lg` | radius (8px) | cards, containers, dialogs |
-| `rounded-md` | radius - 2 (6px) | buttons, inputs, chips, badges, small interactive |
-| `rounded-sm` | radius - 4 (4px) | tiny insets |
+| `rounded-xl` | radius + 4 (14px) | large surfaces, widget window preview, dashboard message bubbles |
+| `rounded-lg` | radius (10px) | cards, containers, dialogs |
+| `rounded-md` | radius - 2 (8px) | buttons, inputs, chips, badges, small interactive |
+| `rounded-sm` | radius - 4 (6px) | tiny insets |
 | `rounded-full` | - | avatars, status dots, count badges, pills |
 
 **Never use bare `rounded`.** It is Tailwind's fixed 4px and ignores the token.

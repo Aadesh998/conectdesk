@@ -34,8 +34,16 @@ url_scheme = "https"
 # Workspaces are only created by platform admins, from the platform dashboard,
 # where they pick the inbox channels each one may use. There is no public
 # signup.
-# Product name on the login page at the base domain.
+# Product name on the website at the base domain.
 product_name = "ConectDesk"
+# Where the website's "Book a demo" buttons go, e.g. a calendar booking page
+# or a https://wa.me/ link. Leave empty to hide them.
+demo_url = ""
+# The product walkthrough video on the website. A direct file URL (.mp4,
+# .webm) plays in the page; a player URL, e.g. a Cloudflare Stream
+# https://customer-<code>.cloudflarestream.com/<id>/iframe link, is embedded.
+# Leave empty to hide the section.
+demo_video_url = "https://public.assets.vnytros.dev/ConectDesk_Demo_AI_Builder_Cup.mp4"
 # Plan new workspaces start on; its limits are under [app.tenancy.plans.<name>].
 default_plan = "free"
 # Where a workspace's Admin > Usage page sends admins to upgrade their plan: a
