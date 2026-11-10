@@ -53,4 +53,4 @@ Check the workspace **Timezone** and **Business hours** under [General](/guide/w
 
 ## Still stuck?
 
-Contact ConectDesk support with your workspace address and a screenshot of what you see.
+Contact ConnectDesk support with your workspace address and a screenshot of what you see.

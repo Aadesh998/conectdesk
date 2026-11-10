@@ -45,7 +45,7 @@ Non-inbox pages show a title bar with a sidebar-toggle icon. The toggle collapse
 | "Platform support {admin} is logged in as {name}. Everything done here is done as this agent." | A platform admin used **Log in as** on this agent. | **End session** logs out. |
 | "Set up your workspace" card ("{done} of {total} done", progress bar), bottom of the inbox sidebar | Users with `general_settings:manage`, until setup is complete or dismissed. | Click to open the setup checklist (Admin → Setup). |
 
-**Browser tab title** shows the unread notification count, e.g. "(3) My inbox - ConectDesk".
+**Browser tab title** shows the unread notification count, e.g. "(3) My inbox - ConnectDesk".
 
 ## Inbox sidebar
 

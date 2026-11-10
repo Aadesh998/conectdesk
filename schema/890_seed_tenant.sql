@@ -26,7 +26,7 @@ VALUES
     (p_tenant_id, 'app.lang', '"en-US"'::jsonb),
     (p_tenant_id, 'app.root_url', '"http://localhost:9000"'::jsonb),
     (p_tenant_id, 'app.logo_url', '""'::jsonb),
-    (p_tenant_id, 'app.site_name', '"ConectDesk"'::jsonb),
+    (p_tenant_id, 'app.site_name', '"ConnectDesk"'::jsonb),
     (p_tenant_id, 'app.favicon_url', '"http://localhost:9000/favicon.ico"'::jsonb),
     (p_tenant_id, 'app.max_file_upload_size', '20'::jsonb),
     (p_tenant_id, 'app.require_2fa', 'false'::jsonb),
@@ -117,7 +117,7 @@ VALUES(p_tenant_id, 'email_notification'::template_type, '
 
 <div>
     Best regards,<br>
-    ConectDesk
+    ConnectDesk
 </div>
 
 ', false, 'Conversation assigned', 'New conversation assigned to you', true);
@@ -144,7 +144,7 @@ VALUES (p_tenant_id,
 
 <p>
   Best regards,<br>
-  ConectDesk
+  ConnectDesk
 </p>
 
 ',
@@ -175,7 +175,7 @@ VALUES (p_tenant_id,
 
 <p>
   Best regards,<br>
-  ConectDesk
+  ConnectDesk
 </p>
 
 ',

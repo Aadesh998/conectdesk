@@ -48,13 +48,29 @@
         </div>
 
         <div class="space-y-2">
-          <!-- Dark-mode toggle -->
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-muted-foreground">{{ t('navigation.darkMode') }}</span>
-            <Switch
-              :checked="mode === 'dark'"
-              @update:checked="(val) => (mode = val ? 'dark' : 'light')"
-            />
+          <!-- Theme: light, dark or follow the system -->
+          <div class="flex items-center justify-between gap-2 text-sm">
+            <span class="text-muted-foreground">{{ t('navigation.theme') }}</span>
+            <div
+              role="radiogroup"
+              :aria-label="t('navigation.theme')"
+              class="inline-flex items-center gap-0.5 rounded-md border p-0.5"
+            >
+              <button
+                v-for="opt in themeOptions"
+                :key="opt.value"
+                type="button"
+                role="radio"
+                :aria-checked="store === opt.value"
+                :aria-label="opt.label"
+                :title="opt.label"
+                class="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                :class="store === opt.value && 'bg-accent text-foreground'"
+                @click.stop="store = opt.value"
+              >
+                <component :is="opt.icon" class="size-3.5" />
+              </button>
+            </div>
           </div>
 
           <div class="border-t border-border pt-3 space-y-3">
@@ -126,21 +142,35 @@ import { SidebarMenuButton } from '@shared-ui/components/ui/sidebar'
 import { Avatar, AvatarFallback, AvatarImage } from '@shared-ui/components/ui/avatar'
 import StatusDot from '@shared-ui/components/StatusDot.vue'
 import { Switch } from '@shared-ui/components/ui/switch'
-import { ChevronsUpDown, CircleUserRound, Keyboard, LogOut } from 'lucide-vue-next'
+import {
+  ChevronsUpDown,
+  CircleUserRound,
+  Keyboard,
+  LogOut,
+  Monitor,
+  Moon,
+  Sun
+} from 'lucide-vue-next'
 import { useUserStore } from '@main/stores/user'
 import { useIsMobile } from '@shared-ui/composables'
 import { useRouter } from 'vue-router'
 import KeyboardShortcutsDialog from '@main/components/KeyboardShortcutsDialog.vue'
 
 import { useColorMode } from '@vueuse/core'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const isMobile = useIsMobile()
-const mode = useColorMode()
+// store is the preference (light, dark or auto); the html class follows it.
+const { store } = useColorMode()
 const userStore = useUserStore()
 const router = useRouter()
 const { t } = useI18n()
 const showShortcuts = ref(false)
+const themeOptions = computed(() => [
+  { value: 'light', label: t('navigation.theme.light'), icon: Sun },
+  { value: 'dark', label: t('navigation.theme.dark'), icon: Moon },
+  { value: 'auto', label: t('navigation.theme.system'), icon: Monitor }
+])
 
 const logout = () => {
   window.location.href = '/logout'

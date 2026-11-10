@@ -54,7 +54,7 @@ var errWeakPassword = errors.New("weak password")
 // without one), and reports whether it went out.
 func sendCredentials(app *App, tenantID int, to, name, loginURL, password, reason string) credentialsResp {
 	out := credentialsResp{Password: password}
-	product := cmp.Or(ko.String("app.tenancy.product_name"), "ConectDesk")
+	product := cmp.Or(ko.String("app.tenancy.product_name"), "ConnectDesk")
 	greeting := "Hi,"
 	if name = strings.TrimSpace(name); name != "" {
 		greeting = "Hi " + html.EscapeString(name) + ","

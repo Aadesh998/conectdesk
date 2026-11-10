@@ -40,7 +40,7 @@ If either is missing, the dashboard does not exist. Its paths (`/platform`, `/ap
 
 | Element | What it does |
 |---|---|
-| Logo: **"C" ConectDesk / Platform admin** | Takes you to the Overview. |
+| Logo: **"C" ConnectDesk / Platform admin** | Takes you to the Overview. |
 | **Overview** | Opens the Overview (`#/`). |
 | **Workspaces** | Opens the workspace list (`#/workspaces`). |
 | **Audit log** | Opens the audit log (`#/audit`). |
@@ -247,7 +247,7 @@ The default workspace (ID 1) always shows no limits.
 | **Activate** | Shown for suspended agents; lets them log in again. Audited as **Activated an agent**. | They're back. |
 | **Delete** | After confirming, deletes the agent the same way Admin → Agents does: they can't log in, they're logged out, and their open conversations are unassigned. Their past messages stay. Audited as **Deleted an agent**. | Someone has left. |
 
-**The new password dialog.** After **Add agent** or **Set password**, a dialog shows the password **once**, with **Copy**, and either "Emailed to <email>." (green) or, if the email didn't go out, the mail server's error and "Share the password with them another way." The email ("Your ConectDesk login") goes through the workspace's own mail server, or the platform's (Settings) when it has none, with the workspace's name as sender. It gives the workspace address, the email and the new password.
+**The new password dialog.** After **Add agent** or **Set password**, a dialog shows the password **once**, with **Copy**, and either "Emailed to <email>." (green) or, if the email didn't go out, the mail server's error and "Share the password with them another way." The email ("Your ConnectDesk login") goes through the workspace's own mail server, or the platform's (Settings) when it has none, with the workspace's name as sender. It gives the workspace address, the email and the new password.
 
 > A new password doesn't log out sessions already open with the old one; use **Suspend** then **Activate** if you need them logged out.
 
@@ -528,7 +528,7 @@ The AI agent also uses this From address.
 
 **Purpose:** Find a workspace and go to its login. There is **no signup** here.
 
-The page title is "Log in · <product_name>". It shows the product name (`app.tenancy.product_name`, "ConectDesk" by default), the heading "Log in to your workspace" and the line "Enter your workspace address."
+The page title is "Log in · <product_name>". It shows the product name (`app.tenancy.product_name`, "ConnectDesk" by default), the heading "Log in to your workspace" and the line "Enter your workspace address."
 
 | Field or button | What it does |
 |---|---|
@@ -563,7 +563,7 @@ The page explains: "People listed here can log in to the internal documentation 
 | **Delete** (on each row) | After confirming, deletes the account and logs them out at once. Audited as **Removed docs access**. | Someone leaves the team. |
 | **Add a viewer** panel: **Email** | The person's email (upper or lower case doesn't matter). | |
 | **Password** | Leave empty for a strong generated password, or type one with 10 to 72 characters, an uppercase letter, a lowercase letter, a number and a symbol. | |
-| **Email the password to them** | On by default. Sends "Your ConectDesk login" with the docs address, the email and the password, through the platform's mail server (Settings). | |
+| **Email the password to them** | On by default. Sends "Your ConnectDesk login" with the docs address, the email and the password, through the platform's mail server (Settings). | |
 | **Add viewer** | Creates the viewer (or, for an email already listed, sets this new password) and shows the password once, with **Copy**, plus whether the email went out. Audited as **Gave docs access**. | Give a new teammate the manual. |
 
 Viewers can't change their password themselves; use **New password**. The same can be done from the command line with `--docs-viewer-add`, `--docs-viewer-remove` and `--docs-viewer-list` (see Operations).

@@ -1,11 +1,11 @@
-# Welcome to ConectDesk
+# Welcome to ConnectDesk
 
-This guide is for the people who **set up and run a ConectDesk workspace**: owners, admins and team leads. It walks through every screen you need, with real screenshots, and explains not just *what* each field does but *why* you would change it and *what to put there*.
+This guide is for the people who **set up and run a ConnectDesk workspace**: owners, admins and team leads. It walks through every screen you need, with real screenshots, and explains not just *what* each field does but *why* you would change it and *what to put there*.
 
-![The ConectDesk inbox with an AI assistant answering a parent on website chat](/guide/img/agent-ai-conversation.jpg)
+![The ConnectDesk inbox with an AI assistant answering a parent on website chat](/guide/img/agent-ai-conversation.jpg)
 *Your shared inbox. Here the AI assistant "Aarav" has answered a fee question by itself; an agent can take over at any time.*
 
-## What ConectDesk does for you
+## What ConnectDesk does for you
 
 - **One inbox for every channel.** Website chat, WhatsApp, email, Facebook Messenger, Instagram, Telegram and phone calls all arrive in the same list, so nobody has to watch five apps.
 - **An AI assistant that answers customers by itself** from the information you give it, around the clock, and hands the chat to a person when it can't help.
@@ -41,15 +41,15 @@ Most workspaces are fully running in an afternoon. Follow these steps in order; 
 
 ## Who can see what
 
-What each person sees in ConectDesk depends on their **role**. The built-in **Admin** role can open every setting in this guide; the **Agent** role answers conversations but can't change settings. You can make your own roles (for example "Team lead") — see [Roles](/guide/team#roles-what-people-are-allowed-to-do).
+What each person sees in ConnectDesk depends on their **role**. The built-in **Admin** role can open every setting in this guide; the **Agent** role answers conversations but can't change settings. You can make your own roles (for example "Team lead") — see [Roles](/guide/team#roles-what-people-are-allowed-to-do).
 
-If a menu item from this guide is missing for you, either your role doesn't include it, or the feature isn't part of your plan. Ask your workspace owner, or contact ConectDesk support.
+If a menu item from this guide is missing for you, either your role doesn't include it, or the feature isn't part of your plan. Ask your workspace owner, or contact ConnectDesk support.
 
 ## Words you'll see
 
 | Word | Meaning |
 |---|---|
-| **Workspace** | Your organisation's own copy of ConectDesk, at an address like `yourname.desk.arrlink.com`. Nobody outside it can see your data. |
+| **Workspace** | Your organisation's own copy of ConnectDesk, at an address like `yourname.desk.arrlink.com`. Nobody outside it can see your data. |
 | **Inbox** | One connected channel: a chat widget, a WhatsApp number, a mailbox, a phone line. |
 | **Conversation** | One thread with one customer. It has a status (Open, Snoozed, Resolved…), an assignee and tags. |
 | **Agent** | A person on your team who logs in to answer customers. |

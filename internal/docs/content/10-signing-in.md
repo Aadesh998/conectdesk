@@ -12,7 +12,7 @@ How agents get into a workspace at `https://<slug>.desk.arrlink.com` (or the wor
 
 | Control | What it does | Typical use |
 |---|---|---|
-| Workspace name heading + "Sign in to your account" | Shows the site name (defaults to "ConectDesk"). | — |
+| Workspace name heading + "Sign in to your account" | Shows the site name (defaults to "ConnectDesk"). | — |
 | One button per SSO provider (provider name and logo) | Sends you to that provider's login. Only enabled providers are shown. | Companies using Google, Okta, etc. |
 | "Or continue with" divider | Separates the SSO buttons from the password form. | — |
 | **Email** | Your login email. Must be a valid email (the special user "System" is the only exception). | — |

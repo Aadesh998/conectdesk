@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"html/template"
+	"slices"
 	"strings"
 
 	"github.com/conectdesk/conectdesk/internal/envelope"
@@ -34,12 +35,32 @@ type landingFAQ struct {
 	SignIn bool
 }
 
+// defaultInstagramURL is the product's Instagram page, linked from the
+// website unless app.tenancy.instagram_url names another.
+const defaultInstagramURL = "https://www.instagram.com/getconnectdesk"
+
+// instagramHandle returns the @handle of an Instagram profile URL, or "" when
+// the URL has no path.
+func instagramHandle(u string) string {
+	if i := strings.IndexAny(u, "?#"); i >= 0 {
+		u = u[:i]
+	}
+	u = strings.TrimRight(u, "/")
+	i := strings.LastIndex(u, "/")
+	if i < 0 || strings.HasSuffix(u[:i], ":/") {
+		return ""
+	}
+	return u[i+1:]
+}
+
 // signInAnswer ends the answer of a SignIn question.
 const signInAnswer = "Sign in from the home page, enter your workspace name, and you'll be taken to your login page."
 
 func landingFAQs(product, baseDomain string) []landingFAQ {
 	return []landingFAQ{
 		{Q: "Who is " + product + " for?", A: "Coaching institutes and training centres with a small admissions team, usually 3 to 30 people: JEE and NEET coaching, IELTS and study-abroad consultants, skill and computer courses, and tuition centres that get enquiries by phone and WhatsApp."},
+		{Q: "Is " + product + " omnichannel software?", A: "Yes. It is an omnichannel CRM built for admissions: phone calls, WhatsApp, Instagram, Messenger, Telegram, website chat and email share one inbox and one history per parent, so nobody has to repeat themselves."},
+		{Q: "Is " + product + " a WhatsApp CRM?", A: "Yes, and more. Your whole team works one WhatsApp Business number from a shared inbox, with an AI assistant, follow-up templates and a lead board, alongside calls and Instagram."},
 		{Q: "Which channels does it work with?", A: "Phone calls, WhatsApp Business, Instagram, Facebook Messenger, Telegram, a chat widget for your website, and email. All of them land in the same inbox."},
 		{Q: "What happens when we miss a call?", A: "The caller gets a WhatsApp reply automatically, with a separate message outside business hours, and a call-back task is created for your team. When a counsellor completes a call with that number, the task closes itself. Call-backs left too long are escalated."},
 		{Q: "We already have a WhatsApp bot. Why do we need this?", A: product + " isn't another bot. It handles what happens around the bot: parents who call instead of messaging, people who want to talk to a real person, follow-ups, and giving the owner a clear view of every lead."},
@@ -52,8 +73,9 @@ func landingFAQs(product, baseDomain string) []landingFAQ {
 // websiteData is what every website page shows: the product, where its
 // pages are, and the analytics and search console settings.
 func websiteData(app *App) map[string]any {
-	product := cmp.Or(ko.String("app.tenancy.product_name"), "ConectDesk")
+	product := cmp.Or(ko.String("app.tenancy.product_name"), "ConnectDesk")
 	base := app.tenant.BaseURL()
+	instagram := cmp.Or(ko.String("app.tenancy.instagram_url"), defaultInstagramURL)
 	guide := ""
 	if app.docsHost != "" && app.guide != nil {
 		guide = app.tenant.HostURL(app.docsHost) + "/guide"
@@ -67,7 +89,11 @@ func websiteData(app *App) map[string]any {
 		"ContactEmail": ko.String("app.tenancy.contact_email"),
 		"PrivacyURL":   cmp.Or(ko.String("app.legal.privacy_policy_url"), base+"/privacy"),
 		"TermsURL":     base + "/terms",
-		"OGImage":      cmp.Or(ko.String("app.tenancy.og_image_url"), base+"/static/public/static/og-image.jpg"),
+		// InstagramURL is the product's Instagram page, linked from the
+		// landing page and the footers.
+		"InstagramURL":    instagram,
+		"InstagramHandle": instagramHandle(instagram),
+		"OGImage":         cmp.Or(ko.String("app.tenancy.og_image_url"), base+"/static/public/static/og-image.jpg"),
 		// GAID is the Google Analytics 4 measurement ID; no analytics without it.
 		"GAID": ko.String("app.tenancy.ga_measurement_id"),
 		// SiteVerification is the Search Console HTML tag token, for verifying
@@ -86,6 +112,8 @@ func landingJSONLD(d map[string]any, faqs []landingFAQ) template.JS {
 		"name":  d["Product"],
 		"url":   base + "/",
 		"logo":  base + "/static/public/static/favicon-192.png",
+		// The product's earlier spelling, so searches for it still find it.
+		"alternateName": "ConectDesk",
 	}
 	if d["Company"] != d["Product"] {
 		org["legalName"] = d["Company"]
@@ -93,12 +121,17 @@ func landingJSONLD(d map[string]any, faqs []landingFAQ) template.JS {
 	if email := d["ContactEmail"].(string); email != "" {
 		org["email"] = email
 	}
-	if links := strings.Fields(ko.String("app.tenancy.social_links")); len(links) > 0 {
-		org["sameAs"] = links
+	links := strings.Fields(ko.String("app.tenancy.social_links"))
+	if ig := d["InstagramURL"].(string); !slices.Contains(links, ig) {
+		links = append(links, ig)
 	}
+	org["sameAs"] = links
 	product := map[string]any{
 		"@type":                  "SoftwareApplication",
+		"@id":                    base + "/#software",
 		"name":                   d["Product"],
+		"alternateName":          "ConectDesk",
+		"keywords":               "omnichannel CRM, admission CRM, WhatsApp CRM, coaching institute CRM, missed call auto reply, enquiry management software",
 		"url":                    base + "/",
 		"description":            d["Description"],
 		"applicationCategory":    "BusinessApplication",
@@ -172,6 +205,9 @@ func websiteURLs(app *App, host string) []sitemapURL {
 		return urls
 	}
 	urls := []sitemapURL{{Loc: origin + "/"}}
+	for _, p := range solutionPages {
+		urls = append(urls, sitemapURL{Loc: origin + solutionsPrefix + p.Slug})
+	}
 	for _, p := range []string{"/privacy", "/terms"} {
 		if p == "/privacy" && ko.String("app.legal.privacy_policy_url") != "" {
 			continue

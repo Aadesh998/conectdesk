@@ -36,7 +36,7 @@ url_scheme = "https"
 # where they pick the inbox channels each one may use. There is no public
 # signup.
 # Product name on the website at the base domain.
-product_name = "ConectDesk"
+product_name = "ConnectDesk"
 # Where the website's "Book a demo" buttons go, e.g. a calendar booking page
 # or a https://wa.me/ link. Leave empty to hide them.
 demo_url = ""
@@ -63,6 +63,9 @@ contact_email = ""
 # The product's profiles elsewhere (LinkedIn, Instagram, YouTube...), as
 # space-separated URLs, for search engines to tie them to the site.
 social_links = ""
+# The product's Instagram page, linked from the landing page and the website
+# footers; https://www.instagram.com/getconnectdesk when empty.
+instagram_url = ""
 # Image shown when the website is shared on WhatsApp, LinkedIn and so on,
 # 1200x630; the built-in one when empty.
 og_image_url = ""
@@ -321,7 +324,7 @@ app_id = ""
 app_password = ""
 app_tenant_id = ""
 # What the bot is called in Teams, which people @mention.
-bot_name = "ConectDesk"
+bot_name = "ConnectDesk"
 
 # Posting conversation updates to connected Slack and Teams channels.
 [integration]

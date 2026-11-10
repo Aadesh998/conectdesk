@@ -26,9 +26,10 @@ func landingOr(next fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 		// <video>, anything else (Cloudflare Stream, YouTube) is embedded.
 		// The section is hidden without it.
 		d["DemoVideoURL"], d["DemoVideoFile"] = video, isVideoFile(video)
-		d["Title"] = d["Product"].(string) + ": Admission CRM for Coaching Institutes"
+		d["Title"] = d["Product"].(string) + ": Omnichannel Admission CRM for Coaching Institutes"
 		d["Canonical"] = d["BaseURL"].(string) + "/"
-		d["Description"] = "Calls, WhatsApp and Instagram in one inbox for coaching institutes. Missed-call replies, AI answers in Hindi and English, and a daily admissions report."
+		d["Description"] = "Omnichannel admission CRM for coaching institutes: calls, WhatsApp and Instagram in one inbox, missed-call replies, AI answers in Hindi and a daily report."
+		d["Solutions"] = solutionPages
 		faqs := landingFAQs(d["Product"].(string), d["BaseDomain"].(string))
 		d["FAQs"], d["JSONLD"] = faqs, landingJSONLD(d, faqs)
 		setWebsiteHeaders(app, r.RequestCtx)

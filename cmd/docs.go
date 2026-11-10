@@ -81,7 +81,7 @@ func handleDocsPage(r *fastglue.Request) error {
 	}
 	r.RequestCtx.Response.Header.Set("X-Frame-Options", "DENY")
 	r.RequestCtx.Response.Header.Set("X-Robots-Tag", "noindex, nofollow")
-	product := cmp.Or(ko.String("app.tenancy.product_name"), "ConectDesk")
+	product := cmp.Or(ko.String("app.tenancy.product_name"), "ConnectDesk")
 
 	viewer, err := docsViewer(r)
 	if err != nil {

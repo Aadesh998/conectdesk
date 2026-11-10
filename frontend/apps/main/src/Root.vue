@@ -2,7 +2,9 @@
   <TooltipProvider :delay-duration="150">
     <Toaster
       class="pointer-events-auto"
-      position="top-center"
+      position="top-right"
+      rich-colors
+      :visible-toasts="5"
       :theme="mode === 'auto' ? 'system' : mode"
     />
     <RouterView />

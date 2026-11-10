@@ -4,7 +4,7 @@
 
 **Where:** *Admin → Notifications → Email*.
 
-ConectDesk emails agents when a conversation is assigned to them, they're mentioned, or an SLA is about to be missed. By default these go out through ConectDesk's own mail server with your workspace name. To send them from your own address instead, fill in your mail server here.
+ConnectDesk emails agents when a conversation is assigned to them, they're mentioned, or an SLA is about to be missed. By default these go out through ConnectDesk's own mail server with your workspace name. To send them from your own address instead, fill in your mail server here.
 
 ![Email notification settings](/guide/img/adm-notification.jpg)
 

@@ -6,7 +6,7 @@ The AI group in the Admin sidebar (Providers, Snippets, Suggestions, Tools, Assi
 
 **Where:** Admin > AI > Providers. URL `/admin/ai/providers`
 **Who can use it:** `ai:manage`
-**Purpose:** Connects ConectDesk to the AI models it uses. One model writes text (drafting replies, Copilot, assistants, summaries). One model "embeds" text so articles and snippets can be searched. An optional decision layer called "Jev" sits on top.
+**Purpose:** Connects ConnectDesk to the AI models it uses. One model writes text (drafting replies, Copilot, assistants, summaries). One model "embeds" text so articles and snippets can be searched. An optional decision layer called "Jev" sits on top.
 **Help panel:** "Works with any OpenAI-compatible endpoint."
 
 The page has three cards.
@@ -59,7 +59,7 @@ Description: "Jev is a fast decision model from TypeSafe. It doesn't write messa
 
 | Element | What it does | Typical use |
 |---|---|---|
-| **Import from URL** (button) | Opens a dialog with a URL box (placeholder `https://example.com/help/article`) and an **Import** button. ConectDesk fetches the page and saves it as a snippet. In the table the snippet gets an "Imported" badge; hover the badge to see the source URL. | Pull an existing FAQ page into the knowledge base. |
+| **Import from URL** (button) | Opens a dialog with a URL box (placeholder `https://example.com/help/article`) and an **Import** button. ConnectDesk fetches the page and saves it as a snippet. In the table the snippet gets an "Imported" badge; hover the badge to see the source URL. | Pull an existing FAQ page into the knowledge base. |
 | **New snippet** (button) | Opens a dialog with the fields below. | |
 | Field: **Title** (required) | Placeholder "Refund policy". | |
 | Field: **Content** (required, large box) | Hint: "The assistant searches this text to answer customer questions, so write it as a self-contained answer rather than a fragment." | |
@@ -72,7 +72,7 @@ Description: "Jev is a fast decision model from TypeSafe. It doesn't write messa
 
 **Where:** Admin > AI > Suggestions. URL `/admin/ai/suggestions`
 **Who can use it:** `ai:manage`
-**Purpose:** ConectDesk can draft new snippets from resolved conversations in which a human agent gave a reusable answer. An admin reviews each one before it is used.
+**Purpose:** ConnectDesk can draft new snippets from resolved conversations in which a human agent gave a reusable answer. An admin reviews each one before it is used.
 **Help panel:** "Suggestions are drafted from resolved conversations where a human agent gave a reusable answer. Review each one; approving it adds a snippet the assistant can use."
 
 | Element | What it does |

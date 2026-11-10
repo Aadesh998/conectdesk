@@ -56,7 +56,7 @@ Everything here is configured per Live Chat inbox under Admin → Inboxes.
 - Closed conversation, when replying to closed conversations is not allowed: "This conversation has been closed" (the input is hidden).
 - Connection banners: "No internet connection", connection failed, connecting, connected.
 - Blocked IP: "Access denied".
-- "Powered by ConectDesk" footer in the chat view, unless it is turned off.
+- "Powered by ConnectDesk" footer in the chat view, unless it is turned off.
 
 ## Public help center (what customers see)
 
@@ -86,7 +86,7 @@ A verified custom domain can also serve it.
 
 **Every page:**
 - Optional announcement bar, which the reader can dismiss.
-- Footer with tagline, links, social icons and "Powered by ConectDesk".
+- Footer with tagline, links, social icons and "Powered by ConnectDesk".
 - A skip-to-content link for accessibility.
 
 **Other states:**

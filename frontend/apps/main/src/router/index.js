@@ -741,7 +741,7 @@ router.beforeEach((to, from, next) => {
   }
 
   const appSettingsStore = useAppSettingsStore()
-  const siteName = appSettingsStore.settings?.['app.site_name'] || 'ConectDesk'
+  const siteName = appSettingsStore.settings?.['app.site_name'] || 'ConnectDesk'
   const i18n = getI18n()
   const typeKey = typeof to.meta?.typeKey === 'function' ? to.meta.typeKey(to) : ''
   const titleKey = typeKey || to.meta?.titleKey

@@ -91,13 +91,10 @@ type User struct {
 	InboxID                int                  `json:"-"`
 	SourceChannel          null.String          `json:"-"`
 	SourceChannelID        null.String          `json:"-"`
-
-	// API Key fields
-	APIKey           null.String `db:"api_key" json:"api_key"`
-	APIKeyLastUsedAt null.Time   `db:"api_key_last_used_at" json:"api_key_last_used_at"`
-	// TOTPEnabled is set when the agent logs in with a two-factor code.
-	TOTPEnabled bool        `db:"totp_enabled" json:"totp_enabled"`
-	APISecret   null.String `db:"api_secret" json:"-"`
+	APIKey                 null.String          `db:"api_key" json:"api_key"`
+	APIKeyLastUsedAt       null.Time            `db:"api_key_last_used_at" json:"api_key_last_used_at"`
+	TOTPEnabled            bool                 `db:"totp_enabled" json:"totp_enabled"`
+	APISecret              null.String          `db:"api_secret" json:"-"`
 }
 
 // ChatUser is a user with limited fields for live chat.

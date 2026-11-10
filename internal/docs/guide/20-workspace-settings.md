@@ -16,7 +16,7 @@ The settings under *Admin → Workspace* apply to the whole workspace: your name
 | Field | What it does | Why you'd change it | What to put |
 |---|---|---|---|
 | **Site name** *(required)* | Your workspace's name. It shows on the login page, in the browser tab ("Inbox – Bright Classes") and in emails. | So your team and customers recognise it as yours. | Your company or brand name, e.g. `Bright Classes`. |
-| **Language** | The default language of the ConectDesk screens for your team. | If your team prefers another language. | Usually **English (United States)**. |
+| **Language** | The default language of the ConnectDesk screens for your team. | If your team prefers another language. | Usually **English (United States)**. |
 | **Timezone** | The workspace's clock. Used for business hours, SLA timers, report dates and the time of the daily WhatsApp report. | **Get this right first** — if it's wrong, "open/closed" hours and SLA deadlines are wrong too. | Where your team works, e.g. **Kolkata, Asia (UTC+05:30)**. |
 | **Business hours** | Which working-hours schedule applies by default. SLA clocks only run during these hours, and the chat widget uses them to say when you're next available. | So customers writing at midnight don't count as a "late reply" and see an honest reply time. | Create a schedule first under [Business hours](#business-hours), then pick it here. Leave empty to treat every hour as working time. |
 | **Root URL** *(required)* | The address of your workspace, e.g. `https://brightclasses.desk.arrlink.com`. Used to build links in emails, chat continuity emails and sign-in callbacks. **No slash at the end.** | Only after you move to your own domain (see [Domains](#domains)). | Leave as it is unless support tells you otherwise. A wrong value breaks links in emails. |
@@ -42,7 +42,7 @@ At the very bottom of General is the **Delete workspace** area.
 
 **Where:** *Admin → Workspace → Business hours*.
 
-**What it's for:** telling ConectDesk when your team is working. SLA timers pause outside these hours, the chat widget can show "We'll be back at 9 AM", and AI follow-ups are only sent within them.
+**What it's for:** telling ConnectDesk when your team is working. SLA timers pause outside these hours, the chat widget can show "We'll be back at 9 AM", and AI follow-ups are only sent within them.
 
 ![Business hours list](/guide/img/adm-business-hours.jpg)
 
@@ -98,16 +98,16 @@ Shows your plan and meters for **Agents**, **Inboxes**, **File storage** and **A
 
 **Where:** *Admin → Workspace → Domains*.
 
-**What it's for:** using your own address, such as `support.brightclasses.in`, for your workspace or help center instead of the ConectDesk one.
+**What it's for:** using your own address, such as `support.brightclasses.in`, for your workspace or help center instead of the ConnectDesk one.
 
 ![The domains page](/guide/img/adm-domains.jpg)
 
 1. Type the domain (e.g. `help.brightclasses.in`) and click **Add domain**.
-2. At your domain provider (GoDaddy, Cloudflare…), add the **TXT** record shown, to prove you own the domain, and the **CNAME** record, to point it at ConectDesk. Click any value to copy it.
+2. At your domain provider (GoDaddy, Cloudflare…), add the **TXT** record shown, to prove you own the domain, and the **CNAME** record, to point it at ConnectDesk. Click any value to copy it.
 3. Click **Verify**. DNS changes can take a few minutes to an hour.
 4. Once **Verified**, either click **Use as workspace address**, or pick the domain as a help center's custom domain.
 
-Keep the TXT record in place — ConectDesk re-checks it daily and warns you if it disappears.
+Keep the TXT record in place — ConnectDesk re-checks it daily and warns you if it disappears.
 
 ## Privacy
 

@@ -63,7 +63,15 @@
   }
 
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
+  }
+
+  button,
+  [role='button'],
+  a,
+  select,
+  summary {
+    cursor: pointer;
   }
 
   .native-html {
@@ -124,25 +132,26 @@
       font-weight: 500;
     }
   }
+  /* Light Studio theme (UI-GUIDELINES.md): zinc neutrals, blue accent. */
   :root {
-    --sidebar-background: 42 45% 97.5%;
-    --sidebar-foreground: 216 10% 9%;
-    --sidebar-primary: 190 79% 27%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 10% 3.9%;
+    --sidebar-primary: 221.2 83.2% 53.3%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 40 30% 92%;
-    --sidebar-accent-foreground: 216 10% 9%;
-    --sidebar-border: 40 26% 86%;
-    --sidebar-ring: 190 70% 40%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-ring: 240 5% 64.9%;
   }
   .dark {
-    --sidebar-background: 30 6% 7%;
-    --sidebar-foreground: 40 25% 92%;
-    --sidebar-primary: 187 55% 55%;
-    --sidebar-primary-foreground: 190 50% 8%;
-    --sidebar-accent: 30 5% 16%;
-    --sidebar-accent-foreground: 40 25% 92%;
-    --sidebar-border: 30 5% 17%;
-    --sidebar-ring: 187 45% 38%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 240 3.8% 46.1%;
   }
 
   :root {
@@ -159,88 +168,91 @@
 
   :root,
   .light {
-    --background: 42 45% 97.5%;
-    --foreground: 216 10% 9%;
-    --foreground-lighter: 220 4% 42%;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --foreground-lighter: 240 3.8% 46.1%;
 
-    --card: 40 100% 99.2%;
-    --card-foreground: 216 10% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
 
-    --popover: 40 100% 99.2%;
-    --popover-foreground: 216 10% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
 
-    --primary: 190 79% 27%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 224.3 76.3% 48%;
+    --primary-foreground: 213.8 100% 96.9%;
 
-    --secondary: 42 30% 94%;
-    --secondary-foreground: 216 10% 9%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
 
-    --muted: 42 30% 94%;
-    --muted-foreground: 220 5% 38%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
 
-    --accent: 40 30% 92%;
-    --accent-foreground: 216 10% 9%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
 
-    --destructive: 2 47% 46%;
-    --destructive-foreground: 9 100% 99%;
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 0 0% 98%;
 
-    --success: 142 72% 37%;
+    --success: 142.1 76.2% 36.3%;
     --success-foreground: 0 0% 98%;
 
-    --warning: 39 85% 43%;
-    --warning-foreground: 24 45% 2%;
-    --warning-600: 35 92% 33%;
+    --warning: 37.7 92.1% 50.2%;
+    --warning-foreground: 240 10% 3.9%;
+    --warning-600: 26 90.5% 37.1%;
 
-    --link: 210 80% 38%;
+    --link: 224.3 76.3% 48%;
 
-    --border: 40 26% 86%;
-    --input: 40 18% 78%;
-    --ring: 190 70% 40%;
-    --radius: 0.625rem;
-    --private: 35 90% 94%;
-    --canvas: 40 22% 90%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5% 64.9%;
+    --radius: 0.25rem;
+    --private: 48 100% 96.1%;
+    --canvas: 240 4.8% 95.9%;
   }
 
   .dark {
-    --background: 30 6% 7%;
-    --foreground: 40 25% 92%;
-    --foreground-lighter: 35 5% 60%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --foreground-lighter: 240 5% 64.9%;
 
-    --card: 30 5% 10%;
-    --card-foreground: 40 25% 92%;
+    --card: 240 5.9% 10%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 30 5% 12%;
-    --popover-foreground: 40 25% 92%;
+    --popover: 240 5.9% 10%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 187 55% 55%;
-    --primary-foreground: 190 50% 8%;
+    /* The guideline's blue-800 is too dark for the app's text-primary uses
+       (unread counts, active links) on zinc-950, so dark uses blue-600. */
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 30 5% 13%;
-    --secondary-foreground: 40 25% 92%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 30 5% 13%;
-    --muted-foreground: 38 8% 70%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
 
-    --accent: 30 5% 16%;
-    --accent-foreground: 40 25% 92%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 4 92% 74%;
-    --destructive-foreground: 12 38% 3%;
+    --destructive: 0 91% 71.4%;
+    --destructive-foreground: 240 10% 3.9%;
 
-    --success: 142 55% 55%;
-    --success-foreground: 142 40% 10%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
 
-    --warning: 36 87% 62%;
-    --warning-foreground: 24 45% 2%;
-    --warning-600: 36 87% 62%;
+    --warning: 45.9 96.7% 64.5%;
+    --warning-foreground: 240 10% 3.9%;
+    --warning-600: 45.9 96.7% 64.5%;
 
-    --link: 205 90% 68%;
+    --link: 213.1 93.9% 67.8%;
 
-    --border: 30 5% 17%;
-    --input: 30 5% 21%;
-    --ring: 187 45% 38%;
-    --private: 30 35% 18%;
-    --canvas: 30 8% 4%;
+    /* white at 10% / 15% over zinc-950, as solid colours so opacity modifiers work */
+    --border: 240 3.7% 15.9%;
+    --input: 240 4% 19%;
+    --ring: 240 3.8% 46.1%;
+    --private: 32 40% 14%;
+    --canvas: 240 10% 2.5%;
   }
 }
 

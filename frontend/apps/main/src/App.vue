@@ -2,6 +2,16 @@
   <div class="flex w-full h-dvh text-foreground bg-canvas p-1 md:p-1.5">
     <SidebarProvider v-if="!isMobile" style="--sidebar-width: 3rem" class="w-auto z-50">
       <ShadcnSidebar collapsible="none" class="border border-sidebar-border rounded-lg overflow-hidden">
+        <SidebarHeader class="items-center pb-0">
+          <router-link
+            :to="{ name: 'inboxes' }"
+            :aria-label="siteName"
+            :title="siteName"
+            class="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground"
+          >
+            {{ siteName.charAt(0).toUpperCase() }}
+          </router-link>
+        </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
@@ -74,7 +84,8 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch, defineAsyncComponent } from 'vue'
+import { computed, onMounted, ref, watch, defineAsyncComponent } from 'vue'
+import { useAppSettingsStore } from '@main/stores/appSettings'
 import { useStorage } from '@vueuse/core'
 import { RouterView } from 'vue-router'
 import { useUserStore } from './stores/user'
@@ -121,6 +132,7 @@ import {
   SidebarGroup,
   SidebarMenu,
   SidebarGroupContent,
+  SidebarHeader,
   SidebarMenuItem,
   SidebarProvider
 } from '@shared-ui/components/ui/sidebar'
@@ -148,6 +160,10 @@ watch(
   { immediate: true }
 )
 const userStore = useUserStore()
+const appSettingsStore = useAppSettingsStore()
+const siteName = computed(
+  () => appSettingsStore.public_config?.['app.site_name'] || 'ConnectDesk'
+)
 const conversationStore = useConversationStore()
 const usersStore = useUsersStore()
 const teamStore = useTeamStore()

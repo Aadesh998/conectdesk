@@ -131,7 +131,7 @@ There are eight tabs. One **Create** or **Save** button at the bottom saves ever
 **Tab "Appearance"**
 - **Logo URL**
 - **Dark mode**
-- **Show powered by**: shows "Powered by ConectDesk" when a conversation is open. On by default.
+- **Show powered by**: shows "Powered by ConnectDesk" when a conversation is open. On by default.
 - **Colors** → **Primary color** (default #2563eb). A warning appears if it is too close to the background.
 - **Home screen**:
   - **Header text color**: Black or White, with a contrast warning if it is hard to read.

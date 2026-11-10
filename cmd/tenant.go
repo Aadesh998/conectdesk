@@ -85,7 +85,7 @@ func tenantHandler(app *App, next fasthttp.RequestHandler) fasthttp.RequestHandl
 		// platform admins, so it serves no signup.
 		if app.tenant.IsBaseDomain(string(ctx.Host())) {
 			// The landing page, and finding a workspace to log in to.
-			if p := string(ctx.Path()); p == "/" || p == "/api/v1/workspaces/lookup" || isWebsitePath(p) || legalPages[p] != "" {
+			if p := string(ctx.Path()); p == "/" || p == "/api/v1/workspaces/lookup" || isWebsitePath(p) || legalPages[p] != "" || isSolutionPath(p) {
 				next(ctx)
 				return
 			}

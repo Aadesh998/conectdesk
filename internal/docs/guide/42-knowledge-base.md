@@ -8,7 +8,7 @@ The **knowledge base** is everything the AI assistant and Juno are allowed to us
 | **Help-center articles** marked for AI | *Admin → Help center* | Longer guides you also want customers to read on your website. |
 | **Suggestions** from resolved chats | *Admin → AI → Suggestions* | Filling gaps automatically from answers your team already gave. |
 
-When a customer writes, ConectDesk searches all three, picks the closest matches and gives only those to the AI along with the question. The AI writes its reply from them.
+When a customer writes, ConnectDesk searches all three, picks the closest matches and gives only those to the AI along with the question. The AI writes its reply from them.
 
 ## Snippets
 
@@ -47,7 +47,7 @@ When a customer writes, ConectDesk searches all three, picks the closest matches
 
 ### Import a snippet from a web page
 
-Already have an FAQ or policy page on your website? Click **Import from URL**, paste the page address and click **Import**. ConectDesk reads the page and saves it as a snippet marked **Imported** (hover the badge to see the source). Check and tidy the imported text — menus and footers sometimes come along.
+Already have an FAQ or policy page on your website? Click **Import from URL**, paste the page address and click **Import**. ConnectDesk reads the page and saves it as a snippet marked **Imported** (hover the badge to see the source). Check and tidy the imported text — menus and footers sometimes come along.
 
 ![Importing a page as a snippet](/guide/img/ai-snippet-import.jpg)
 
@@ -70,7 +70,7 @@ If you publish the same article in several languages, turn the toggle on for **o
 
 ![The Suggestions page](/guide/img/ai-suggestions.jpg)
 
-Turn on **Learn from resolved conversations**. When a conversation is resolved in which an agent gave a reusable answer, ConectDesk drafts a question-and-answer suggestion. Nothing is used until you review it:
+Turn on **Learn from resolved conversations**. When a conversation is resolved in which an agent gave a reusable answer, ConnectDesk drafts a question-and-answer suggestion. Nothing is used until you review it:
 
 - Click a suggestion, edit the **Question** and **Answer** if needed, and click **Approve** — it becomes a snippet (marked "Auto-created").
 - **Reject** throws it away.

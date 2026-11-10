@@ -1,0 +1,216 @@
+{{/* A solution page: one search's view of the product, from solutions.go. */}}
+{{ define "solution" }}<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>{{ .Data.Title }}</title>
+	<meta name="description" content="{{ .Data.Description }}" />
+	<meta name="theme-color" content="#07070b" />
+	<meta name="color-scheme" content="light dark" />
+	{{ template "website-meta" . }}
+	<script type="application/ld+json">{{ .Data.JSONLD }}</script>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@500&display=swap" rel="stylesheet" />
+	<style>
+		/* The landing page's theme: zinc neutrals with blue-to-violet gradients. */
+		:root {
+			--bg: #ffffff; --bg-2: #fafafa; --card: #ffffff; --muted-bg: #f4f4f5;
+			--fg: #09090b; --fg-2: #3f3f46; --muted: #71717a; --faint: #a1a1aa; --border: #e4e4e7;
+			--primary-text: #1d4ed8; --ig: #c13584;
+			--grad: linear-gradient(135deg, #2563eb 0%, #4f46e5 55%, #7c3aed 100%);
+			--grad-text: linear-gradient(90deg, #1d4ed8, #4f46e5 50%, #7c3aed);
+			--r: 4px; --r-lg: 12px;
+			--sans: "Geist", ui-sans-serif, system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
+			--ease: cubic-bezier(0.22, 1, 0.36, 1);
+			color-scheme: light;
+		}
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--bg: #09090b; --bg-2: #0c0c0e; --card: #18181b; --muted-bg: #27272a;
+				--fg: #fafafa; --fg-2: #d4d4d8; --muted: #a1a1aa; --faint: #71717a; --border: #27272a;
+				--primary-text: #93c5fd; --ig: #f472b6;
+				--grad-text: linear-gradient(90deg, #60a5fa, #818cf8 50%, #c4b5fd);
+				color-scheme: dark;
+			}
+		}
+		*, *::before, *::after { box-sizing: border-box; }
+		body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 var(--sans); -webkit-font-smoothing: antialiased; }
+		a { color: inherit; text-decoration: none; }
+		:focus-visible { outline: 2px solid rgb(161 161 170 / .6); outline-offset: 2px; }
+		.ic { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+		.wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+		@media (min-width: 768px) { .wrap { padding: 0 40px; } }
+		.narrow { max-width: 760px; }
+
+		.hdr { position: sticky; top: 0; z-index: 50; background: rgb(7 7 11 / .9); color: #fafafa; border-bottom: 1px solid rgb(255 255 255 / .08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+		.hdr .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 12px; padding-bottom: 12px; }
+		.logo { display: inline-flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+		.logo svg { width: 28px; height: 28px; }
+		.hdr nav { display: flex; align-items: center; gap: 4px; }
+		.hdr nav a { padding: 6px 10px; border-radius: var(--r); font-size: 14px; font-weight: 500; color: #a1a1aa; }
+		.hdr nav a:hover { color: #fff; background: rgb(255 255 255 / .08); }
+		.hdr nav a.ig { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; }
+		.hdr nav a.ig .ic { font-size: 17px; }
+		@media (max-width: 560px) { .hdr nav .hide-sm { display: none; } }
+
+		.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: var(--r); font-size: 15px; font-weight: 500; border: 1px solid transparent; white-space: nowrap; transition: filter .2s, transform .2s var(--ease), background-color .15s; }
+		.btn-ink { background: var(--grad); color: #fff; box-shadow: inset 0 1px 0 rgb(255 255 255 / .2), 0 8px 24px -10px rgb(79 70 229 / .7); }
+		.btn-ink:hover { filter: brightness(1.1); transform: translateY(-1px); }
+		.btn-ghost { background: rgb(255 255 255 / .05); border-color: rgb(255 255 255 / .14); color: #fff; }
+		.btn-ghost:hover { background: rgb(255 255 255 / .11); }
+		.btn .ic { font-size: 16px; }
+
+		.hero { position: relative; overflow: hidden; padding: 64px 0 72px; background: #07070b; color: #fafafa; }
+		@media (min-width: 768px) { .hero { padding: 88px 0 96px; } }
+		.hero::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgb(255 255 255 / .045) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .045) 1px, transparent 1px); background-size: 56px 56px; -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 0%, #000 20%, transparent 75%); mask-image: radial-gradient(ellipse 60% 70% at 50% 0%, #000 20%, transparent 75%); }
+		.hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(60% 70% at 70% 0%, rgb(123 110 177 / .35), transparent 70%), radial-gradient(40% 50% at 10% 20%, rgb(37 99 235 / .2), transparent 70%); animation: glow 14s ease-in-out infinite alternate; }
+		@keyframes glow { to { transform: translate(-4%, 3%) scale(1.05); } }
+		.hero .wrap { position: relative; z-index: 1; }
+		.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 22px; padding: 0; list-style: none; font: 500 12.5px var(--mono); color: #a1a1aa; }
+		.crumbs a:hover { color: #fff; }
+		.crumbs li + li::before { content: "/"; margin-right: 8px; color: #52525b; }
+		.kicker { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 10px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .14); background: rgb(255 255 255 / .04); font-size: 12.5px; font-weight: 500; color: #d4d4d8; }
+		.kicker::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #8b5cf6); box-shadow: 0 0 0 3px rgb(124 58 237 / .2); }
+		h1 { margin: 20px 0 0; max-width: 900px; font: 600 40px/1.06 var(--sans); letter-spacing: -0.045em; text-wrap: balance; }
+		@media (min-width: 768px) { h1 { font-size: 60px; } }
+		.lede { margin: 22px 0 0; max-width: 680px; font-size: 18px; line-height: 1.65; color: #a1a1aa; }
+		.cta { margin-top: 32px; display: flex; flex-wrap: wrap; gap: 12px; }
+
+		main article { padding: 64px 0 24px; }
+		article h2 { margin: 48px 0 12px; font: 600 26px/1.2 var(--sans); letter-spacing: -0.03em; }
+		article h2:first-child { margin-top: 0; }
+		article p { margin: 0 0 14px; color: var(--fg-2); }
+		article ul { margin: 0 0 14px; padding: 0; list-style: none; display: grid; gap: 10px; }
+		article li { display: flex; gap: 12px; color: var(--fg-2); }
+		article li .ic { margin-top: 5px; font-size: 16px; color: var(--primary-text); stroke-width: 2.5; }
+		.rv { transition: opacity .7s var(--ease), transform .7s var(--ease); }
+		.js .rv:not(.in) { opacity: 0; transform: translateY(14px); }
+
+		.faq { padding: 32px 0 24px; }
+		.faq h2 { margin: 0 0 12px; font: 600 26px/1.2 var(--sans); letter-spacing: -0.03em; }
+		.faq details { border-top: 1px solid var(--border); }
+		.faq details:last-child { border-bottom: 1px solid var(--border); }
+		.faq summary { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; cursor: pointer; list-style: none; font-size: 16.5px; font-weight: 500; }
+		.faq summary::-webkit-details-marker { display: none; }
+		.faq summary .pm { width: 28px; height: 28px; flex-shrink: 0; border-radius: var(--r); border: 1px solid var(--border); display: grid; place-items: center; color: var(--muted); transition: transform .2s var(--ease); }
+		.faq details[open] summary .pm { transform: rotate(45deg); background: var(--grad); border-color: transparent; color: #fff; }
+		.faq details p { margin: -4px 0 18px; color: var(--muted); }
+
+		.more { padding: 40px 0 72px; }
+		.more h2 { margin: 0 0 16px; font: 600 15px var(--sans); color: var(--muted); }
+		.more-g { display: grid; gap: 12px; }
+		@media (min-width: 768px) { .more-g { grid-template-columns: repeat(3, 1fr); } }
+		.more-g a { position: relative; display: block; padding: 18px 20px; border-radius: var(--r-lg); border: 1px solid var(--border); background: var(--card); transition: border-color .2s, transform .2s var(--ease); }
+		.more-g a:hover { border-color: #8b5cf6; transform: translateY(-2px); }
+		.more-g b { display: block; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+		.more-g span { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 13.5px; background: var(--grad-text); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+		.band { position: relative; overflow: hidden; margin: 0 12px 48px; padding: 64px 0; border-radius: var(--r-lg); background: #09090b; color: #fafafa; }
+		@media (min-width: 768px) { .band { margin: 0 24px 64px; } }
+		.band::before { content: ""; position: absolute; inset: 0; background: url("/static/public/static/site/close-bg.webp") right center / cover no-repeat; opacity: .9; }
+		.band .wrap { position: relative; }
+		.band h2 { margin: 0; max-width: 640px; font: 600 36px/1.08 var(--sans); letter-spacing: -0.04em; }
+		.band h2 em { font-style: normal; background: linear-gradient(90deg, #93c5fd, #a5b4fc, #c4b5fd); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+		.ftr { border-top: 1px solid var(--border); padding: 24px 0 40px; font-size: 13.5px; color: var(--faint); }
+		.ftr .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+		.ftr a { color: var(--muted); margin-right: 16px; }
+		.ftr a:hover { color: var(--fg); }
+		@media (prefers-reduced-motion: reduce) { .hero::after { animation: none; } .rv { transition: none; } .js .rv:not(.in) { opacity: 1; transform: none; } }
+	</style>
+	<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="brand" viewBox="0 0 64 64"><defs><linearGradient id="brand-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d4ed8"/><stop offset="1" stop-color="#3b82f6"/></linearGradient></defs><path d="M14 4h36c5.5 0 10 4.5 10 10v24c0 5.5-4.5 10-10 10H26L13 59c-1.3 1.1-3 .2-3-1.4V48C6.6 46.6 4 42.6 4 38V14C4 8.5 8.5 4 14 4z" fill="url(#brand-g)"/><path d="M40.6 17.6A12.5 12.5 0 1 0 40.6 34.4" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round"/><circle cx="44.5" cy="26" r="4.2" fill="#f59e0b"/></symbol>
+<symbol id="arrow-right" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></symbol>
+<symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
+<symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="M12 5v14" /></symbol>
+<symbol id="instagram" viewBox="0 0 24 24"><rect width="20" height="20" x="2" y="2" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" x2="17.51" y1="6.5" y2="6.5" /></symbol>
+</defs></svg>
+
+<header class="hdr">
+	<div class="wrap">
+		<a href="/" class="logo" aria-label="{{ .Data.Product }} home"><svg aria-hidden="true"><use href="#brand" /></svg>{{ .Data.Product }}</a>
+		<nav aria-label="Main">
+			<a href="/#features" class="hide-sm">Features</a>
+			<a href="/#faq" class="hide-sm">FAQ</a>
+			<a href="{{ .Data.InstagramURL }}" class="ig" target="_blank" rel="noopener me" aria-label="{{ .Data.Product }} on Instagram" data-ga="instagram_open"><svg class="ic"><use href="#instagram" /></svg></a>
+			<a href="/#signin" data-ga="sign_in_open">Sign in</a>
+		</nav>
+	</div>
+</header>
+
+<main>
+	{{ with .Data.Page }}
+	<section class="hero">
+		<div class="wrap">
+			<ol class="crumbs"><li><a href="/">{{ $.Data.Product }}</a></li><li>{{ .Nav }}</li></ol>
+			<span class="kicker">{{ .Kicker }}</span>
+			<h1>{{ .H1 }}</h1>
+			<p class="lede">{{ .Lede }}</p>
+			<div class="cta">
+				{{ if $.Data.DemoURL }}<a href="{{ $.Data.DemoURL }}" class="btn btn-ink" target="_blank" rel="noopener" data-ga="generate_lead">Book a demo<svg class="ic"><use href="#arrow-right" /></svg></a>{{ end }}
+				<a href="/" class="btn btn-ghost">See {{ $.Data.Product }}</a>
+			</div>
+		</div>
+	</section>
+
+	<article class="wrap narrow">
+		{{ range .Sections }}
+		<section class="rv">
+			<h2>{{ .H2 }}</h2>
+			{{ range .Paras }}<p>{{ . }}</p>{{ end }}
+			{{ with .Bullets }}<ul>{{ range . }}<li><svg class="ic"><use href="#check" /></svg><span>{{ . }}</span></li>{{ end }}</ul>{{ end }}
+		</section>
+		{{ end }}
+	</article>
+
+	{{ with .FAQs }}
+	<section class="faq wrap narrow rv" id="faq">
+		<h2>Questions</h2>
+		{{ range . }}<details><summary>{{ .Q }}<span class="pm" aria-hidden="true"><svg class="ic"><use href="#plus" /></svg></span></summary><p>{{ .A }}</p></details>
+		{{ end }}
+	</section>
+	{{ end }}
+	{{ end }}
+
+	<section class="more wrap narrow">
+		<h2>More from {{ .Data.Product }}</h2>
+		<div class="more-g">
+			{{ range .Data.Others }}<a href="/solutions/{{ .Slug }}"><b>{{ .Nav }}</b><span>{{ .Title }} <svg class="ic"><use href="#arrow-right" /></svg></span></a>{{ end }}
+		</div>
+	</section>
+
+	<section class="band">
+		<div class="wrap">
+			<h2>Be ready for every call <em>this admission season.</em></h2>
+			<div class="cta">
+				{{ if .Data.DemoURL }}<a href="{{ .Data.DemoURL }}" class="btn btn-ink" target="_blank" rel="noopener" data-ga="generate_lead">Book a demo<svg class="ic"><use href="#arrow-right" /></svg></a>{{ end }}
+				<a href="/#signin" class="btn btn-ghost" data-ga="sign_in_open">Sign in to your workspace</a>
+			</div>
+		</div>
+	</section>
+</main>
+
+<footer class="ftr">
+	<div class="wrap">
+		<span>© {{ Date "2006" }} {{ .Data.Company }}</span>
+		<span><a href="/">Home</a>{{ with .Data.GuideURL }}<a href="{{ . }}">Guide</a>{{ end }}<a href="{{ .Data.PrivacyURL }}">Privacy</a><a href="{{ .Data.TermsURL }}">Terms</a><a href="{{ .Data.InstagramURL }}" target="_blank" rel="noopener me" data-ga="instagram_open">Instagram</a></span>
+	</div>
+</footer>
+<script>
+(function () {
+	var rv = document.querySelectorAll('.rv');
+	if (!('IntersectionObserver' in window)) { rv.forEach(function (el) { el.classList.add('in'); }); return; }
+	var io = new IntersectionObserver(function (es) {
+		es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+	}, { rootMargin: '0px 0px -8% 0px' });
+	rv.forEach(function (el) { io.observe(el); });
+})();
+</script>
+</body>
+</html>
+{{ end }}

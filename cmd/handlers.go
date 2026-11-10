@@ -580,6 +580,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	getAndHead("/robots.txt", rateLimit(handleRobotsTxt, "public"))
 	getAndHead("/privacy", rateLimit(handleLegalPage, "public"))
 	getAndHead("/terms", rateLimit(handleLegalPage, "public"))
+	getAndHead("/solutions/{slug}", rateLimit(handleSolutionPage, "public"))
 	getAndHead("/sitemap.xml", rateLimit(handleSitemapIndex, "public"))
 	getAndHead("/hc/{slug}", rateLimit(handleRedirectHelpCenterHome, "public"))
 	getAndHead("/hc/{slug}/{locale}", rateLimit(handleShowHelpCenterHome, "public"))

@@ -1,6 +1,6 @@
 # AI setup: how it fits together
 
-ConectDesk's AI does two jobs:
+ConnectDesk's AI does two jobs:
 
 - **The AI assistant** answers customers by itself on chat, WhatsApp and other channels, and hands the conversation to a person when it can't help.
 - **Juno**, the copilot, helps your agents inside a conversation: summaries, draft replies, rewriting.
@@ -21,7 +21,7 @@ Every AI action (an assistant reply, a Juno answer, a summary) counts as one **A
 
 **Where:** *Admin → AI → Providers*.
 
-**What it's for:** telling ConectDesk which AI model to use and giving it the key to your AI account. ConectDesk works with OpenAI, Anthropic (Claude), OpenRouter, Groq, Together AI, a local Ollama, or any "OpenAI-compatible" service.
+**What it's for:** telling ConnectDesk which AI model to use and giving it the key to your AI account. ConnectDesk works with OpenAI, Anthropic (Claude), OpenRouter, Groq, Together AI, a local Ollama, or any "OpenAI-compatible" service.
 
 **Before you start:** create an API key in your provider's dashboard. For OpenAI: sign in at platform.openai.com → *API keys* → *Create new secret key*, and add some credit to the account.
 
@@ -52,7 +52,7 @@ Click **Test connection** — it checks the key *before* you save ("Connection s
 
 ![The Embedding card](/guide/img/ai-provider-embedding.jpg)
 
-When a customer asks "what are the batch timings?", ConectDesk has to find the right snippet among all of yours. The **embedding** model turns each snippet and article into numbers so it can find the closest matches by meaning, not just exact words ("timings" finds "schedule").
+When a customer asks "what are the batch timings?", ConnectDesk has to find the right snippet among all of yours. The **embedding** model turns each snippet and article into numbers so it can find the closest matches by meaning, not just exact words ("timings" finds "schedule").
 
 | Field | What to put |
 |---|---|

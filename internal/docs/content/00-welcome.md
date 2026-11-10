@@ -1,12 +1,12 @@
 # Welcome
 
-This is the internal manual for **ConectDesk**, the customer-support and admissions desk we run at **desk.arrlink.com**. It explains every screen and button: what it does, why you'd use it, where to find it and who is allowed to use it. It covers the agent app, every Admin setting, the pages customers see, the platform admin dashboard and the operator tools.
+This is the internal manual for **ConnectDesk**, the customer-support and admissions desk we run at **desk.arrlink.com**. It explains every screen and button: what it does, why you'd use it, where to find it and who is allowed to use it. It covers the agent app, every Admin setting, the pages customers see, the platform admin dashboard and the operator tools.
 
 Only docs viewers can read this site. Platform admins give and remove access under **Docs access** on the platform dashboard (see [Platform admin dashboard](/docs/platform-admin#115-docs-access)).
 
 ## What the product does
 
-ConectDesk brings every customer conversation into one shared inbox, whatever channel it arrives on, so a team can answer, track and report on them:
+ConnectDesk brings every customer conversation into one shared inbox, whatever channel it arrives on, so a team can answer, track and report on them:
 
 - **Channels:** email (Gmail, Microsoft 365 or any IMAP/SMTP mailbox), a live-chat widget on your website, WhatsApp, Facebook Messenger, Instagram, Telegram, and phone calls through Exotel.
 - **Agents** reply from one screen, with private notes, @mentions, macros, tags, statuses, SLAs and a built-in AI copilot called **Juno**.

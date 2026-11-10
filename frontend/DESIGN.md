@@ -21,29 +21,37 @@ HSL channel triples in CSS variables, consumed via `hsl(var(--x))` (Tailwind cla
 
 | Token | Light | Dark | Use for |
 |---|---|---|---|
-| `background` | `42 45% 97.5%` | `30 6% 7%` | app/content surface (warm paper) |
-| `foreground` | `216 10% 9%` | `40 25% 92%` | primary text (ink) |
-| `foreground-lighter` | `220 4% 42%` | `35 5% 60%` | idle sidebar nav items |
-| `card` / `card-foreground` | `40 100% 99.2%` / `216 10% 9%` | `30 5% 10%` / `40 25% 92%` | raised card surface |
-| `popover` / `popover-foreground` | `40 100% 99.2%` / `216 10% 9%` | `30 5% 12%` / `40 25% 92%` | menus, popovers, dropdowns |
-| `primary` / `primary-foreground` | `190 79% 27%` / `0 0% 100%` | `187 55% 55%` / `190 50% 8%` | brand (peacock), active state, unread badges, primary buttons |
-| `secondary` / `secondary-foreground` | `42 30% 94%` / `216 10% 9%` | `30 5% 13%` / `40 25% 92%` | secondary buttons, outgoing message bubbles |
-| `muted` / `muted-foreground` | `42 30% 94%` / `220 5% 38%` | `30 5% 13%` / `38 8% 70%` | muted backgrounds, captions/meta text, secondary labels |
-| `accent` / `accent-foreground` | `40 30% 92%` / `216 10% 9%` | `30 5% 16%` / `40 25% 92%` | hover and selected states |
-| `destructive` / `destructive-foreground` | `2 47% 46%` / `9 100% 99%` | `4 92% 74%` / `12 38% 3%` | errors, delete, SLA breached, overdue, offline |
-| `success` / `success-foreground` | `142 72% 37%` / `0 0% 98%` | `142 55% 55%` / `142 40% 10%` | positive/met, verified, online, connected, delivered |
-| `warning` / `warning-foreground` | `39 85% 43%` / `24 45% 2%` | `36 87% 62%` / `24 45% 2%` | away, pending, SLA approaching, connecting (as background) |
-| `warning-600` | `35 92% 33%` | `36 87% 62%` | warning as TEXT/icon color. Plain `warning` fails 4.5:1 on light |
-| `link` | `210 80% 38%` | `205 90% 68%` | links inside rendered email/message content only. UI links use `.link-style` |
-| `border` | `40 26% 86%` | `30 5% 17%` | all borders/dividers |
-| `input` | `40 18% 78%` | `30 5% 21%` | form field borders |
-| `ring` | `190 70% 40%` | `187 45% 38%` | focus rings |
-| `private` | `35 90% 94%` | `30 35% 18%` | private-note background tint |
-| `canvas` | `40 22% 90%` | `30 8% 4%` | app gutter behind floating panels (deepest surface) |
+| `background` | `0 0% 100%` (white) | `240 10% 3.9%` (zinc-950) | app/content surface |
+| `foreground` | `240 10% 3.9%` (zinc-950) | `0 0% 98%` | primary text |
+| `foreground-lighter` | `240 3.8% 46.1%` (zinc-500) | `240 5% 64.9%` (zinc-400) | idle sidebar nav items |
+| `card` / `card-foreground` | `0 0% 100%` / zinc-950 | `240 5.9% 10%` (zinc-900) / `0 0% 98%` | raised card surface |
+| `popover` / `popover-foreground` | `0 0% 100%` / zinc-950 | zinc-900 / `0 0% 98%` | menus, popovers, dropdowns |
+| `primary` / `primary-foreground` | `224.3 76.3% 48%` (blue-700) / blue-50 | `221.2 83.2% 53.3%` (blue-600) / white | brand, active state, unread badges, primary buttons |
+| `secondary` / `secondary-foreground` | `240 4.8% 95.9%` (zinc-100) / zinc-900 | `240 3.7% 15.9%` (zinc-800) / `0 0% 98%` | secondary buttons, outgoing message bubbles |
+| `muted` / `muted-foreground` | zinc-100 / zinc-500 | zinc-800 / zinc-400 | muted backgrounds, captions/meta text, secondary labels |
+| `accent` / `accent-foreground` | zinc-100 / zinc-900 | zinc-800 / `0 0% 98%` | hover and selected states |
+| `destructive` / `destructive-foreground` | `0 72.2% 50.6%` (red-600) | `0 91% 71.4%` (red-400) | errors, delete, SLA breached, overdue, offline |
+| `success` / `success-foreground` | `142.1 76.2% 36.3%` (green-600) | `142.1 70.6% 45.3%` (green-500) | positive/met, verified, online, connected, delivered |
+| `warning` / `warning-foreground` | `37.7 92.1% 50.2%` (amber-500) | `45.9 96.7% 64.5%` (amber-300) | away, pending, SLA approaching, connecting (as background) |
+| `warning-600` | `26 90.5% 37.1%` (amber-700) | amber-300 | warning as TEXT/icon color. Plain `warning` fails 4.5:1 on light |
+| `link` | blue-700 | `213.1 93.9% 67.8%` (blue-400) | links inside rendered email/message content only. UI links use `.link-style` |
+| `border` | `240 5.9% 90%` (zinc-200) | zinc-800 | all borders/dividers |
+| `input` | zinc-200 | `240 4% 19%` | form field borders |
+| `ring` | `240 5% 64.9%` (zinc-400) | zinc-500 | focus rings |
+| `private` | `48 100% 96.1%` (amber-50) | `32 40% 14%` | private-note background tint |
+| `canvas` | zinc-100 | `240 10% 2.5%` | app gutter behind floating panels (deepest surface) |
+
+The palette follows `UI-GUIDELINES.md` (logchef's shadcn-vue theme): zinc neutrals and a
+blue accent. The guideline's dark `primary` is blue-800; the app uses blue-600 instead
+because `text-primary` (unread counts, active links) is unreadable in blue-800 on zinc-950.
 
 **Sidebar tokens** (left nav chrome): `sidebar-background` matches `background` in both
 themes, plus `sidebar-foreground`, `sidebar-primary`, `sidebar-accent`,
 `sidebar-accent-foreground`, `sidebar-border`, `sidebar-ring`.
+
+**Theme switching**: the user menu has a Light / Dark / System control
+(`useColorMode().store`: `light | dark | auto`); VueUse writes the `dark` class on `<html>`
+and keeps the choice in localStorage.
 
 **Chart tokens** (unovis): `--vis-primary-color: var(--primary)`,
 `--vis-secondary-color: var(--success)`, `--vis-text-color: var(--muted-foreground)`.
@@ -55,7 +63,7 @@ Color carries meaning; use the semantic token, never a raw palette color.
 - **success (green):** SLA met, identity verified, agent online, widget connected, message delivered/read
 - **warning (amber):** agent away, SLA approaching/remaining, widget connecting, no-internet banner
 - **destructive (red):** error, delete, SLA breached, SLA overdue
-- **primary (peacock):** brand identity, active nav, unread count badges, primary actions
+- **primary (blue):** brand identity, active nav, unread count badges, primary actions
 - **foreground / muted:** neutral data (counts, totals, timestamps). Do not color a number
   unless the color means something. On the reports dashboard numbers are neutral; only
   met=success and breached=destructive are colored.
@@ -92,9 +100,9 @@ In light mode `card` is pure white against a near-white background. In dark mode
 
 ## 3. Typography
 
-Font: Geist. The palette is warm paper neutrals and ink text with a peacock brand
-(`#0f6b7d`); the website at the base domain adds marigold (`#f5a524`) as its highlight and
-Fraunces for headlines. Sizes: `text-xs` 12 · `text-sm` 14 · `text-base` 16 · `text-lg` 18 ·
+Font: Geist (Geist Mono for small uppercase labels on the website). The palette is zinc
+neutrals with a blue brand (`#1d4ed8`); the website at the base domain uses the same
+palette, with amber only for "pending" chips. Headlines are Geist 600 with tight tracking. Sizes: `text-xs` 12 · `text-sm` 14 · `text-base` 16 · `text-lg` 18 ·
 `text-xl` 20 · `text-2xl` 24 · `text-3xl` 30. Weights: 400 body · 500 labels · 600 headings ·
 700 rare emphasis.
 
@@ -112,14 +120,14 @@ Use `tabular-nums` for any numeric column, timer, or metric to stop width jitter
 
 ## 4. Radius
 
-`--radius` = `0.625rem` (10px). The Tailwind scale derives from it:
+`--radius` = `0.25rem` (4px), tight corners everywhere. The Tailwind scale derives from it:
 
 | Class | Value | Use for |
 |---|---|---|
-| `rounded-xl` | radius + 4 (14px) | large surfaces, widget window preview, dashboard message bubbles |
-| `rounded-lg` | radius (10px) | cards, containers, dialogs |
-| `rounded-md` | radius - 2 (8px) | buttons, inputs, chips, badges, small interactive |
-| `rounded-sm` | radius - 4 (6px) | tiny insets |
+| `rounded-xl` | radius + 4 (8px) | large surfaces, widget window preview, dashboard message bubbles |
+| `rounded-lg` | radius (4px) | cards, containers, dialogs |
+| `rounded-md` | radius - 2 (2px) | buttons, inputs, chips, badges, small interactive |
+| `rounded-sm` | radius - 4 (0px) | tiny insets |
 | `rounded-full` | - | avatars, status dots, count badges, pills |
 
 **Never use bare `rounded`.** It is Tailwind's fixed 4px and ignores the token.

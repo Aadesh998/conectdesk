@@ -5,40 +5,40 @@
 <style>
 	/* The app's own theme (frontend/shared-ui/assets/styles/main.scss). */
 	:root {
-		--bg: hsl(42 45% 97.5%); --fg: hsl(216 10% 9%); --card: hsl(40 100% 99.2%);
-		--muted: hsl(42 30% 94%); --muted-fg: hsl(220 5% 38%);
-		--border: hsl(40 26% 86%); --input: hsl(40 18% 78%);
-		--primary: hsl(190 79% 27%); --primary-fg: hsl(0 0% 100%); --ring: hsl(190 70% 40%);
-		--ring-glow: hsl(190 79% 27% / 0.14);
-		--destructive: hsl(2 47% 46%); --destructive-bg: hsl(2 47% 46% / 0.1);
-		--success: hsl(142 72% 37%); --success-bg: hsl(142 72% 37% / 0.12);
-		--radius: 0.625rem;
+		--bg: hsl(0 0% 100%); --fg: hsl(240 10% 3.9%); --card: hsl(0 0% 100%);
+		--muted: hsl(240 4.8% 95.9%); --muted-fg: hsl(240 3.8% 46.1%);
+		--border: hsl(240 5.9% 90%); --input: hsl(240 5.9% 90%);
+		--primary: hsl(224.3 76.3% 48%); --primary-fg: hsl(213.8 100% 96.9%); --ring: hsl(240 5% 64.9%);
+		--ring-glow: hsl(240 5% 64.9% / 0.5);
+		--destructive: hsl(0 72.2% 50.6%); --destructive-bg: hsl(0 72.2% 50.6% / 0.1);
+		--success: hsl(142.1 76.2% 36.3%); --success-bg: hsl(142.1 76.2% 36.3% / 0.12);
+		--radius: 0.25rem;
 	}
 	@media (prefers-color-scheme: dark) {
 		:root {
-			--bg: hsl(30 6% 7%); --fg: hsl(40 25% 92%); --card: hsl(30 5% 10%);
-			--muted: hsl(30 5% 13%); --muted-fg: hsl(38 8% 70%);
-			--border: hsl(30 5% 17%); --input: hsl(30 5% 21%);
-			--primary: hsl(187 55% 55%); --primary-fg: hsl(190 50% 8%); --ring: hsl(187 45% 38%);
-			--ring-glow: hsl(187 55% 55% / 0.18);
-			--destructive: hsl(4 92% 74%); --destructive-bg: hsl(4 92% 74% / 0.12);
-			--success: hsl(142 55% 55%); --success-bg: hsl(142 55% 55% / 0.14);
+			--bg: hsl(240 10% 3.9%); --fg: hsl(0 0% 98%); --card: hsl(240 5.9% 10%);
+			--muted: hsl(240 3.7% 15.9%); --muted-fg: hsl(240 5% 64.9%);
+			--border: hsl(240 3.7% 15.9%); --input: hsl(240 4% 19%);
+			--primary: hsl(221.2 83.2% 53.3%); --primary-fg: hsl(0 0% 100%); --ring: hsl(240 3.8% 46.1%);
+			--ring-glow: hsl(240 3.8% 46.1% / 0.5);
+			--destructive: hsl(0 91% 71.4%); --destructive-bg: hsl(0 91% 71.4% / 0.12);
+			--success: hsl(142.1 70.6% 45.3%); --success-bg: hsl(142.1 70.6% 45.3% / 0.14);
 		}
 	}
 	* { box-sizing: border-box; }
-	body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 "Geist", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+	body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 "Geist", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 	a { color: var(--primary); }
 	input, select, button, textarea { font: inherit; color: inherit; }
 	input, select { width: 100%; background: transparent; border: 1px solid var(--input); border-radius: var(--radius); padding: 0.55rem 0.75rem; outline: none; }
-	input:focus, select:focus { border-color: var(--ring); box-shadow: 0 0 0 4px var(--ring-glow); }
+	input:focus, select:focus { border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring-glow); }
 	button { background: var(--primary); color: var(--primary-fg); border: 0; border-radius: var(--radius); padding: 0.6rem 1rem; font-weight: 500; cursor: pointer; }
-	button:hover { filter: brightness(1.06); }
+	button:hover { background: color-mix(in srgb, var(--primary) 90%, transparent); }
 	button:disabled { opacity: 0.55; cursor: default; filter: none; }
-	.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 1px 2px hsl(30 30% 20% / 0.05), 0 12px 32px -16px hsl(30 30% 20% / 0.16); }
+	.card { background: var(--card); border: 1px solid var(--border); border-radius: calc(var(--radius) + 4px); box-shadow: 0 1px 2px hsl(240 10% 4% / 0.05); }
 	.muted { color: var(--muted-fg); }
 	.page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; }
 	.auth { width: 100%; max-width: 440px; padding: 1.75rem; }
-	.auth h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.025em; text-align: center; margin: 0 0 0.25rem; }
+	.auth h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.025em; text-align: center; margin: 0 0 0.25rem; }
 	.auth .sub { text-align: center; color: var(--muted-fg); margin: 0 0 1.25rem; }
 	.auth label { display: block; margin: 0.9rem 0 0.35rem; font-size: 0.875rem; color: var(--muted-fg); }
 	.auth .hint { font-size: 0.8rem; color: var(--muted-fg); margin-top: 0.3rem; }

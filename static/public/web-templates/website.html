@@ -51,51 +51,68 @@ look. Page is "privacy", "terms" or "notfound". */}}
 	<title>{{ .Data.Title }} · {{ .Data.Product }}</title>
 	{{ with .Data.Description }}<meta name="description" content="{{ . }}" />{{ end }}
 	{{ if eq .Data.Page "notfound" }}<meta name="robots" content="noindex" />{{ end }}
-	<meta name="theme-color" content="#fbf8f1" />
+	<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+	<meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+	<meta name="color-scheme" content="light dark" />
 	{{ template "website-meta" . }}
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-	<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Geist:wght@400..700&display=swap" rel="stylesheet" />
+	<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@500&display=swap" rel="stylesheet" />
 	<style>
+		/* The landing page's theme: zinc neutrals, a blue accent, Geist. */
 		:root {
-			--paper: #fbf8f1; --paper-2: #f4efe3; --ink: #15171a; --ink-2: #3a3f45; --muted: #646870; --faint: #9a9890;
-			--line: #e3dbc9; --peacock: #0f6b7d; --marigold: #f5a524;
-			--serif: "Fraunces", Georgia, "Times New Roman", serif;
-			--sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+			--bg: #ffffff; --bg-2: #fafafa; --muted-bg: #f4f4f5; --fg: #09090b; --fg-2: #3f3f46; --muted: #71717a; --faint: #a1a1aa;
+			--border: #e4e4e7; --primary: #1d4ed8; --primary-h: #1e40af; --primary-fg: #eff6ff; --primary-text: #1d4ed8; --ig: #c13584;
+			--r: 4px; --sans: "Geist", ui-sans-serif, system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
+			color-scheme: light;
+		}
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--bg: #09090b; --bg-2: #0c0c0e; --muted-bg: #27272a; --fg: #fafafa; --fg-2: #d4d4d8; --muted: #a1a1aa; --faint: #71717a;
+				--border: #27272a; --primary: #2563eb; --primary-h: #1d4ed8; --primary-fg: #ffffff; --primary-text: #60a5fa; --ig: #f472b6;
+				color-scheme: dark;
+			}
 		}
 		*, *::before, *::after { box-sizing: border-box; }
-		body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.65 var(--sans); -webkit-font-smoothing: antialiased; }
-		a { color: var(--peacock); }
-		.wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
-		.hdr { border-bottom: 1px solid var(--line); }
-		.hdr .wrap { max-width: 1180px; display: flex; align-items: center; justify-content: space-between; padding-top: 16px; padding-bottom: 16px; }
-		.logo { display: inline-flex; align-items: center; gap: 9px; color: var(--ink); text-decoration: none; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
-		.logo svg { width: 30px; height: 30px; }
-		.hdr nav a { margin-left: 20px; font-size: 14.5px; font-weight: 500; color: var(--ink-2); text-decoration: none; }
-		.hdr nav a:hover { color: var(--peacock); }
+		body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 var(--sans); -webkit-font-smoothing: antialiased; }
+		a { color: var(--primary-text); text-underline-offset: 3px; }
+		:focus-visible { outline: 2px solid rgb(161 161 170 / .6); outline-offset: 2px; }
+		.wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+		.hdr { position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+		.hdr .wrap { max-width: 1180px; display: flex; align-items: center; justify-content: space-between; padding-top: 12px; padding-bottom: 12px; }
+		.logo { display: inline-flex; align-items: center; gap: 8px; color: var(--fg); text-decoration: none; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+		.logo svg { width: 28px; height: 28px; }
+		.hdr nav { display: flex; align-items: center; gap: 4px; }
+		.hdr nav a { padding: 6px 10px; border-radius: var(--r); font-size: 14px; font-weight: 500; color: var(--muted); text-decoration: none; }
+		.hdr nav a:hover { color: var(--fg); background: var(--muted-bg); }
+		.hdr nav a.ig { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; }
+		.hdr nav a.ig:hover { color: var(--ig); }
+		.ic { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 		main { padding: 56px 0 80px; }
-		h1 { margin: 0; font: 600 44px/1.05 var(--serif); letter-spacing: -0.02em; }
-		.updated { margin: 12px 0 40px; font-size: 14px; color: var(--muted); }
-		h2 { margin: 40px 0 8px; font: 600 24px/1.2 var(--serif); }
-		p, li { color: var(--ink-2); }
+		h1 { margin: 0; font: 600 40px/1.1 var(--sans); letter-spacing: -0.04em; text-wrap: balance; }
+		.updated { margin: 12px 0 40px; font: 500 12.5px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+		h2 { margin: 40px 0 8px; font: 600 20px/1.3 var(--sans); letter-spacing: -0.02em; }
+		p, li { color: var(--fg-2); }
 		ul { padding-left: 1.2em; }
 		li { margin: 6px 0; }
 		.nf { text-align: center; padding: 64px 0; }
-		.nf .code { font: 600 120px/1 var(--serif); color: var(--marigold); }
+		.nf .code { font: 600 112px/1 var(--sans); letter-spacing: -0.06em; color: var(--muted-bg); }
 		.nf p { margin: 16px auto 32px; max-width: 420px; color: var(--muted); }
-		.btn { display: inline-block; margin: 4px; border-radius: 999px; padding: 11px 22px; font-weight: 600; text-decoration: none; border: 1.5px solid var(--ink); color: var(--ink); }
-		.btn.ink { background: var(--ink); color: var(--paper); }
-		.ftr { border-top: 1px solid var(--line); padding: 24px 0 40px; font-size: 13.5px; color: var(--faint); }
+		.btn { display: inline-flex; align-items: center; height: 40px; margin: 4px; border-radius: var(--r); padding: 0 18px; font-size: 15px; font-weight: 500; text-decoration: none; border: 1px solid var(--border); color: var(--fg); background: var(--bg); }
+		.btn:hover { background: var(--muted-bg); }
+		.btn.ink { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); }
+		.btn.ink:hover { background: var(--primary-h); }
+		.ftr { border-top: 1px solid var(--border); padding: 24px 0 40px; font-size: 13.5px; color: var(--faint); }
 		.ftr .wrap { max-width: 1180px; display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
 		.ftr a { color: var(--muted); text-decoration: none; margin-right: 16px; }
-		.ftr a:hover { color: var(--peacock); }
+		.ftr a:hover { color: var(--fg); }
 	</style>
 </head>
 <body>
 <header class="hdr">
 	<div class="wrap">
-		<a href="{{ .Data.BaseURL }}/" class="logo"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="brand-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a4f5d"/><stop offset="1" stop-color="#14899e"/></linearGradient></defs><path d="M14 4h36c5.5 0 10 4.5 10 10v24c0 5.5-4.5 10-10 10H26L13 59c-1.3 1.1-3 .2-3-1.4V48C6.6 46.6 4 42.6 4 38V14C4 8.5 8.5 4 14 4z" fill="url(#brand-g)"/><path d="M40.6 17.6A12.5 12.5 0 1 0 40.6 34.4" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round"/><circle cx="44.5" cy="26" r="4.2" fill="#f5a524"/></svg>{{ .Data.Product }}</a>
-		<nav>{{ with .Data.GuideURL }}<a href="{{ . }}">Guide</a>{{ end }}<a href="{{ .Data.BaseURL }}/#signin" data-ga="sign_in_open">Sign in</a></nav>
+		<a href="{{ .Data.BaseURL }}/" class="logo"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="brand-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d4ed8"/><stop offset="1" stop-color="#3b82f6"/></linearGradient></defs><path d="M14 4h36c5.5 0 10 4.5 10 10v24c0 5.5-4.5 10-10 10H26L13 59c-1.3 1.1-3 .2-3-1.4V48C6.6 46.6 4 42.6 4 38V14C4 8.5 8.5 4 14 4z" fill="url(#brand-g)"/><path d="M40.6 17.6A12.5 12.5 0 1 0 40.6 34.4" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round"/><circle cx="44.5" cy="26" r="4.2" fill="#f59e0b"/></svg>{{ .Data.Product }}</a>
+		<nav>{{ with .Data.GuideURL }}<a href="{{ . }}">Guide</a>{{ end }}<a href="{{ .Data.InstagramURL }}" class="ig" target="_blank" rel="noopener me" aria-label="{{ .Data.Product }} on Instagram" title="Instagram" data-ga="instagram_open"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" x2="17.51" y1="6.5" y2="6.5" /></svg></a><a href="{{ .Data.BaseURL }}/#signin" data-ga="sign_in_open">Sign in</a></nav>
 	</div>
 </header>
 <main>
@@ -120,7 +137,7 @@ look. Page is "privacy", "terms" or "notfound". */}}
 <footer class="ftr">
 	<div class="wrap">
 		<span>© {{ Date "2006" }} {{ .Data.Company }}</span>
-		<span><a href="{{ .Data.BaseURL }}/">Home</a>{{ with .Data.GuideURL }}<a href="{{ . }}">Guide</a>{{ end }}<a href="{{ .Data.PrivacyURL }}">Privacy</a><a href="{{ .Data.TermsURL }}">Terms</a>{{ with .Data.ContactEmail }}<a href="mailto:{{ . }}">{{ . }}</a>{{ end }}</span>
+		<span><a href="{{ .Data.BaseURL }}/">Home</a>{{ with .Data.GuideURL }}<a href="{{ . }}">Guide</a>{{ end }}<a href="{{ .Data.PrivacyURL }}">Privacy</a><a href="{{ .Data.TermsURL }}">Terms</a><a href="{{ .Data.InstagramURL }}" target="_blank" rel="noopener me" data-ga="instagram_open">Instagram</a>{{ with .Data.ContactEmail }}<a href="mailto:{{ . }}">{{ . }}</a>{{ end }}</span>
 	</div>
 </footer>
 </body>
